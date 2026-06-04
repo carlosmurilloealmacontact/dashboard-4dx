@@ -23,31 +23,15 @@ const MODULOS_EQUIPO = [
 const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach", "jefatura", "gerente", "asesor"]
 
 export default function AdminView({ perfilAdmin }: Props) {
-  const [equipoCompleto, setEquipoCompleto] = useState<Persona[]>([])
   const [filtroRol, setFiltroRol] = useState("")
   const [filtroCoordinador, setFiltroCoordinador] = useState("")
   const [filtroServicio, setFiltroServicio] = useState("")
   const [personaSeleccionadaEmail, setPersonaSeleccionadaEmail] = useState("")
-  const [cargandoFiltros, setCargandoFiltros] = useState(true)
-  const [errorFiltros, setErrorFiltros] = useState("")
 
-  useEffect(() => {
-    fetch("/api/jerarquia")
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json()
-      })
-      .then(d => {
-        if (d.error) throw new Error(d.error)
-        // El equipo del admin es todos los usuarios activos
-        setEquipoCompleto(d.equipo ?? [])
-      })
-      .catch(e => {
-        console.error("ERROR cargando equipo:", e)
-        setErrorFiltros(e.message)
-      })
-      .finally(() => setCargandoFiltros(false))
-  }, [])
+  // El equipo completo viene del perfil del admin
+  const equipoCompleto = perfilAdmin.equipo ?? []
+  const cargandoFiltros = false
+  const errorFiltros = ""
 
   // Obtener valores únicos para los filtros
   const coordinadoresUnicos = [...new Set(equipoCompleto.map(p => p.coordinador).filter(Boolean))].sort()
