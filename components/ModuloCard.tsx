@@ -22,7 +22,7 @@ const COLOR_METRIC: Record<string, string> = {
   yellow: "text-yellow-400",
   red:    "text-red-400",
   blue:   "text-blue-400",
-  white:  "text-white",
+  white:  "text-gray-900",
 }
 
 interface ModuloCardProps {
@@ -40,7 +40,7 @@ function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) 
   const { metric } = useModuloMetric()
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden transition-all hover:border-gray-700">
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all hover:border-gray-700">
       <button
         className="w-full p-5 text-left flex items-start justify-between gap-3"
         onClick={() => setExpandido(!expandido)}
@@ -48,7 +48,7 @@ function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) 
         <div className="flex items-start gap-3">
           <span className="text-2xl">{icono}</span>
           <div>
-            <p className="text-sm font-semibold text-white">{titulo}</p>
+            <p className="text-sm font-semibold text-gray-900">{titulo}</p>
             <p className="text-xs text-gray-500 mt-0.5">{descripcion}</p>
           </div>
         </div>
@@ -56,7 +56,7 @@ function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) 
       </button>
 
       {/* KPI visible sin expandir */}
-      <div className="px-5 pb-3 flex items-center gap-4 border-t border-gray-800 pt-3">
+      <div className="px-5 pb-3 flex items-center gap-4 border-t border-gray-200 pt-3">
         {metric ? (
           <>
             <div>
@@ -92,7 +92,7 @@ function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) 
 
       {/* Componente siempre montado para que cargue datos y publique KPI */}
       {Componente && (
-        <div className={expandido ? "px-5 pb-5 border-t border-gray-800 pt-4" : "hidden"}>
+        <div className={expandido ? "px-5 pb-5 border-t border-gray-200 pt-4" : "hidden"}>
           <Suspense fallback={<p className="text-xs text-gray-500 py-2">Cargando...</p>}>
             <Componente />
           </Suspense>
@@ -101,7 +101,7 @@ function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) 
 
       {/* Panel expandible sin componente */}
       {expandido && !Componente && (
-        <div className="px-5 pb-5 border-t border-gray-800 pt-4">
+        <div className="px-5 pb-5 border-t border-gray-200 pt-4">
           <div className="space-y-1 max-h-64 overflow-y-auto">
             {equipo.length > 0 ? (
               equipo.map(p => (
