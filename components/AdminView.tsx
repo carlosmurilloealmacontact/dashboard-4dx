@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import { PerfilProvider } from "@/context/PerfilContext"
-import { MODULOS_POR_ROL, normalizarCargo } from "@/lib/jerarquia"
+import { normalizarCargo } from "@/lib/jerarquia"
 import type { PerfilUsuario, Persona } from "@/lib/jerarquia"
 
 interface Props {
