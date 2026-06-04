@@ -6,6 +6,12 @@ const BASES: { id: string; rango: string }[] = [
   { id: "1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM",  rango: "Socio!A:AS" }, // LATAM - coaches y líderes
 ]
 
+// Superusuarios/Administradores con acceso a todo
+const ADMIN_EMAILS = [
+  "carlosmurilloe.almacontact@outsourcing-account.com",
+  "mariarestrepoh.almacontact@outsourcing-account.com"
+]
+
 export interface Persona {
   cedula: string
   nombre: string
@@ -29,6 +35,7 @@ export type RolNormalizado =
   | "coach"
   | "supervisor"
   | "asesor"
+  | "admin"
   | "desconocido"
 
 export function normalizarCargo(cargo: string): RolNormalizado {
@@ -121,6 +128,19 @@ export async function obtenerPerfil(
   )
 
   if (!persona) return null
+
+  // Verificar si es administrador
+  const esAdmin = ADMIN_EMAILS.some(email => email.toLowerCase().trim() === emailBuscar)
+
+  if (esAdmin) {
+    // Los admins ven a todos como su "equipo"
+    return {
+      persona,
+      rol: "admin",
+      equipo: activos.filter(p => p.cedula !== persona.cedula),
+      supervisores: []
+    }
+  }
 
   const rol = normalizarCargo(persona.cargo)
   const nombrePersona = (persona.nombre ?? "").toLowerCase().trim()
