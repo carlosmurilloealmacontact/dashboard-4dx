@@ -1,0 +1,159 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import ModuloCard from "@/components/ModuloCard"
+import { PerfilProvider } from "@/context/PerfilContext"
+import { MODULOS_POR_ROL } from "@/lib/roles"
+import type { PerfilUsuario } from "@/lib/jerarquia"
+
+interface Coordinador {
+  nombre: string
+  email: string
+  servicio: string
+  area: string
+  servicios?: string[]  // servicios de sus supervisores
+}
+
+const MODULOS_EQUIPO = [
+  { id: "adherencia",       titulo: "Adherencia 4DX",            icono: "📋", descripcion: "Ingresos diarios del equipo" },
+  { id: "practicas_lideres", titulo: "Prácticas Líderes",         icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "compromisos",      titulo: "Compromisos",                icono: "🤝", descripcion: "Estado de compromisos por asesor" },
+  { id: "quiz",             titulo: "Quiz Semanal",               icono: "📝", descripcion: "Presentación y aprobación" },
+  { id: "estoy_enterado",   titulo: "Estoy Enterado",             icono: "📢", descripcion: "Seguimiento de briefings" },
+  { id: "feedback",         titulo: "Feedback Interfábricas",     icono: "💬", descripcion: "Feedback entre compañeros" },
+  { id: "resolutividad",    titulo: "Circuito de Resolutividad",  icono: "💡", descripcion: "Ideas y mejoras del equipo" },
+]
+
+interface Props {
+  perfilCoach: PerfilUsuario
+}
+
+export default function CoachTeamView({ perfilCoach }: Props) {
+  const [coordinadores, setCoordinadores] = useState<Coordinador[]>([])
+  const [filtroServicio, setFiltroServicio] = useState("")
+  const [filtroCoord, setFiltroCoord] = useState("")
+  const [cargandoFiltros, setCargandoFiltros] = useState(true)
+  const [errorFiltros, setErrorFiltros] = useState("")
+
+  useEffect(() => {
+    fetch("/api/jerarquia/coordinadores")
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then(d => {
+        if (d.error) throw new Error(d.error)
+        console.log("DEBUG coordinadores:", d.coordinadores)
+        setCoordinadores(d.coordinadores ?? [])
+      })
+      .catch(e => {
+        console.error("ERROR cargando coordinadores:", e)
+        setErrorFiltros(e.message)
+      })
+      .finally(() => setCargandoFiltros(false))
+  }, [])
+
+  // Todos los servicios disponibles en todos los coordinadores
+  const todosLosServicios = [...new Set(coordinadores.flatMap(c => c.servicios ?? []))].sort()
+
+  // Coordinadores que tienen el servicio seleccionado (si hay filtro)
+  const coordnadoresPorServicio = filtroServicio
+    ? coordinadores.filter(c => (c.servicios ?? []).includes(filtroServicio))
+    : coordinadores
+
+  // Coordinador seleccionado
+  const coordSeleccionado = coordinadores.find(c => c.email === filtroCoord)
+
+  // Email del coordinador seleccionado para pasar a los módulos
+  const teamEmail = coordSeleccionado?.email ?? ""
+
+  return (
+    <div className="mt-10">
+      {/* Separador */}
+      <div className="border-t border-gray-800 mb-8" />
+
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-white mb-1">Seguimiento de Equipo</h3>
+        {errorFiltros && (
+          <p className="text-red-400 text-xs mb-2">Error al cargar coordinadores: {errorFiltros}</p>
+        )}
+        {cargandoFiltros && !errorFiltros && (
+          <p className="text-gray-500 text-xs mb-2">Cargando coordinadores...</p>
+        )}
+        {!cargandoFiltros && !errorFiltros && (
+          <p className="text-gray-500 text-sm">Selecciona un coordinador o servicio para ver el estado de su equipo.</p>
+        )}
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-3 mb-6 flex-wrap items-center">
+        {/* Filtro de servicio PRIMERO */}
+        {todosLosServicios.length > 0 && (
+          <select
+            className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[200px]"
+            value={filtroServicio}
+            onChange={e => { setFiltroServicio(e.target.value); setFiltroCoord("") }}
+            disabled={cargandoFiltros}
+          >
+            <option value="">— Todos los servicios —</option>
+            {todosLosServicios.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Filtro de coordinador SEGUNDO */}
+        <select
+          className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[220px]"
+          value={filtroCoord}
+          onChange={e => setFiltroCoord(e.target.value)}
+          disabled={cargandoFiltros}
+        >
+          <option value="">— Selecciona un coordinador —</option>
+          {coordnadoresPorServicio.map(c => (
+            <option key={c.email} value={c.email}>
+              {c.nombre.split(" ").slice(0, 3).join(" ")}
+            </option>
+          ))}
+        </select>
+
+        {(filtroCoord || filtroServicio) && (
+          <button
+            className="text-xs text-gray-500 hover:text-white px-3 py-2 border border-gray-700 rounded-lg"
+            onClick={() => { setFiltroCoord(""); setFiltroServicio("") }}
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {/* Módulos del equipo */}
+      {teamEmail ? (
+        <PerfilProvider perfil={perfilCoach} teamEmail={teamEmail}>
+          <div>
+            {coordSeleccionado && (
+              <p className="text-xs text-gray-500 mb-4">
+                Mostrando equipo de <span className="text-white">{coordSeleccionado.nombre.split(" ").slice(0, 3).join(" ")}</span>
+                {coordSeleccionado.servicio && <span className="text-gray-600"> · {coordSeleccionado.servicio}</span>}
+              </p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {MODULOS_EQUIPO.map(m => (
+                <ModuloCard
+                  key={m.id}
+                  {...m}
+                  equipo={[]}
+                  rol="coordinador"
+                />
+              ))}
+            </div>
+          </div>
+        </PerfilProvider>
+      ) : (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+          <p className="text-gray-500 text-sm">Selecciona un coordinador para ver el estado de su equipo.</p>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,168 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { usePerfilContext } from "@/context/PerfilContext"
+import { useModuloUrl } from "@/hooks/useModuloUrl"
+import { useModuloMetric } from "@/context/ModuloMetricContext"
+
+interface Agente {
+  asesor: string
+  estado: string
+  categoria: "sin_ingreso" | "abierto" | "cerrado_mejora" | "cerrado_sin_mejora"
+}
+
+interface SupervisorComp {
+  supervisor: string
+  total: number
+  sinIngreso: number
+  abiertos: number
+  cerradoMejora: number
+}
+
+interface Data {
+  total: number
+  semanaActual: string
+  semanas: string[]
+  resumen: { sinIngreso: number; abiertos: number; cerradoMejora: number; cerradoSin: number }
+  agentes: Agente[]
+  porSupervisor?: SupervisorComp[]
+}
+
+const CAT_CONFIG = {
+  sin_ingreso:      { label: "Sin ingreso",       color: "text-red-400",    dot: "bg-red-500",    badge: "bg-red-900/40 text-red-300" },
+  abierto:          { label: "Abierto",            color: "text-yellow-400", dot: "bg-yellow-500", badge: "bg-yellow-900/40 text-yellow-300" },
+  cerrado_sin_mejora: { label: "Cerrado sin mejora", color: "text-gray-400", dot: "bg-gray-500",   badge: "bg-gray-700 text-gray-300" },
+  cerrado_mejora:   { label: "Cerrado con mejora", color: "text-green-400",  dot: "bg-green-500",  badge: "bg-green-900/40 text-green-300" },
+}
+
+export default function Compromisos() {
+  const [data, setData] = useState<Data | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [semana, setSemana] = useState("")
+  const [filtro, setFiltro] = useState<string>("todos")
+  const url = useModuloUrl("/api/modulos/compromisos")
+  const { setMetric } = useModuloMetric()
+
+  useEffect(() => {
+    fetch(url).then(r => r.json()).then(d => {
+      setData(d)
+      if (d.semanaActual) setSemana(d.semanaActual)
+      if (d.resumen) {
+        setMetric({
+          valor: `${d.total} ingresados`,
+          alerta: d.resumen.sinIngreso,
+          color: d.resumen.sinIngreso > 0 ? "yellow" : "green",
+        })
+      }
+    }).finally(() => setCargando(false))
+  }, [url, setMetric])
+
+  if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+  if (!data?.resumen) return <p className="text-xs text-gray-500 py-2">Sin datos.</p>
+
+  const { resumen, agentes, semanas } = data
+  const agentesFiltrados = filtro === "todos" ? agentes : agentes.filter(a => a.categoria === filtro)
+
+  return (
+    <div className="space-y-4">
+      {/* Selector semana */}
+      {semanas?.length > 0 && (
+        <select
+          className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+          value={semana}
+          onChange={e => setSemana(e.target.value)}
+        >
+          {semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
+        </select>
+      )}
+
+      {/* Resumen por estado — clickeables para filtrar */}
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          ["sin_ingreso",    resumen.sinIngreso],
+          ["abierto",        resumen.abiertos],
+          ["cerrado_mejora", resumen.cerradoMejora],
+          ["cerrado_sin_mejora", resumen.cerradoSin],
+        ] as [string, number][]).map(([cat, count]) => {
+          const cfg = CAT_CONFIG[cat as keyof typeof CAT_CONFIG]
+          const activo = filtro === cat
+          return (
+            <button
+              key={cat}
+              onClick={() => setFiltro(activo ? "todos" : cat)}
+              className={`rounded-lg p-2 text-left border transition ${activo ? "border-white" : "border-gray-700"} bg-gray-800`}
+            >
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                <span className="text-xs text-gray-400 truncate">{cfg.label}</span>
+              </div>
+              <p className={`text-xl font-bold ${cfg.color}`}>{count}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Alerta sin ingreso */}
+      {resumen.sinIngreso > 0 && (
+        <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
+          <p className="text-xs text-red-400 font-medium">
+            ⚠ {resumen.sinIngreso} persona{resumen.sinIngreso !== 1 ? "s" : ""} sin ingresar compromiso esta semana
+          </p>
+        </div>
+      )}
+
+      {/* Vista coordinador: por supervisor */}
+      {data.porSupervisor && data.porSupervisor.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">Por supervisor</p>
+          {data.porSupervisor.map((sv, i) => (
+            <div key={i} className="bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-300 truncate mb-1">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+              <div className="flex gap-3 text-xs">
+                {sv.sinIngreso > 0 && <span className="text-red-400">⚠ {sv.sinIngreso} sin ingreso</span>}
+                <span className="text-yellow-400">{sv.abiertos} abiertos</span>
+                <span className="text-green-400">{sv.cerradoMejora} con mejora</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lista de agentes */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-xs text-gray-500">
+            {filtro === "todos" ? `${data.total} agentes` : `${agentesFiltrados.length} ${CAT_CONFIG[filtro as keyof typeof CAT_CONFIG]?.label ?? ""}`}
+          </p>
+          {filtro !== "todos" && (
+            <button className="text-xs text-gray-600 hover:text-white" onClick={() => setFiltro("todos")}>
+              Ver todos
+            </button>
+          )}
+        </div>
+        <div className="space-y-1 max-h-56 overflow-y-auto">
+          {agentesFiltrados.map((a, i) => {
+            const cfg = CAT_CONFIG[a.categoria]
+            const esAlerta = a.categoria === "sin_ingreso"
+            return (
+              <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  {esAlerta && <span className="text-red-400 text-xs flex-shrink-0">⚠</span>}
+                  <span className={`text-xs truncate ${esAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                    {a.asesor.split(" ").slice(0, 3).join(" ")}
+                  </span>
+                </div>
+                <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ml-2 ${cfg.badge}`}>
+                  {cfg.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+

@@ -1,0 +1,107 @@
+"use client"
+
+// Página solo para desarrollo — simula la vista de cualquier usuario por email
+import { useState } from "react"
+import ModuloCard from "@/components/ModuloCard"
+import CoachTeamView from "@/components/CoachTeamView"
+import { MODULOS_POR_ROL } from "@/lib/roles"
+import type { PerfilUsuario } from "@/lib/jerarquia"
+import { PerfilProvider } from "@/context/PerfilContext"
+
+const TODOS_MODULOS = [
+  { id: "adherencia", titulo: "Adherencia 4DX", icono: "📋", descripcion: "Ingresos diarios del equipo" },
+  { id: "practicas_lideres", titulo: "Prácticas Líderes", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
+  { id: "adherencia_pca", titulo: "Adherencia PCA/PTA", icono: "🔍", descripcion: "Logueo y revisiones diarias" },
+  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
+  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
+  { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
+  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
+  { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
+  { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
+]
+
+export default function PreviewPage() {
+  const [email, setEmail] = useState("angelasilva.almacontact@outsourcing-account.com")
+  const [perfil, setPerfil] = useState<PerfilUsuario | null>(null)
+  const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState("")
+
+  function cargar() {
+    setCargando(true)
+    setError("")
+    fetch(`/api/jerarquia/test?email=${email}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) setError(data.error)
+        else setPerfil(data)
+      })
+      .catch(() => setError("Error al cargar"))
+      .finally(() => setCargando(false))
+  }
+
+  const modulosVisibles = perfil
+    ? TODOS_MODULOS.filter(m => MODULOS_POR_ROL[perfil.rol?.toLowerCase()]?.includes(m.id))
+    : []
+
+  return (
+    <div className="min-h-screen bg-gray-950 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6 bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 flex gap-3 items-center">
+          <span className="text-yellow-400 text-sm font-medium">⚠️ Modo Preview — solo desarrollo</span>
+        </div>
+
+        <div className="flex gap-3 mb-8">
+          <input
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="email@outsourcing-account.com"
+          />
+          <button
+            onClick={cargar}
+            disabled={cargando}
+            className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-5 py-2 rounded-lg transition disabled:opacity-50"
+          >
+            {cargando ? "Cargando..." : "Ver como este usuario"}
+          </button>
+        </div>
+
+        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+
+        {perfil && (
+          <>
+            <div className="mb-6 flex items-center gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-white">{perfil.persona.nombre}</h2>
+                <div className="flex gap-2 mt-1">
+                  <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded-full capitalize">{perfil.rol}</span>
+                  <span className="text-xs text-gray-500">{perfil.persona.servicio}</span>
+                  <span className="text-xs text-gray-600">{perfil.equipo.length} personas en equipo</span>
+                </div>
+              </div>
+            </div>
+
+            <PerfilProvider perfil={perfil} emailOverride={email}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {modulosVisibles.map(m => (
+                  <ModuloCard
+                    key={m.id}
+                    {...m}
+                    equipo={perfil.equipo}
+                    rol={perfil.rol}
+                  />
+                ))}
+              </div>
+
+              {/* Vista de seguimiento de equipo para coaches */}
+              {perfil.rol?.toLowerCase() === "coach" && (
+                <CoachTeamView perfilCoach={perfil} />
+              )}
+            </PerfilProvider>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
