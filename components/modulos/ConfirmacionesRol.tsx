@@ -94,12 +94,12 @@ export default function ConfirmacionesRol() {
       <div className="space-y-4">
         {/* KPI */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-800 rounded-lg p-3">
-            <p className="text-xs text-gray-400">Confirmaciones recibidas</p>
-            <p className="text-2xl font-bold text-white">{data.total}</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <p className="text-xs text-gray-600">Confirmaciones recibidas</p>
+            <p className="text-2xl font-bold text-gray-900">{data.total}</p>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
-            <p className="text-xs text-gray-400">Promedio general</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <p className="text-xs text-gray-600">Promedio general</p>
             <p className={`text-2xl font-bold ${colorPct(promGeneral)}`}>
               {promGeneral !== null ? `${promGeneral}%` : "—"}
             </p>
@@ -110,7 +110,7 @@ export default function ConfirmacionesRol() {
         {data.dimMasAfectada && data.dimMasAfectada.valor < 80 && (
           <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-3">
             <p className="text-xs text-yellow-400 font-medium">⚠ Ítem más afectado</p>
-            <p className="text-sm text-white mt-1">{data.dimMasAfectada.label}</p>
+            <p className="text-sm text-gray-900 mt-1">{data.dimMasAfectada.label}</p>
             <p className="text-xs text-gray-500">{data.dimMasAfectada.valor}% promedio</p>
           </div>
         )}
@@ -119,8 +119,8 @@ export default function ConfirmacionesRol() {
         <div className="space-y-2">
           {promediosDims.map(({ key, label, prom }) => (
             <div key={key} className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 w-32 truncate">{label}</span>
-              <div className="flex-1 bg-gray-800 rounded-full h-2">
+              <span className="text-xs text-gray-600 w-32 truncate">{label}</span>
+              <div className="flex-1 bg-white border border-gray-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${prom === null ? "bg-gray-700" : prom >= 80 ? "bg-green-500" : prom >= 60 ? "bg-yellow-500" : "bg-red-500"}`}
                   style={{ width: `${prom ?? 0}%` }}
@@ -138,16 +138,16 @@ export default function ConfirmacionesRol() {
           <p className="text-xs text-gray-500 mb-2">Últimas confirmaciones</p>
           <div className="space-y-2">
             {data.ultimas5.map((c, i) => (
-              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
+              <div key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <button className="w-full px-3 py-2 text-left flex justify-between items-center"
                   onClick={() => setExpandida(expandida === i ? null : i)}>
-                  <span className="text-xs text-gray-300">Confirmación #{data.total - data.ultimas5.length + i + 1}</span>
+                  <span className="text-xs text-gray-700">Confirmación #{data.total - data.ultimas5.length + i + 1}</span>
                   <span className="text-gray-600 text-xs">{expandida === i ? "▲" : "▼"}</span>
                 </button>
                 {expandida === i && (
-                  <div className="px-3 pb-3 space-y-2 border-t border-gray-700">
-                    {c.pontos && <div><p className="text-xs text-green-400 mt-2 mb-1">✓ Puntos fuertes</p><p className="text-xs text-gray-300">{c.pontos}</p></div>}
-                    {c.oport && <div><p className="text-xs text-yellow-400 mb-1">↗ Oportunidades</p><p className="text-xs text-gray-300">{c.oport}</p></div>}
+                  <div className="px-3 pb-3 space-y-2 border-t border-gray-200">
+                    {c.pontos && <div><p className="text-xs text-green-400 mt-2 mb-1">✓ Puntos fuertes</p><p className="text-xs text-gray-700">{c.pontos}</p></div>}
+                    {c.oport && <div><p className="text-xs text-yellow-400 mb-1">↗ Oportunidades</p><p className="text-xs text-gray-700">{c.oport}</p></div>}
                   </div>
                 )}
               </div>
@@ -159,40 +159,54 @@ export default function ConfirmacionesRol() {
   }
 
   // ── VISTA COACH/COORDINADOR — confirmaciones REALIZADAS ───────────
+  // Filtrar solo confirmaciones de esta semana
+  const confirmacionesEstaSemana = data.ultimas5.filter(c => {
+    if (!c.fecha) return false
+    const fechaConfirmacion = new Date(c.fecha)
+    const hoy = new Date()
+    const diasDiferencia = Math.floor((hoy.getTime() - fechaConfirmacion.getTime()) / (1000 * 60 * 60 * 24))
+    // Mostrar confirmaciones de los últimos 7 días (esta semana)
+    return diasDiferencia >= 0 && diasDiferencia < 7
+  })
+
   return (
     <div className="space-y-4">
       {/* KPI */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-400">Total realizadas</p>
-          <p className="text-2xl font-bold text-white">{data.total}</p>
-        </div>
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-400">Esta semana</p>
-          <p className={`text-2xl font-bold ${data.deEstaSemana > 0 ? "text-green-400" : "text-red-400"}`}>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <p className="text-xs text-gray-600">Esta semana</p>
+          <p className={`text-2xl font-bold ${data.deEstaSemana > 0 ? "text-green-600" : "text-red-600"}`}>
             {data.deEstaSemana}
           </p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <p className="text-xs text-gray-600">Total realizadas</p>
+          <p className="text-2xl font-bold text-gray-900">{data.total}</p>
         </div>
       </div>
 
       {/* Alerta si no ha hecho esta semana */}
       {data.alertaCoach && (
-        <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
-          <p className="text-xs text-red-400 font-medium">⚠ {data.alertaCoach}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p className="text-xs text-red-700 font-medium">⚠ {data.alertaCoach}</p>
         </div>
       )}
 
-      {/* Últimas realizadas */}
+      {/* Confirmaciones de esta semana */}
       <div>
-        <p className="text-xs text-gray-500 mb-2">Últimas realizadas</p>
-        <div className="space-y-1 max-h-48 overflow-y-auto">
-          {data.ultimas5.map((c, i) => (
-            <div key={i} className="flex items-center justify-between bg-gray-800 rounded px-3 py-2">
-              <span className="text-xs text-gray-300 truncate max-w-[160px]">{c.liderAcomp.split(" ").slice(0, 3).join(" ")}</span>
-              {c.ritual && <span className="text-xs text-gray-500 truncate max-w-[80px]">{c.ritual}</span>}
-            </div>
-          ))}
-        </div>
+        <p className="text-xs text-gray-600 mb-2">Confirmaciones de esta semana</p>
+        {confirmacionesEstaSemana.length > 0 ? (
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {confirmacionesEstaSemana.map((c, i) => (
+              <div key={i} className="flex items-center justify-between bg-white border border-gray-200 rounded px-3 py-2">
+                <span className="text-xs text-gray-700 truncate max-w-[160px]">{c.liderAcomp.split(" ").slice(0, 3).join(" ")}</span>
+                {c.ritual && <span className="text-xs text-gray-500 truncate max-w-[80px]">{c.ritual}</span>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500">Sin confirmaciones esta semana</p>
+        )}
       </div>
     </div>
   )

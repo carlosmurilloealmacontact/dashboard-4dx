@@ -20,10 +20,8 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
   ],
   coach: [
     "practicas_coach",
-    "confirmaciones_rol",
     "adherencia_pca",
-    "resolutividad",
-    "compromisos",
+    "confirmaciones_rol",
   ],
   coordinador: [
     "adherencia",
