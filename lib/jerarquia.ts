@@ -127,10 +127,34 @@ export async function obtenerPerfil(
       || (p.email ?? "").toLowerCase().trim() === emailBuscar
   )
 
-  if (!persona) return null
-
-  // Verificar si es administrador
+  // Verificar si es administrador (antes de validar si existe)
   const esAdmin = ADMIN_EMAILS.some(email => email.toLowerCase().trim() === emailBuscar)
+
+  // Si es admin pero no existe en BD, crear perfil temporal
+  if (esAdmin && !persona) {
+    const adminTemporal: Persona = {
+      cedula: "0",
+      nombre: "Administrador",
+      cargo: "admin",
+      servicio: "Administración",
+      gerencia: undefined,
+      jefeInmediato: "",
+      coordinador: "",
+      email: emailBuscar,
+      emailCorporativo: emailBuscar,
+      usuarioLatam: "",
+      estado: "activo",
+      area: "Administración",
+    }
+    return {
+      persona: adminTemporal,
+      rol: "admin",
+      equipo: activos,
+      supervisores: []
+    }
+  }
+
+  if (!persona) return null
 
   if (esAdmin) {
     // Los admins ven a todos como su "equipo"
