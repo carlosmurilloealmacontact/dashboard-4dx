@@ -55,15 +55,6 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
     "adherencia_pca",
   ],
   admin: [
-    "adherencia",
-    "practicas_lideres",
-    "practicas_coach",
     "confirmaciones_rol",
-    "compromisos",
-    "quiz",
-    "estoy_enterado",
-    "feedback",
-    "resolutividad",
-    "adherencia_pca",
   ],
 }

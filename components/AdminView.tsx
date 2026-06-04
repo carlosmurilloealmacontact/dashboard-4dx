@@ -78,18 +78,18 @@ export default function AdminView({ perfilAdmin }: Props) {
   return (
     <div className="mt-10">
       {/* Separador */}
-      <div className="border-t border-gray-800 mb-8" />
+      <div className="border-t border-gray-200 mb-8" />
 
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-1">Seguimiento Administrativo</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Seguimiento Administrativo</h3>
         {errorFiltros && (
-          <p className="text-red-400 text-xs mb-2">Error al cargar equipo: {errorFiltros}</p>
+          <p className="text-red-600 text-xs mb-2">Error al cargar equipo: {errorFiltros}</p>
         )}
         {cargandoFiltros && !errorFiltros && (
-          <p className="text-gray-500 text-xs mb-2">Cargando equipo...</p>
+          <p className="text-gray-600 text-xs mb-2">Cargando equipo...</p>
         )}
         {!cargandoFiltros && !errorFiltros && (
-          <p className="text-gray-500 text-sm">Filtra por rol, coordinador o servicio para hacer seguimiento.</p>
+          <p className="text-gray-600 text-sm">Filtra por rol, coordinador o servicio para hacer seguimiento.</p>
         )}
       </div>
 
@@ -97,7 +97,7 @@ export default function AdminView({ perfilAdmin }: Props) {
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         {/* Filtro de rol */}
         <select
-          className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[150px]"
+          className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
           value={filtroRol}
           onChange={e => { setFiltroRol(e.target.value); setPersonaSeleccionadaEmail("") }}
           disabled={cargandoFiltros}
@@ -112,7 +112,7 @@ export default function AdminView({ perfilAdmin }: Props) {
 
         {/* Filtro de coordinador */}
         <select
-          className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[220px]"
+          className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
           value={filtroCoordinador}
           onChange={e => { setFiltroCoordinador(e.target.value); setPersonaSeleccionadaEmail("") }}
           disabled={cargandoFiltros}
@@ -127,7 +127,7 @@ export default function AdminView({ perfilAdmin }: Props) {
 
         {/* Filtro de servicio */}
         <select
-          className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[200px]"
+          className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
           value={filtroServicio}
           onChange={e => { setFiltroServicio(e.target.value); setPersonaSeleccionadaEmail("") }}
           disabled={cargandoFiltros}
@@ -140,7 +140,7 @@ export default function AdminView({ perfilAdmin }: Props) {
 
         {(filtroRol || filtroCoordinador || filtroServicio || personaSeleccionadaEmail) && (
           <button
-            className="text-xs text-gray-500 hover:text-white px-3 py-2 border border-gray-700 rounded-lg"
+            className="text-xs text-gray-600 hover:text-gray-900 px-3 py-2 border border-gray-300 rounded-lg"
             onClick={() => {
               setFiltroRol("")
               setFiltroCoordinador("")
@@ -157,7 +157,7 @@ export default function AdminView({ perfilAdmin }: Props) {
       {equipoFiltrado.length > 0 && (
         <div className="flex gap-3 mb-6 flex-wrap items-center">
           <select
-            className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[300px]"
+            className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
             value={personaSeleccionadaEmail}
             onChange={e => setPersonaSeleccionadaEmail(e.target.value)}
             disabled={cargandoFiltros}
@@ -179,8 +179,8 @@ export default function AdminView({ perfilAdmin }: Props) {
       {personaSeleccionada && teamEmail ? (
         <PerfilProvider perfil={perfilAdmin} teamEmail={teamEmail}>
           <div>
-            <p className="text-xs text-gray-500 mb-4">
-              Seguimiento de <span className="text-white">{personaSeleccionada.nombre.split(" ").slice(0, 3).join(" ")}</span>
+            <p className="text-xs text-gray-600 mb-4">
+              Seguimiento de <span className="text-gray-900 font-semibold">{personaSeleccionada.nombre.split(" ").slice(0, 3).join(" ")}</span>
               {personaSeleccionada.cargo && <span className="text-gray-600"> · {personaSeleccionada.cargo}</span>}
               {personaSeleccionada.servicio && <span className="text-gray-600"> · {personaSeleccionada.servicio}</span>}
             </p>
@@ -197,14 +197,14 @@ export default function AdminView({ perfilAdmin }: Props) {
           </div>
         </PerfilProvider>
       ) : !cargandoFiltros && equipoFiltrado.length > 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-500 text-sm">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+          <p className="text-gray-600 text-sm">
             {equipoFiltrado.length} persona(s) encontrada(s). Selecciona una de arriba para ver el seguimiento.
           </p>
         </div>
       ) : !cargandoFiltros ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-500 text-sm">Usa los filtros para encontrar y seleccionar una persona.</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+          <p className="text-gray-600 text-sm">Usa los filtros para encontrar y seleccionar una persona.</p>
         </div>
       ) : null}
     </div>
