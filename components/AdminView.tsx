@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import { PerfilProvider } from "@/context/PerfilContext"
-import { MODULOS_POR_ROL } from "@/lib/roles"
+import { MODULOS_POR_ROL, normalizarCargo } from "@/lib/jerarquia"
 import type { PerfilUsuario, Persona } from "@/lib/jerarquia"
 
 interface Props {
@@ -39,11 +39,9 @@ export default function AdminView({ perfilAdmin }: Props) {
 
   // Aplicar filtros
   const equipoFiltrado = equipoCompleto.filter(p => {
-    const cargo = (p.cargo ?? "").toLowerCase()
-
     if (filtroRol) {
-      const coincideRol = cargo.includes(filtroRol.toLowerCase())
-      if (!coincideRol) return false
+      const rolNormalizado = normalizarCargo(p.cargo)
+      if (rolNormalizado !== filtroRol) return false
     }
 
     if (filtroCoordinador && p.coordinador !== filtroCoordinador) return false
