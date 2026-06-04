@@ -1,10 +1,21 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import { PerfilProvider } from "@/context/PerfilContext"
-import { normalizarCargo } from "@/lib/jerarquia"
 import type { PerfilUsuario, Persona } from "@/lib/jerarquia"
+
+// Función para normalizar cargo (mismo que en jerarquia.ts)
+function normalizarCargo(cargo: string): string {
+  const c = cargo.toLowerCase()
+  if (c.includes("gerente") || c.includes("director")) return "gerente"
+  if (c.includes("jefatura") || c.includes("jefe")) return "jefatura"
+  if (c.includes("coordinador")) return "coordinador"
+  if (c.includes("coach")) return "coach"
+  if (c.includes("supervisor") || c.includes("lider") || c.includes("líder")) return "supervisor"
+  if (c.includes("asesor") || c.includes("agente") || c.includes("aprendiz")) return "asesor"
+  return "desconocido"
+}
 
 interface Props {
   perfilAdmin: PerfilUsuario
