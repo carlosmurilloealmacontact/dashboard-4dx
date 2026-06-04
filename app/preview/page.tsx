@@ -41,7 +41,7 @@ export default function PreviewPage() {
   }
 
   const modulosVisibles = perfil
-    ? TODOS_MODULOS.filter(m => MODULOS_POR_ROL[perfil.rol?.toLowerCase()]?.includes(m.id))
+    ? TODOS_MODULOS.filter(m => MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL]?.includes(m.id))
     : []
 
   return (
