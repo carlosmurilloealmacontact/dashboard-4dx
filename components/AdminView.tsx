@@ -27,6 +27,7 @@ export default function AdminView({ perfilAdmin }: Props) {
   const [filtroRol, setFiltroRol] = useState("")
   const [filtroCoordinador, setFiltroCoordinador] = useState("")
   const [filtroServicio, setFiltroServicio] = useState("")
+  const [personaSeleccionadaEmail, setPersonaSeleccionadaEmail] = useState("")
   const [cargandoFiltros, setCargandoFiltros] = useState(true)
   const [errorFiltros, setErrorFiltros] = useState("")
 
@@ -67,8 +68,11 @@ export default function AdminView({ perfilAdmin }: Props) {
     return true
   })
 
-  // Persona seleccionada para seguimiento
-  const personaSeleccionada = equipoFiltrado.length === 1 ? equipoFiltrado[0] : null
+  // Persona seleccionada explícitamente por el admin
+  const personaSeleccionada = equipoFiltrado.find(p => {
+    const email = p.emailCorporativo || p.email
+    return email === personaSeleccionadaEmail
+  })
   const teamEmail = personaSeleccionada?.emailCorporativo || personaSeleccionada?.email || ""
 
   return (
@@ -89,13 +93,13 @@ export default function AdminView({ perfilAdmin }: Props) {
         )}
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-3 mb-6 flex-wrap items-center">
+      {/* Filtros - Fila 1 */}
+      <div className="flex gap-3 mb-4 flex-wrap items-center">
         {/* Filtro de rol */}
         <select
           className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[150px]"
           value={filtroRol}
-          onChange={e => setFiltroRol(e.target.value)}
+          onChange={e => { setFiltroRol(e.target.value); setPersonaSeleccionadaEmail("") }}
           disabled={cargandoFiltros}
         >
           <option value="">— Todos los roles —</option>
@@ -110,7 +114,7 @@ export default function AdminView({ perfilAdmin }: Props) {
         <select
           className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[220px]"
           value={filtroCoordinador}
-          onChange={e => setFiltroCoordinador(e.target.value)}
+          onChange={e => { setFiltroCoordinador(e.target.value); setPersonaSeleccionadaEmail("") }}
           disabled={cargandoFiltros}
         >
           <option value="">— Todos los coordinadores —</option>
@@ -125,7 +129,7 @@ export default function AdminView({ perfilAdmin }: Props) {
         <select
           className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[200px]"
           value={filtroServicio}
-          onChange={e => setFiltroServicio(e.target.value)}
+          onChange={e => { setFiltroServicio(e.target.value); setPersonaSeleccionadaEmail("") }}
           disabled={cargandoFiltros}
         >
           <option value="">— Todos los servicios —</option>
@@ -134,13 +138,14 @@ export default function AdminView({ perfilAdmin }: Props) {
           ))}
         </select>
 
-        {(filtroRol || filtroCoordinador || filtroServicio) && (
+        {(filtroRol || filtroCoordinador || filtroServicio || personaSeleccionadaEmail) && (
           <button
             className="text-xs text-gray-500 hover:text-white px-3 py-2 border border-gray-700 rounded-lg"
             onClick={() => {
               setFiltroRol("")
               setFiltroCoordinador("")
               setFiltroServicio("")
+              setPersonaSeleccionadaEmail("")
             }}
           >
             Limpiar
@@ -148,16 +153,30 @@ export default function AdminView({ perfilAdmin }: Props) {
         )}
       </div>
 
-      {/* Info de resultados */}
-      <div className="mb-4">
-        <p className="text-xs text-gray-400">
-          Mostrando <span className="text-white font-semibold">{equipoFiltrado.length}</span> persona(s)
-          {personaSeleccionada && ` — Seguimiento de ${personaSeleccionada.nombre.split(" ").slice(0, 3).join(" ")}`}
-        </p>
-      </div>
+      {/* Selector de persona - Fila 2 (si hay resultados) */}
+      {equipoFiltrado.length > 0 && (
+        <div className="flex gap-3 mb-6 flex-wrap items-center">
+          <select
+            className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 min-w-[300px]"
+            value={personaSeleccionadaEmail}
+            onChange={e => setPersonaSeleccionadaEmail(e.target.value)}
+            disabled={cargandoFiltros}
+          >
+            <option value="">— Selecciona una persona —</option>
+            {equipoFiltrado.map(persona => {
+              const email = persona.emailCorporativo || persona.email
+              return (
+                <option key={email} value={email}>
+                  {persona.nombre.split(" ").slice(0, 3).join(" ")} · {persona.cargo} · {persona.servicio}
+                </option>
+              )
+            })}
+          </select>
+        </div>
+      )}
 
-      {/* Módulos del equipo filtrado */}
-      {teamEmail && personaSeleccionada ? (
+      {/* Módulos del equipo filtrado - Solo si se selecciona una persona */}
+      {personaSeleccionada && teamEmail ? (
         <PerfilProvider perfil={perfilAdmin} teamEmail={teamEmail}>
           <div>
             <p className="text-xs text-gray-500 mb-4">
@@ -177,17 +196,17 @@ export default function AdminView({ perfilAdmin }: Props) {
             </div>
           </div>
         </PerfilProvider>
-      ) : equipoFiltrado.length > 1 ? (
+      ) : !cargandoFiltros && equipoFiltrado.length > 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
           <p className="text-gray-500 text-sm">
-            {equipoFiltrado.length} personas coinciden con los filtros. Ajusta los filtros para seleccionar una persona.
+            {equipoFiltrado.length} persona(s) encontrada(s). Selecciona una de arriba para ver el seguimiento.
           </p>
         </div>
-      ) : (
+      ) : !cargandoFiltros ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-500 text-sm">Usa los filtros para seleccionar una persona y hacer seguimiento.</p>
+          <p className="text-gray-500 text-sm">Usa los filtros para encontrar y seleccionar una persona.</p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
