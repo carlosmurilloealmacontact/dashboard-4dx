@@ -45,15 +45,15 @@ export default function PreviewPage() {
     : []
 
   return (
-    <div className="min-h-screen bg-gray-950 p-6">
+    <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 flex gap-3 items-center">
-          <span className="text-yellow-400 text-sm font-medium">⚠️ Modo Preview — solo desarrollo</span>
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3 items-center">
+          <span className="text-yellow-700 text-sm font-medium">⚠️ Modo Preview — solo desarrollo</span>
         </div>
 
         <div className="flex gap-3 mb-8">
           <input
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="email@outsourcing-account.com"
@@ -67,16 +67,16 @@ export default function PreviewPage() {
           </button>
         </div>
 
-        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
         {perfil && (
           <>
             <div className="mb-6 flex items-center gap-3">
               <div>
-                <h2 className="text-xl font-bold text-white">{perfil.persona.nombre}</h2>
+                <h2 className="text-xl font-bold text-gray-900">{perfil.persona.nombre}</h2>
                 <div className="flex gap-2 mt-1">
-                  <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded-full capitalize">{perfil.rol}</span>
-                  <span className="text-xs text-gray-500">{perfil.persona.servicio}</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full capitalize">{perfil.rol}</span>
+                  <span className="text-xs text-gray-600">{perfil.persona.servicio}</span>
                   <span className="text-xs text-gray-600">{perfil.equipo.length} personas en equipo</span>
                 </div>
               </div>
