@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import CoachTeamView from "@/components/CoachTeamView"
+import AdminView from "@/components/AdminView"
 import { usePerfil } from "@/hooks/usePerfil"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 
@@ -132,9 +133,14 @@ export default function DashboardPage() {
           <p className="text-gray-500 text-sm">No hay módulos configurados para tu rol.</p>
         )}
 
-        {/* Vista de seguimiento de equipo para coaches */}
+        {/* Vista de seguimiento para coaches */}
         {perfil?.rol?.toLowerCase() === "coach" ? (
           <CoachTeamView perfilCoach={perfil} />
+        ) : null}
+
+        {/* Vista administrativa para admins */}
+        {perfil?.rol?.toLowerCase() === "admin" ? (
+          <AdminView perfilAdmin={perfil} />
         ) : null}
 
         <div className="mt-8 text-center text-xs text-gray-600">
