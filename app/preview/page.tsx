@@ -4,6 +4,7 @@
 import { useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import CoachTeamView from "@/components/CoachTeamView"
+import AdminView from "@/components/AdminView"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
@@ -82,23 +83,28 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            <PerfilProvider perfil={perfil} emailOverride={email}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {modulosVisibles.map(m => (
-                  <ModuloCard
-                    key={m.id}
-                    {...m}
-                    equipo={perfil.equipo}
-                    rol={perfil.rol}
-                  />
-                ))}
-              </div>
+            {/* Vista administrativa para admins */}
+            {perfil.rol?.toLowerCase() === "admin" ? (
+              <AdminView perfilAdmin={perfil} />
+            ) : (
+              <PerfilProvider perfil={perfil} emailOverride={email}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {modulosVisibles.map(m => (
+                    <ModuloCard
+                      key={m.id}
+                      {...m}
+                      equipo={perfil.equipo}
+                      rol={perfil.rol}
+                    />
+                  ))}
+                </div>
 
-              {/* Vista de seguimiento de equipo para coaches */}
-              {perfil.rol?.toLowerCase() === "coach" && (
-                <CoachTeamView perfilCoach={perfil} />
-              )}
-            </PerfilProvider>
+                {/* Vista de seguimiento de equipo para coaches */}
+                {perfil.rol?.toLowerCase() === "coach" && (
+                  <CoachTeamView perfilCoach={perfil} />
+                )}
+              </PerfilProvider>
+            )}
           </>
         )}
       </div>
