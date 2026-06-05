@@ -1,6 +1,5 @@
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
-import { guardarToken, obtenerToken, estaExpirado } from "@/lib/db"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,27 +24,6 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at
-
-        // Guardar en BD para persistencia indefinida
-        guardarToken(
-          token.email || "",
-          account.refresh_token || "",
-          account.access_token,
-          typeof account.expires_in === "number" ? account.expires_in : undefined
-        )
-      } else if (token.email) {
-        // Siguientes logins: obtener tokens guardados de la BD
-        const saved = obtenerToken(token.email)
-        if (saved) {
-          token.refreshToken = saved.refreshToken
-
-          // Si el access token está expirado, lo marcaremos como null
-          // (la sesión lo refrescará cuando sea necesario)
-          if (saved.accessToken && !estaExpirado(saved.expiresAt)) {
-            token.accessToken = saved.accessToken
-            token.expiresAt = saved.expiresAt
-          }
-        }
       }
       return token
     },
@@ -59,6 +37,7 @@ export const authOptions: NextAuthOptions = {
     // Sin maxAge = sesión indefinida
     // El único cierre es logout manual o revocación en Google
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   pages: {
     signIn: "/login",
