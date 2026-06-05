@@ -159,7 +159,7 @@ export default function AdminView({ perfilAdmin }: Props) {
             {equipoFiltrado.map(persona => {
               const email = persona.emailCorporativo || persona.email
               return (
-                <option key={email} value={email}>
+                <option key={persona.cedula} value={email}>
                   {persona.nombre.split(" ").slice(0, 3).join(" ")} · {persona.cargo} · {persona.servicio}
                 </option>
               )

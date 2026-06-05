@@ -1,6 +1,5 @@
 "use client"
 
-import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import ModuloCard from "@/components/ModuloCard"
@@ -94,7 +93,9 @@ export default function DashboardPage() {
             </div>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" })
+            }}
             className="text-xs text-gray-600 hover:text-gray-900 transition"
           >
             Salir
