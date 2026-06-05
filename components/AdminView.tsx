@@ -42,6 +42,23 @@ const COORDINADORES_PERMITIDOS = [
   "CARBONO PEDROZA YINEIDIS YESENIA"
 ]
 
+const COACHES_PERMITIDOS = [
+  "CARLA ROBERTA SPERCEL LEAL",
+  "CLAUDIA LORETO VENEGAS MARTINEZ",
+  "LOPEZ DIAZ CAROLINA ESTEFANIA",
+  "PEREIRA MARCELA",
+  "PEREZ NELSON ANDRES",
+  "MURILLO CARMEN",
+  "MYRYAM LUCERO CASTRO LINARES",
+  "JULIAN ANDRES DIAZ RODRIGUEZ",
+  "MAHIDE SOFIA SANTIAGO ESCORCIA",
+  "ALISON MORENO MARIN",
+  "Andrea Cristina Freitas",
+  "ELIANA ANDREA HERRERA CARMONA",
+  "Erika Juliette Angel Londoño",
+  "Ivonne Mella",
+]
+
 export default function AdminView({ perfilAdmin }: Props) {
   const [filtroRol, setFiltroRol] = useState("")
   const [filtroCoordinador, setFiltroCoordinador] = useState("")
@@ -53,10 +70,10 @@ export default function AdminView({ perfilAdmin }: Props) {
   const cargandoFiltros = false
   const errorFiltros = ""
 
-  // Lógica de filtrado simple:
-  // 1. Si selecciona Supervisor → todos los supervisores
+  // Lógica de filtrado por rol:
+  // 1. Si selecciona Supervisor → supervisores con usuarioLatam (líderes)
   // 2. Si selecciona Coordinador → todos los coordinadores
-  // 3. Si selecciona Coach → solo @latam.com y los 2 admins
+  // 3. Si selecciona Coach → 14 coaches específicos + 2 admins
 
   let equipoFiltradoPorRol = equipoCompleto
 
@@ -67,12 +84,19 @@ export default function AdminView({ perfilAdmin }: Props) {
 
       if (rol !== rolNormalizado) return false
 
-      // Filtro especial para coaches: solo @latam.com y admins
+      // Filtro especial para supervisores: solo con usuarioLatam (líderes LATAM)
+      if (rolNormalizado === "supervisor") {
+        return !!p.usuarioLatam
+      }
+
+      // Filtro especial para coaches: solo los 14 específicos + 2 admins
       if (rolNormalizado === "coach") {
+        const nombre = p.nombre.toUpperCase().trim()
+        const coachEnLista = COACHES_PERMITIDOS.some(c => c.toUpperCase().trim() === nombre)
         const email = p.email.toLowerCase()
-        return email.includes("@latam.com") ||
-               email === "carlosmurilloe.almacontact@outsourcing-account.com" ||
-               email === "mariarestrepoh.almacontact@outsourcing-account.com"
+        const esAdmin = email === "carlosmurilloe.almacontact@outsourcing-account.com" ||
+                       email === "mariarestrepoh.almacontact@outsourcing-account.com"
+        return coachEnLista || esAdmin
       }
 
       return true
