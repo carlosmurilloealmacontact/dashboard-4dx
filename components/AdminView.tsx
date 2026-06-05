@@ -42,6 +42,50 @@ const COORDINADORES_PERMITIDOS = [
   "CARBONO PEDROZA YINEIDIS YESENIA"
 ]
 
+const LIDERES = [
+  "CARVAJAL BARRERA LUCAS",
+  "ARENAS MONCADA VALERIA",
+  "VELASQUEZ CARTAGENA ALEJANDRO",
+  "SILVA ECHAVARRIA ANGELA MARIA",
+  "HOYOS BERMUDEZ ARIANA",
+  "RAMOS MIRANDA ANA SHAIRITH",
+  "CARDONA BARRAGAN CATALINA",
+  "CEGUERI ACEVEDO DANY JAVIER",
+  "CHAVARRIAGA GONZALEZ DIANA MARIA",
+  "JARAMILLO VASQUEZ DAVID",
+  "RUBIO ORTIZ DIANA MARCELA",
+  "STUMMO ARRIETA EVELIS TATIANA",
+  "VASCO ALVAREZ EMANUEL ALEJANDRO",
+  "RIOS RAMIREZ JUAN ESTEBAN",
+  "GIRALDO ARROYAVE GERALDIN",
+  "RIOS CELESTINO GERSON DARIO",
+  "ALVAREZ CASTRO HEIDY STEFFANIA",
+  "VILLA CADAVID JHON FERNANDO",
+  "ORIXAS CASTRO JHEISSON",
+  "RUA OLAYA JUAN PABLO",
+  "SANDOVAL VARGAS JONATHAN",
+  "RODRIGUEZ RESTREPO KAREN DAYANNE",
+  "LOPEZ SISO KEILLURY MAHOLI",
+  "MENA CUESTA LAURA DANIELA",
+  "BEDOYA ESPINAL LUISA MERCEDES",
+  "GRAJALES MENA JESUS ENRIQUE",
+  "CASTRO RODRIGUEZ LUZ KARIME",
+  "RAMIREZ RIOS LIZETH MELISSA",
+  "BARRERA VALENCIA MARIA ALEJANDRA",
+  "AGUDELO BARRIENTOS MARIA CAMILA",
+  "TREJOS HINCAPIE MELISSA",
+  "MARTINEZ PIEDRIZ MARIA SILVANA",
+  "OROPEZA OROPEZA NIEVES HERYMAR",
+  "ALVAREZ PINEDA NEVY LUZ",
+  "CORDOBA MORENO SEBASTIAN",
+  "ADARMES FARIAS TEOLY KARLET",
+  "SALDARRIAGA BIANT TIFFANI MELISSA",
+  "SALAZAR SANMARTIN WENDY JOSEFINA",
+  "MENDEZ DAZA YEINSY YOHANA",
+  "OVALLES ORTEGANA YENNIFEER ANDREINA",
+  "TORRES PEREZ YEFERSON",
+]
+
 const COACHES_PERMITIDOS = [
   "CARLA ROBERTA SPERCEL LEAL",
   "CLAUDIA LORETO VENEGAS MARTINEZ",
@@ -78,9 +122,10 @@ export default function AdminView({ perfilAdmin }: Props) {
 
       if (rol !== filtroRol) return false
 
-      // Filtro especial para supervisores: solo con usuarioLatam (líderes)
+      // Filtro especial para supervisores: solo los 41 líderes de la lista
       if (filtroRol === "supervisor") {
-        return !!p.usuarioLatam
+        const nombre = p.nombre.toUpperCase().trim()
+        return LIDERES.some(l => l.toUpperCase().trim() === nombre)
       }
 
       // Filtro especial para coaches: solo los 14 específicos + 2 admins
@@ -95,10 +140,11 @@ export default function AdminView({ perfilAdmin }: Props) {
 
       // Para coordinadores: mostrar jefes inmediatos de los supervisores líderes
       if (filtroRol === "coordinador") {
-        // Obtener jefes de los supervisores líderes
-        const supervisoresLideres = equipoCompleto.filter(p =>
-          normalizarCargo(p.cargo) === "supervisor" && !!p.usuarioLatam
-        )
+        // Obtener jefes de los supervisores líderes (de la lista de 41)
+        const supervisoresLideres = equipoCompleto.filter(p => {
+          const nombre = p.nombre.toUpperCase().trim()
+          return LIDERES.some(l => l.toUpperCase().trim() === nombre)
+        })
         const jefesUnicos = [...new Set(supervisoresLideres.map(s => s.jefeInmediato).filter(Boolean))]
         return jefesUnicos.some(jefe => jefe === p.nombre.toUpperCase().trim())
       }
