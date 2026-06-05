@@ -103,25 +103,49 @@ export default function AdminView({ perfilAdmin }: Props) {
     })
   }
 
-  // Coordinadores disponibles en el equipo filtrado por rol
-  const coordinadoresUnicos = [...new Set(
-    equipoFiltradoPorRol.map(p => p.coordinador).filter(Boolean)
+  // Coordinadores disponibles: solo los jefes inmediatos de supervisores (líderes)
+  // Si se selecciona un rol específico, mostrar coordinadores de ese rol
+  // Si es supervisor, mostrar solo jefes de esos supervisores líderes
+  let coordinadoresUnicos = [...new Set(
+    equipoFiltradoPorRol
+      .filter(p => {
+        // Si es supervisor, usar jefeInmediato en lugar de coordinador
+        if (normalizarCargo(p.cargo) === "supervisor") {
+          return !!p.jefeInmediato
+        }
+        return !!p.coordinador
+      })
+      .map(p => {
+        if (normalizarCargo(p.cargo) === "supervisor") {
+          return p.jefeInmediato
+        }
+        return p.coordinador
+      })
+      .filter(Boolean)
   )].sort()
 
-  // Servicios disponibles en el equipo filtrado por rol (y coordinador si está seleccionado)
+  // Servicios disponibles en el equipo filtrado por rol (y coordinador/jefe si está seleccionado)
   let serviciosUnicos = [...new Set(
     equipoFiltradoPorRol.map(p => p.servicio).filter(Boolean)
   )].sort()
 
   if (filtroCoordinador) {
     serviciosUnicos = serviciosUnicos.filter(srv =>
-      equipoFiltradoPorRol.some(p => p.coordinador === filtroCoordinador && p.servicio === srv)
+      equipoFiltradoPorRol.some(p => {
+        const jefe = normalizarCargo(p.cargo) === "supervisor" ? p.jefeInmediato : p.coordinador
+        return jefe === filtroCoordinador && p.servicio === srv
+      })
     )
   }
 
-  // Aplicar todos los filtros (rol + coordinador + servicio)
+  // Aplicar todos los filtros (rol + coordinador/jefe + servicio)
   const equipoFiltrado = equipoFiltradoPorRol.filter(p => {
-    if (filtroCoordinador && p.coordinador !== filtroCoordinador) return false
+    // Para supervisores, filtrar por jefeInmediato; para otros, por coordinador
+    if (filtroCoordinador) {
+      const jefe = normalizarCargo(p.cargo) === "supervisor" ? p.jefeInmediato : p.coordinador
+      if (jefe !== filtroCoordinador) return false
+    }
+
     if (filtroServicio && p.servicio !== filtroServicio) return false
     return true
   })
