@@ -64,8 +64,9 @@ export default function CoachTeamView({ perfilCoach }: Props) {
   // Coordinador seleccionado
   const coordSeleccionado = coordinadores.find(c => c.email === filtroCoord)
 
-  // Email del coordinador seleccionado para pasar a los módulos
+  // Email del coordinador seleccionado y servicio para pasar a los módulos
   const teamEmail = coordSeleccionado?.email ?? ""
+  const servicioFiltrado = filtroServicio
 
   return (
     <div className="mt-10">
@@ -144,6 +145,7 @@ export default function CoachTeamView({ perfilCoach }: Props) {
                   {...m}
                   equipo={[]}
                   rol="coordinador"
+                  servicio={servicioFiltrado}
                 />
               ))}
             </div>

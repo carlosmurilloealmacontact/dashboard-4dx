@@ -32,9 +32,10 @@ interface ModuloCardProps {
   descripcion: string
   equipo: Persona[]
   rol: RolNormalizado
+  servicio?: string
 }
 
-function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) {
+function CardInner({ id, titulo, icono, descripcion, equipo, servicio }: ModuloCardProps) {
   const [expandido, setExpandido] = useState(false)
   const Componente = COMPONENTES[id]
   const { metric } = useModuloMetric()
