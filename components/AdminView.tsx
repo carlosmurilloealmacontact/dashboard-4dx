@@ -53,63 +53,52 @@ export default function AdminView({ perfilAdmin }: Props) {
   const cargandoFiltros = false
   const errorFiltros = ""
 
-  // Primero, filtrar personas que estén bajo los 6 coordinadores permitidos
-  const equipoPermitido = equipoCompleto.filter(p =>
-    COORDINADORES_PERMITIDOS.includes(p.coordinador)
-  )
+  // Lógica de filtrado simple:
+  // 1. Si selecciona Supervisor → todos los supervisores
+  // 2. Si selecciona Coordinador → todos los coordinadores
+  // 3. Si selecciona Coach → solo @latam.com y los 2 admins
 
-  // Obtener valores únicos para los filtros (dinámicos según rol seleccionado)
-  let coordinadoresUnicos = COORDINADORES_PERMITIDOS.filter(coord =>
-    equipoPermitido.some(p => p.coordinador === coord)
-  )
+  let equipoFiltradoPorRol = equipoCompleto
 
-  let serviciosUnicos: string[] = []
-
-  // Si hay un rol seleccionado, filtrar coordinadores y servicios por ese rol
   if (filtroRol) {
-    coordinadoresUnicos = coordinadoresUnicos.filter(coord =>
-      equipoPermitido.some(p => {
-        const rolNormalizado = normalizarCargo(p.cargo)
-        return rolNormalizado === filtroRol && p.coordinador === coord
-      })
-    )
+    const rolNormalizado = filtroRol
+    equipoFiltradoPorRol = equipoCompleto.filter(p => {
+      const rol = normalizarCargo(p.cargo)
 
-    serviciosUnicos = [...new Set(
-      equipoPermitido
-        .filter(p => {
-          const rolNormalizado = normalizarCargo(p.cargo)
-          return rolNormalizado === filtroRol
-        })
-        .map(p => p.servicio)
-        .filter(Boolean)
-    )].sort()
-  } else {
-    // Sin rol seleccionado, mostrar servicios de supervisores bajo los 6 coordinadores
-    serviciosUnicos = [...new Set(
-      equipoPermitido
-        .filter(p => normalizarCargo(p.cargo) === "supervisor")
-        .map(p => p.servicio)
-        .filter(Boolean)
-    )].sort()
+      if (rol !== rolNormalizado) return false
+
+      // Filtro especial para coaches: solo @latam.com y admins
+      if (rolNormalizado === "coach") {
+        const email = p.email.toLowerCase()
+        return email.includes("@latam.com") ||
+               email === "carlosmurilloe.almacontact@outsourcing-account.com" ||
+               email === "mariarestrepoh.almacontact@outsourcing-account.com"
+      }
+
+      return true
+    })
   }
 
-  // Si hay coordinador seleccionado, filtrar servicios por ese coordinador
-  if (filtroCoordinador && !filtroRol) {
+  // Coordinadores disponibles en el equipo filtrado por rol
+  const coordinadoresUnicos = [...new Set(
+    equipoFiltradoPorRol.map(p => p.coordinador).filter(Boolean)
+  )].sort()
+
+  // Servicios disponibles en el equipo filtrado por rol (y coordinador si está seleccionado)
+  let serviciosUnicos = [...new Set(
+    equipoFiltradoPorRol.map(p => p.servicio).filter(Boolean)
+  )].sort()
+
+  if (filtroCoordinador) {
     serviciosUnicos = serviciosUnicos.filter(srv =>
-      equipoPermitido.some(p => p.coordinador === filtroCoordinador && p.servicio === srv)
+      equipoFiltradoPorRol.some(p => p.coordinador === filtroCoordinador && p.servicio === srv)
     )
   }
 
-  // Aplicar filtros
-  const equipoFiltrado = equipoPermitido.filter(p => {
-    // Solo mostrar los 3 roles permitidos
-    const rolNormalizado = normalizarCargo(p.cargo)
-    if (!ROLES_DISPONIBLES.includes(rolNormalizado)) return false
-
-    if (filtroRol && rolNormalizado !== filtroRol) return false
+  // Aplicar todos los filtros (rol + coordinador + servicio)
+  const equipoFiltrado = equipoFiltradoPorRol.filter(p => {
     if (filtroCoordinador && p.coordinador !== filtroCoordinador) return false
     if (filtroServicio && p.servicio !== filtroServicio) return false
-
     return true
   })
 
