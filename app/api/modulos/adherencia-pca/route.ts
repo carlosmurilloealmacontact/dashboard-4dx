@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
 
   const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
   const esCoord = ["coordinador", "jefatura", "gerente"].includes(perfil.rol)
+  const esCoach = perfil.rol === "coach"
 
   if (esCoord) {
     // Vista coordinador: supervisores bajo este coordinador

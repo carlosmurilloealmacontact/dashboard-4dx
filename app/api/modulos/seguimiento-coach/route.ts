@@ -34,10 +34,15 @@ export async function GET(req: NextRequest) {
   const iCDR    = idx("cdr_sim")
   const iFoco   = idx("focos")
 
+  // Debug: si no encuentra columnas, loguear
+  if (iLider === -1) console.log("No encontró 'Lider Coach' en headers:", headers.slice(0, 10))
+  if (iFecha === -1) console.log("No encontró 'Fecha'")
+  if (iCumple === -1) console.log("No encontró 'Cumple'")
+
   const nombreLider = (perfil.persona.nombre ?? "").toLowerCase().trim()
 
   const registros = rows.slice(1)
-    .filter(r => (r[iLider] ?? "").toLowerCase().trim() === nombreLider)
+    .filter(r => iLider >= 0 && (r[iLider] ?? "").toLowerCase().trim() === nombreLider)
     .map(r => ({
       fecha:  r[iFecha]  ?? "",
       semana: r[iSemana] ?? "",

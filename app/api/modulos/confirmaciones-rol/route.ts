@@ -54,7 +54,20 @@ export async function GET(req: NextRequest) {
     (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === n.toLowerCase().trim()
   )
 
-  const iNombreCoach = idx("nombre")
+  // Columna AT (46) para nombre del coach, buscar la segunda "Nombre" si hay múltiples
+  let iNombreCoach = -1
+  let nombreCount = 0
+  for (let i = 0; i < headers.length; i++) {
+    if ((headers[i] ?? "").toLowerCase().trim() === "nombre") {
+      nombreCount++
+      if (nombreCount === 2 || i >= 45) { // AT es columna 46 (índice 45)
+        iNombreCoach = i
+        break
+      }
+    }
+  }
+  if (iNombreCoach === -1) iNombreCoach = idx("nombre") // Fallback
+
   const iLiderAcomp  = idx("lider acompanado")
   const iRitual      = headers.findIndex(h => (h ?? "").toLowerCase().includes("ritual") && (h ?? "").toLowerCase().includes("acompan"))
   const iPontos      = idx("pontos fortes")
