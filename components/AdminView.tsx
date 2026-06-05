@@ -31,7 +31,16 @@ const MODULOS_EQUIPO = [
   { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
 ]
 
-const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach", "jefatura", "gerente", "asesor"]
+const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
+
+const COORDINADORES_PERMITIDOS = [
+  "ROJAS LEGUIZAMO ANDRES FELIPE",
+  "HERNANDEZ URREGO CRISTIAN ENRIQUE",
+  "MARTINEZ PEREZ JHON ALEXANDER",
+  "MONSALVE HERRERA JOHN JAMES",
+  "LOBO VERA LADY VANESSA",
+  "CARBONO PEDROZA YINEIDIS YESENIA"
+]
 
 export default function AdminView({ perfilAdmin }: Props) {
   const [filtroRol, setFiltroRol] = useState("")
@@ -45,8 +54,21 @@ export default function AdminView({ perfilAdmin }: Props) {
   const errorFiltros = ""
 
   // Obtener valores únicos para los filtros
-  const coordinadoresUnicos = [...new Set(equipoCompleto.map(p => p.coordinador).filter(Boolean))].sort()
-  const serviciosUnicos = [...new Set(equipoCompleto.map(p => p.servicio).filter(Boolean))].sort()
+  // Solo mostrar los 6 coordinadores permitidos que existan en el equipo
+  const coordinadoresUnicos = COORDINADORES_PERMITIDOS.filter(coord =>
+    equipoCompleto.some(p => p.coordinador === coord)
+  )
+
+  // Servicios solo de supervisores que tengan como jefe a uno de los coordinadores permitidos
+  const serviciosUnicos = [...new Set(
+    equipoCompleto
+      .filter(p => {
+        const rolNormalizado = normalizarCargo(p.cargo)
+        return rolNormalizado === "supervisor" && COORDINADORES_PERMITIDOS.includes(p.coordinador)
+      })
+      .map(p => p.servicio)
+      .filter(Boolean)
+  )].sort()
 
   // Aplicar filtros
   const equipoFiltrado = equipoCompleto.filter(p => {
