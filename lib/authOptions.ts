@@ -10,9 +10,7 @@ export const authOptions: NextAuthOptions = {
         params: {
           scope: "openid email profile https://www.googleapis.com/auth/spreadsheets.readonly",
           access_type: "offline",
-          // "select_account" = solo la primera vez pide autorización
-          // "consent" = cada vez que inicia sesión
-          prompt: "select_account",
+          prompt: "consent",
         },
       },
     }),
