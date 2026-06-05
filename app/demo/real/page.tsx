@@ -8,9 +8,9 @@ import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
 
 const USUARIOS_DEMO = [
-  { nombre: "MYRYAM LUCERO CASTRO LINARES", rol: "coach" },
-  { nombre: "HERNANDEZ URREGO CRISTIAN ENRIQUE", rol: "coordinador" },
-  { nombre: "CARDONA BARRAGAN CATALINA", rol: "supervisor" },
+  { nombre: "MYRYAM LUCERO CASTRO LINARES", email: "myryam.almacontact@outsourcing-account.com", rol: "coach" },
+  { nombre: "HERNANDEZ URREGO CRISTIAN ENRIQUE", email: "cristianhernandez.almacontact@outsourcing-account.com", rol: "coordinador" },
+  { nombre: "CARDONA BARRAGAN CATALINA", email: "catalinacarona.almacontact@outsourcing-account.com", rol: "supervisor" },
 ]
 
 const TODOS_MODULOS = [
@@ -27,7 +27,7 @@ const TODOS_MODULOS = [
 ]
 
 export default function RealDemoPage() {
-  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(USUARIOS_DEMO[0].nombre)
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(USUARIOS_DEMO[0].email)
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState("")
@@ -36,11 +36,11 @@ export default function RealDemoPage() {
     cargarPerfil(usuarioSeleccionado)
   }, [usuarioSeleccionado])
 
-  async function cargarPerfil(nombre: string) {
+  async function cargarPerfil(email: string) {
     setCargando(true)
     setError("")
     try {
-      const res = await fetch(`/api/jerarquia/test?email=${encodeURIComponent(nombre)}`)
+      const res = await fetch(`/api/jerarquia/test?email=${encodeURIComponent(email)}`)
       const data = await res.json()
       if (data.error) {
         setError(data.error)
@@ -73,7 +73,7 @@ export default function RealDemoPage() {
           className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
         >
           {USUARIOS_DEMO.map(u => (
-            <option key={u.nombre} value={u.nombre}>
+            <option key={u.email} value={u.email}>
               {u.nombre.split(" ").slice(0, 3).join(" ")} ({u.rol})
             </option>
           ))}
