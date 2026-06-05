@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
           token.email || "",
           account.refresh_token || "",
           account.access_token,
-          account.expires_in
+          typeof account.expires_in === "number" ? account.expires_in : undefined
         )
       } else if (token.email) {
         // Siguientes logins: obtener tokens guardados de la BD
