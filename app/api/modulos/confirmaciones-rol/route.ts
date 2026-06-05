@@ -86,6 +86,12 @@ export async function GET(req: NextRequest) {
   const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
   const esSupervisor = perfil.rol === "supervisor"
 
+  console.log("DEBUG confirmaciones-rol:")
+  console.log("  nombrePersona:", nombrePersona)
+  console.log("  esSupervisor:", esSupervisor)
+  console.log("  iNombreCoach index:", iNombreCoach)
+  console.log("  primeros 5 nombres:", rows.slice(1, 6).map(r => (r[iNombreCoach] ?? "").toLowerCase().trim()))
+
   const confirmaciones = rows.slice(1).filter(r => {
     if (esSupervisor) return (r[iLiderAcomp] ?? "").toLowerCase().trim() === nombrePersona
     return (r[iNombreCoach] ?? "").toLowerCase().trim() === nombrePersona

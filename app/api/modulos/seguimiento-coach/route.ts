@@ -41,6 +41,11 @@ export async function GET(req: NextRequest) {
 
   const nombreLider = (perfil.persona.nombre ?? "").toLowerCase().trim()
 
+  console.log("DEBUG seguimiento-coach:")
+  console.log("  nombreLider buscando:", nombreLider)
+  console.log("  iLider index:", iLider)
+  console.log("  primeros 5 nombres en hoja:", rows.slice(1, 6).map(r => (r[iLider] ?? "").toLowerCase().trim()))
+
   const registros = rows.slice(1)
     .filter(r => iLider >= 0 && (r[iLider] ?? "").toLowerCase().trim() === nombreLider)
     .map(r => ({

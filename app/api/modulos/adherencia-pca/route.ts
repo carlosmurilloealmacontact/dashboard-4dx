@@ -44,6 +44,13 @@ export async function GET(req: NextRequest) {
   const esCoord = ["coordinador", "jefatura", "gerente"].includes(perfil.rol)
   const esCoach = perfil.rol === "coach"
 
+  console.log("DEBUG adherencia-pca:")
+  console.log("  nombrePersona:", nombrePersona)
+  console.log("  rol:", perfil.rol)
+  console.log("  esCoach:", esCoach)
+  console.log("  iNombre index:", iNombre)
+  console.log("  primeros 5 nombres:", rows.slice(1, 6).map(r => (r[iNombre] ?? "").toLowerCase().trim()))
+
   if (esCoord) {
     // Vista coordinador: supervisores bajo este coordinador
     const registros = rows.slice(1)
