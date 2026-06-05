@@ -53,30 +53,60 @@ export default function AdminView({ perfilAdmin }: Props) {
   const cargandoFiltros = false
   const errorFiltros = ""
 
-  // Obtener valores únicos para los filtros
-  // Solo mostrar los 6 coordinadores permitidos que existan en el equipo
-  const coordinadoresUnicos = COORDINADORES_PERMITIDOS.filter(coord =>
-    equipoCompleto.some(p => p.coordinador === coord)
+  // Primero, filtrar personas que estén bajo los 6 coordinadores permitidos
+  const equipoPermitido = equipoCompleto.filter(p =>
+    COORDINADORES_PERMITIDOS.includes(p.coordinador)
   )
 
-  // Servicios solo de supervisores que tengan como jefe a uno de los coordinadores permitidos
-  const serviciosUnicos = [...new Set(
-    equipoCompleto
-      .filter(p => {
+  // Obtener valores únicos para los filtros (dinámicos según rol seleccionado)
+  let coordinadoresUnicos = COORDINADORES_PERMITIDOS.filter(coord =>
+    equipoPermitido.some(p => p.coordinador === coord)
+  )
+
+  let serviciosUnicos: string[] = []
+
+  // Si hay un rol seleccionado, filtrar coordinadores y servicios por ese rol
+  if (filtroRol) {
+    coordinadoresUnicos = coordinadoresUnicos.filter(coord =>
+      equipoPermitido.some(p => {
         const rolNormalizado = normalizarCargo(p.cargo)
-        return rolNormalizado === "supervisor" && COORDINADORES_PERMITIDOS.includes(p.coordinador)
+        return rolNormalizado === filtroRol && p.coordinador === coord
       })
-      .map(p => p.servicio)
-      .filter(Boolean)
-  )].sort()
+    )
+
+    serviciosUnicos = [...new Set(
+      equipoPermitido
+        .filter(p => {
+          const rolNormalizado = normalizarCargo(p.cargo)
+          return rolNormalizado === filtroRol
+        })
+        .map(p => p.servicio)
+        .filter(Boolean)
+    )].sort()
+  } else {
+    // Sin rol seleccionado, mostrar servicios de supervisores bajo los 6 coordinadores
+    serviciosUnicos = [...new Set(
+      equipoPermitido
+        .filter(p => normalizarCargo(p.cargo) === "supervisor")
+        .map(p => p.servicio)
+        .filter(Boolean)
+    )].sort()
+  }
+
+  // Si hay coordinador seleccionado, filtrar servicios por ese coordinador
+  if (filtroCoordinador && !filtroRol) {
+    serviciosUnicos = serviciosUnicos.filter(srv =>
+      equipoPermitido.some(p => p.coordinador === filtroCoordinador && p.servicio === srv)
+    )
+  }
 
   // Aplicar filtros
-  const equipoFiltrado = equipoCompleto.filter(p => {
-    if (filtroRol) {
-      const rolNormalizado = normalizarCargo(p.cargo)
-      if (rolNormalizado !== filtroRol) return false
-    }
+  const equipoFiltrado = equipoPermitido.filter(p => {
+    // Solo mostrar los 3 roles permitidos
+    const rolNormalizado = normalizarCargo(p.cargo)
+    if (!ROLES_DISPONIBLES.includes(rolNormalizado)) return false
 
+    if (filtroRol && rolNormalizado !== filtroRol) return false
     if (filtroCoordinador && p.coordinador !== filtroCoordinador) return false
     if (filtroServicio && p.servicio !== filtroServicio) return false
 
