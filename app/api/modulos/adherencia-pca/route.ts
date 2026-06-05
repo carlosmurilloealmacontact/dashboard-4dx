@@ -98,9 +98,16 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // Vista supervisor: sus propios monitoreos
+  // Vista supervisor/coach: sus propios monitoreos
+  console.log("DEBUG adherencia-pca (supervisor/coach):")
+  console.log("  nombrePersona:", nombrePersona)
+  console.log("  iNombre:", iNombre)
+  if (iNombre >= 0) {
+    console.log("  primeros 5 nombres en col", iNombre, ":", rows.slice(1, 6).map(r => (r[iNombre] ?? "").toLowerCase().trim()))
+  }
+
   const registros = rows.slice(1)
-    .filter(r => (r[iNombre] ?? "").toLowerCase().trim() === nombrePersona)
+    .filter(r => iNombre >= 0 && (r[iNombre] ?? "").toLowerCase().trim() === nombrePersona)
     .map(r => ({
       fecha:   r[iFecha]   ?? "",
       semana:  r[iSemana]  ?? "",
@@ -134,11 +141,15 @@ export async function GET(req: NextRequest) {
   const totalMonitoreosSemana = deEstaSemana.reduce((s, d) => s + d.total, 0)
   const diasConMeta = deEstaSemana.filter(d => d.total >= META_DIARIA).length
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     modo: "supervisor",
     semanas,
     semanaActual,
     kpi: { pct: pctPromedio, totalMonitoreos: totalMonitoreosSemana, diasConMeta, meta: META_DIARIA },
     dias,
   })
+
+  // Caché por 1 hora para reducir quota de Google Sheets
+  response.headers.set('Cache-Control', 'private, max-age=3600')
+  return response
 }

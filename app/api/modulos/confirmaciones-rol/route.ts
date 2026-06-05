@@ -54,19 +54,25 @@ export async function GET(req: NextRequest) {
     (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === n.toLowerCase().trim()
   )
 
-  // Columna AT (46) para nombre del coach, buscar la segunda "Nombre" si hay múltiples
+  // Columna AT (índice 45) para nombre del coach
+  // Buscar columna "nombre" que esté en posición >= 45 o es la segunda "Nombre"
   let iNombreCoach = -1
-  let nombreCount = 0
+  let nombrePositions: number[] = []
+
   for (let i = 0; i < headers.length; i++) {
     if ((headers[i] ?? "").toLowerCase().trim() === "nombre") {
-      nombreCount++
-      if (nombreCount === 2 || i >= 45) { // AT es columna 46 (índice 45)
-        iNombreCoach = i
-        break
-      }
+      nombrePositions.push(i)
     }
   }
-  if (iNombreCoach === -1) iNombreCoach = idx("nombre") // Fallback
+
+  // Preferir la más cercana a columna AT (índice 45)
+  if (nombrePositions.length > 0) {
+    iNombreCoach = nombrePositions.reduce((closest, current) =>
+      Math.abs(current - 45) < Math.abs(closest - 45) ? current : closest
+    )
+  }
+
+  console.log("DEBUG confirmaciones-rol: iNombreCoach=", iNombreCoach, "posiciones encontradas=", nombrePositions)
 
   const iLiderAcomp  = idx("lider acompanado")
   const iRitual      = headers.findIndex(h => (h ?? "").toLowerCase().includes("ritual") && (h ?? "").toLowerCase().includes("acompan"))
@@ -142,7 +148,7 @@ export async function GET(req: NextRequest) {
     ? "Sin confirmaciones esta semana"
     : null
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     total: confirmaciones.length,
     esSupervisor,
     semanaActual,
@@ -153,4 +159,8 @@ export async function GET(req: NextRequest) {
     dimMasAfectada: dimMasAfectada ? { key: dimMasAfectada[0], label: DIMS_LABELS[dimMasAfectada[0]], valor: dimMasAfectada[1] } : null,
     ultimas5: confirmaciones.slice(-5),
   })
+
+  // Caché por 1 hora para reducir quota de Google Sheets
+  response.headers.set('Cache-Control', 'private, max-age=3600')
+  return response
 }

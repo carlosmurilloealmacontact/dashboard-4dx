@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   const conCDR    = registros.filter(r => r.cdr && r.cdr !== "0")
   const semanas   = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     registros: registros.slice(-60),
     semanas,
     resumen: {
@@ -70,4 +70,8 @@ export async function GET(req: NextRequest) {
       ultimoCDR: conCDR.at(-1)?.cdr ?? null,
     },
   })
+
+  // Caché por 1 hora para reducir quota de Google Sheets
+  response.headers.set('Cache-Control', 'private, max-age=3600')
+  return response
 }
