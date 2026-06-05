@@ -8,8 +8,8 @@ import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
 
 const USUARIOS_DEMO = [
-  { nombre: "MYRYAM LUCERO CASTRO LINARES", email: "myryam.almacontact@outsourcing-account.com", rol: "coach" },
-  { nombre: "HERNANDEZ URREGO CRISTIAN ENRIQUE", email: "cristianhernandez.almacontact@outsourcing-account.com", rol: "coordinador" },
+  { nombre: "MYRYAM LUCERO CASTRO LINARES", email: "lucero.castro@latam.com", rol: "coach" },
+  { nombre: "HERNANDEZ URREGO CRISTIAN ENRIQUE", email: "cristianenriquehernandez.almacontact@outsourcing-account.com", rol: "coordinador" },
   { nombre: "CARDONA BARRAGAN CATALINA", email: "catalinacarona.almacontact@outsourcing-account.com", rol: "supervisor" },
 ]
 
