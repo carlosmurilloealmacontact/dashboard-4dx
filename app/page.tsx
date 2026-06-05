@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { signOut } from "next-auth/react"
 import ModuloCard from "@/components/ModuloCard"
 import CoachTeamView from "@/components/CoachTeamView"
 import AdminView from "@/components/AdminView"
@@ -94,7 +95,10 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={async () => {
+              // Primero borra el token de la BD
               await fetch("/api/auth/logout", { method: "POST" })
+              // Luego borra la sesión
+              await signOut({ callbackUrl: "/login" })
             }}
             className="text-xs text-gray-600 hover:text-gray-900 transition"
           >
