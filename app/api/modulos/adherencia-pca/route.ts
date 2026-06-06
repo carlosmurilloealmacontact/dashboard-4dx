@@ -121,10 +121,12 @@ export async function GET(req: NextRequest) {
   const semanaActual = semanas.at(-1) ?? ""
   const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
-  // Días únicos con sus monitoreos
+  // Días únicos con sus monitoreos (una entrada por fecha, toma el ÚLTIMO registro
+  // del día para que "Total Gestión Dia" refleje el acumulado final del día)
   const porFecha: Record<string, { total: number; cumple: string }> = {}
   registros.forEach(r => {
-    if (r.fecha && !porFecha[r.fecha]) {
+    if (r.fecha) {
+      // Sobreescribir siempre → el último registro del día queda guardado
       porFecha[r.fecha] = { total: r.total, cumple: r.cumple }
     }
   })
@@ -137,11 +139,13 @@ export async function GET(req: NextRequest) {
     cumpleMeta: d.total >= META_DIARIA,
   }))
 
-  // KPI: promedio cumplimiento semana actual y total monitoreos
-  const pcts = deEstaSemana.map(d => parseCumplePct(d.cumple))
+  // KPI: usar los días deduplicados (porFecha) de la semana actual
+  // para evitar contar múltiples filas del mismo día
+  const diasSemanaActual = dias.filter(d => d.semana === semanaActual)
+  const pcts = diasSemanaActual.map(d => parseCumplePct(d.cumple))
   const pctPromedio = pcts.length > 0 ? Math.round(pcts.reduce((a, b) => a + b) / pcts.length) : 0
-  const totalMonitoreosSemana = deEstaSemana.reduce((s, d) => s + d.total, 0)
-  const diasConMeta = deEstaSemana.filter(d => d.total >= META_DIARIA).length
+  const totalMonitoreosSemana = diasSemanaActual.reduce((s, d) => s + d.total, 0)
+  const diasConMeta = diasSemanaActual.filter(d => d.total >= META_DIARIA).length
 
   const response = NextResponse.json({
     modo: "supervisor",
