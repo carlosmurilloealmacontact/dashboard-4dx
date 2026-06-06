@@ -149,7 +149,6 @@ export async function GET(req: NextRequest) {
     dias,
   })
 
-  // Caché por 1 hora para reducir quota de Google Sheets
-  response.headers.set('Cache-Control', 'private, max-age=3600')
+  response.headers.set('Cache-Control', 'no-store')
   return response
 }

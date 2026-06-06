@@ -24,9 +24,27 @@ function textoANum(v: string): number | null {
   return isNaN(n) ? null : n
 }
 
-function getISOWeek(dateStr: string): string {
+function parseSheetDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+  // Handle "dd/mm/yyyy" or "dd/mm/yyyy HH:MM:SS" (Google Sheets LATAM format)
+  const parts = dateStr.split("/")
+  if (parts.length === 3) {
+    const day   = Number(parts[0])
+    const month = Number(parts[1])
+    // parts[2] may be "2026" or "2026 09:15:00" — take only the year portion
+    const year  = Number(parts[2].split(" ")[0].split("T")[0])
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
+      const d = new Date(year, month - 1, day)
+      return isNaN(d.getTime()) ? null : d
+    }
+  }
   const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ""
+  return isNaN(d.getTime()) ? null : d
+}
+
+function getISOWeek(dateStr: string): string {
+  const d = parseSheetDate(dateStr)
+  if (!d) return ""
   const jan1 = new Date(d.getFullYear(), 0, 1)
   const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
   return String(week)
@@ -160,7 +178,6 @@ export async function GET(req: NextRequest) {
     ultimas5: confirmaciones.slice(-5),
   })
 
-  // Caché por 1 hora para reducir quota de Google Sheets
-  response.headers.set('Cache-Control', 'private, max-age=3600')
+  response.headers.set('Cache-Control', 'no-store')
   return response
 }

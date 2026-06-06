@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
+import { useModuloMetric } from "@/context/ModuloMetricContext"
 
 interface Registro {
   fecha: string
@@ -58,13 +59,21 @@ export default function SeguimientoCoach() {
   const [cargando, setCargando] = useState(true)
   const [semanaSeleccionada, setSemanaSeleccionada] = useState("")
   const url = useModuloUrl("/api/modulos/seguimiento-coach")
+  const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
       if (d.semanas?.length) setSemanaSeleccionada(String(d.semanas.at(-1)))
+      if (d.resumen && d.resumen.totalDias > 0) {
+        const pct = d.resumen.pctCumplimiento
+        setMetric({
+          valor: `${pct}%`,
+          color: pct >= 80 ? "green" : pct >= 60 ? "yellow" : "red",
+        })
+      }
     }).finally(() => setCargando(false))
-  }, [url])
+  }, [url, setMetric])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data?.resumen || data.resumen.totalDias === 0) return <p className="text-xs text-gray-500 py-2">Sin registros.</p>

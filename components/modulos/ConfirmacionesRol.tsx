@@ -158,14 +158,29 @@ export default function ConfirmacionesRol() {
     )
   }
 
+  function parseSheetDate(dateStr: string): Date | null {
+    if (!dateStr) return null
+    const parts = dateStr.split("/")
+    if (parts.length === 3) {
+      const day   = Number(parts[0])
+      const month = Number(parts[1])
+      const year  = Number(parts[2].split(" ")[0].split("T")[0])
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
+        const d = new Date(year, month - 1, day)
+        return isNaN(d.getTime()) ? null : d
+      }
+    }
+    const d = new Date(dateStr)
+    return isNaN(d.getTime()) ? null : d
+  }
+
   // ── VISTA COACH/COORDINADOR — confirmaciones REALIZADAS ───────────
-  // Filtrar solo confirmaciones de esta semana
   const confirmacionesEstaSemana = data.ultimas5.filter(c => {
     if (!c.fecha) return false
-    const fechaConfirmacion = new Date(c.fecha)
+    const fechaConfirmacion = parseSheetDate(c.fecha)
+    if (!fechaConfirmacion) return false
     const hoy = new Date()
     const diasDiferencia = Math.floor((hoy.getTime() - fechaConfirmacion.getTime()) / (1000 * 60 * 60 * 24))
-    // Mostrar confirmaciones de los últimos 7 días (esta semana)
     return diasDiferencia >= 0 && diasDiferencia < 7
   })
 
