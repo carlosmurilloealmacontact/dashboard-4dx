@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
         nombre: perfil.persona.nombre,
         nombreNormalizado: nombrePersona,
         rol: perfil.rol,
-        email: perfil.emailCorporativo,
+        email: perfil.persona.emailCorporativo,
       },
       seguimientoCoach: {
         sheetRows: seguimientoRows.length - 1,
