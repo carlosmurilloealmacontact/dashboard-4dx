@@ -115,7 +115,8 @@ export default function RealDemoPage() {
             </div>
 
             {modulosVisibles.length > 0 ? (
-              <>
+              // emailOverride hace que useModuloUrl agregue ?email=... a todas las llamadas de módulos
+              <PerfilProvider perfil={perfil} emailOverride={usuarioSeleccionado}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
                   {modulosVisibles.map(modulo => (
                     <ModuloCard
@@ -129,11 +130,9 @@ export default function RealDemoPage() {
 
                 {/* Vista de seguimiento de equipo para coaches */}
                 {perfil.rol === "coach" && (
-                  <PerfilProvider perfil={perfil}>
-                    <CoachTeamView perfilCoach={perfil} />
-                  </PerfilProvider>
+                  <CoachTeamView perfilCoach={perfil} />
                 )}
-              </>
+              </PerfilProvider>
             ) : (
               <p className="text-gray-600 text-sm">No hay módulos configurados para este rol.</p>
             )}
