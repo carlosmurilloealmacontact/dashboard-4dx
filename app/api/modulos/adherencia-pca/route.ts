@@ -121,13 +121,17 @@ export async function GET(req: NextRequest) {
   const semanaActual = semanas.at(-1) ?? ""
   const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
-  // Días únicos con sus monitoreos (una entrada por fecha, toma el ÚLTIMO registro
-  // del día para que "Total Gestión Dia" refleje el acumulado final del día)
+  // Días únicos con sus monitoreos.
+  // "Total Gestión Dia" es un acumulado que crece durante el día y puede
+  // terminar en 0 (fila cierre). Se toma el MÁXIMO para obtener el pico real.
   const porFecha: Record<string, { total: number; cumple: string }> = {}
   registros.forEach(r => {
     if (r.fecha) {
-      // Sobreescribir siempre → el último registro del día queda guardado
-      porFecha[r.fecha] = { total: r.total, cumple: r.cumple }
+      const prev = porFecha[r.fecha]
+      porFecha[r.fecha] = {
+        total:  prev ? Math.max(prev.total, r.total) : r.total,
+        cumple: r.cumple || (prev?.cumple ?? ""),
+      }
     }
   })
 
