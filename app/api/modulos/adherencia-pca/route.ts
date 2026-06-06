@@ -89,13 +89,15 @@ export async function GET(req: NextRequest) {
     const pctGlobal = allPcts.length > 0 ? Math.round(allPcts.reduce((a, b) => a + b) / allPcts.length) : 0
     const totalMonitoreos = deEstaSemana.reduce((s, d) => s + d.total, 0)
 
-    return NextResponse.json({
+    const resCoord = NextResponse.json({
       modo: "coordinador",
       semanas,
       semanaActual,
       kpi: { pct: pctGlobal, totalMonitoreos },
       porSupervisor,
     })
+    resCoord.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=60')
+    return resCoord
   }
 
   // Vista supervisor/coach: sus propios monitoreos
@@ -149,6 +151,7 @@ export async function GET(req: NextRequest) {
     dias,
   })
 
-  response.headers.set('Cache-Control', 'no-store')
+  // Caché corta: 2 min — la hoja tiene 17k+ filas, sin caché agota la quota
+  response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=60')
   return response
 }

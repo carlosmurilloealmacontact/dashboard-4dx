@@ -55,12 +55,14 @@ function barColor(n: number) {
 export default function AdherenciaPCA() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState("")
   const [semana, setSemana] = useState("")
   const url = useModuloUrl("/api/modulos/adherencia-pca")
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
+      if (d.error) { setError(d.error); return }
       setData(d)
       if (d.semanaActual) setSemana(String(d.semanaActual))
       if (d.kpi) {
@@ -73,6 +75,7 @@ export default function AdherenciaPCA() {
   }, [url, setMetric])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+  if (error) return <p className="text-xs text-red-400 py-2">Error: {error}</p>
   if (!data || !data.kpi) return <p className="text-xs text-gray-500 py-2">Sin registros.</p>
 
   const semanaActiva = semana || data.semanaActual
