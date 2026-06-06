@@ -139,9 +139,21 @@ export async function GET(req: NextRequest) {
     }
   }))
 
-  // Semana actual del servidor
+  // Semana actual: lunes 00:00 → domingo 23:59 (más robusto que ISO week)
+  const hoy = new Date()
+  const diaSemana = hoy.getDay() // 0=dom, 1=lun, ...
+  const lunes = new Date(hoy)
+  lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
+  lunes.setHours(0, 0, 0, 0)
+  const domingo = new Date(lunes)
+  domingo.setDate(lunes.getDate() + 6)
+  domingo.setHours(23, 59, 59, 999)
+
   const semanaActual = getISOWeek(new Date().toISOString())
-  const deEstaSemana = confirmaciones.filter(c => c.semana === semanaActual)
+  const deEstaSemana = confirmaciones.filter(c => {
+    const d = parseSheetDate(c.fecha)
+    return d !== null && d >= lunes && d <= domingo
+  })
 
   // Promedios por dimensión (todas las confirmaciones)
   function promDim(key: keyof typeof confirmaciones[0]["dims"]) {

@@ -175,13 +175,20 @@ export default function ConfirmacionesRol() {
   }
 
   // ── VISTA COACH/COORDINADOR — confirmaciones REALIZADAS ───────────
+  // Misma lógica que el backend: lunes 00:00 → domingo 23:59
+  const hoy = new Date()
+  const diaSemana = hoy.getDay()
+  const lunes = new Date(hoy)
+  lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
+  lunes.setHours(0, 0, 0, 0)
+  const domingo = new Date(lunes)
+  domingo.setDate(lunes.getDate() + 6)
+  domingo.setHours(23, 59, 59, 999)
+
   const confirmacionesEstaSemana = data.ultimas5.filter(c => {
     if (!c.fecha) return false
-    const fechaConfirmacion = parseSheetDate(c.fecha)
-    if (!fechaConfirmacion) return false
-    const hoy = new Date()
-    const diasDiferencia = Math.floor((hoy.getTime() - fechaConfirmacion.getTime()) / (1000 * 60 * 60 * 24))
-    return diasDiferencia >= 0 && diasDiferencia < 7
+    const d = parseSheetDate(c.fecha)
+    return d !== null && d >= lunes && d <= domingo
   })
 
   return (
