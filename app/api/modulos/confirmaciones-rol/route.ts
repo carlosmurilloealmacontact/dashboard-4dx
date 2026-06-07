@@ -26,19 +26,25 @@ function textoANum(v: string): number | null {
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr) return null
-  // Handle "dd/mm/yyyy" or "dd/mm/yyyy HH:MM:SS" (Google Sheets LATAM format)
-  const parts = dateStr.split("/")
+  const s = dateStr.trim()
+  // Formato ISO con guiones: "2026-06-01" o "2026-06-01 12:02"
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (iso) {
+    const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
+    return isNaN(d.getTime()) ? null : d
+  }
+  // Formato LATAM con barras: "dd/mm/yyyy" o "dd/mm/yyyy HH:MM:SS"
+  const parts = s.split("/")
   if (parts.length === 3) {
     const day   = Number(parts[0])
     const month = Number(parts[1])
-    // parts[2] may be "2026" or "2026 09:15:00" — take only the year portion
     const year  = Number(parts[2].split(" ")[0].split("T")[0])
     if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
       const d = new Date(year, month - 1, day)
       return isNaN(d.getTime()) ? null : d
     }
   }
-  const d = new Date(dateStr)
+  const d = new Date(s)
   return isNaN(d.getTime()) ? null : d
 }
 
@@ -187,7 +193,7 @@ export async function GET(req: NextRequest) {
     alertaCoach,
     promedios,
     dimMasAfectada: dimMasAfectada ? { key: dimMasAfectada[0], label: DIMS_LABELS[dimMasAfectada[0]], valor: dimMasAfectada[1] } : null,
-    ultimas5: confirmaciones.slice(-5),
+    ultimas5: confirmaciones.slice(-10),
   })
 
   response.headers.set('Cache-Control', 'no-store')

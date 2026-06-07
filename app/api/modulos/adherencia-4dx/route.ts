@@ -81,16 +81,17 @@ export async function GET(req: NextRequest) {
   const iBP     = idx("bp")
   const iNombre = idx("nombre")
   const iJefe   = idx("jefe_inmediato")
+  const iCoordinador = idx("coordinador")
   const iCumple = idx("cumple_dia")
 
   const esCoord = ["coordinador", "jefatura", "gerente"].includes(perfil.rol?.toLowerCase())
+  const nombrePersonaCoord = (perfil.persona.nombre ?? "").toLowerCase().trim()
 
   if (esCoord) {
     // --- VISTA COORDINADOR: agrupar por supervisor ---
-    const supervisores = perfil.supervisores.map(s => (s.nombre ?? "").toLowerCase().trim())
-
+    // Filtramos por la columna "Coordinador" de la hoja (perfil.supervisores puede venir vacío).
     const registros = rows.slice(1)
-      .filter(r => supervisores.includes((r[iJefe] ?? "").toLowerCase().trim()))
+      .filter(r => iCoordinador >= 0 && (r[iCoordinador] ?? "").toLowerCase().trim() === nombrePersonaCoord)
       .map(r => ({
         fecha:  r[iFecha]  ?? "",
         semana: r[iSemana] ?? "",

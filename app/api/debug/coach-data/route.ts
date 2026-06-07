@@ -69,7 +69,53 @@ export async function GET(req: NextRequest) {
       .filter(r => iNombreCoach >= 0 && (r[iNombreCoach] ?? "").toLowerCase().trim() === nombrePersona)
       .length
 
+    // === ADHERENCIA 4DX (Cumplimiento_Diario_MCI) ===
+    const adh4Rows = await getSheetData(
+      session.accessToken,
+      "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso",
+      "Cumplimiento_Diario_MCI!A:J"
+    )
+    const adh4Headers = adh4Rows[0] ?? []
+    const adh4idx = (n: string) => adh4Headers.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase())
+    const i4Jefe = adh4idx("jefe_inmediato")
+    const supervisoresNombres = (perfil.supervisores ?? []).map(s => (s.nombre ?? "").toLowerCase().trim())
+    const jefesEnHoja = [...new Set(adh4Rows.slice(1).map(r => (r[i4Jefe] ?? "").toLowerCase().trim()).filter(Boolean))]
+    const adh4Matches = adh4Rows.slice(1).filter(r => supervisoresNombres.includes((r[i4Jefe] ?? "").toLowerCase().trim())).length
+    const adherencia4DX = {
+      headers: adh4Headers,
+      i4Jefe,
+      rolPerfil: perfil.rol,
+      supervisoresDelPerfil: supervisoresNombres,
+      adh4Matches,
+      jefesEnHoja: jefesEnHoja.slice(0, 40),
+    }
+
+    // === MUESTRAS CRUDAS PARA DIAGNÓSTICO ===
+    // PCA: fechas/semanas de Lucero
+    const iAdhFecha = adhHeaders.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === "fecha")
+    const iAdhDia   = adhHeaders.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === "dia semana")
+    const iAdhSem   = adhHeaders.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === "semana")
+    const iAdhTot   = adhHeaders.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === "total gestion dia")
+    const pcaRowsLucero = adherenciaRows.slice(1)
+      .filter(r => iNombre >= 0 && (r[iNombre] ?? "").toLowerCase().trim() === nombrePersona)
+      .map(r => ({ fecha: r[iAdhFecha] ?? "", dia: r[iAdhDia] ?? "", semana: r[iAdhSem] ?? "", total: r[iAdhTot] ?? "" }))
+    const pcaUltimas20 = pcaRowsLucero.slice(-20)
+    const pcaSemanas = [...new Set(pcaRowsLucero.map(r => r.semana).filter(Boolean))]
+
+    // Confirmaciones: fechas de Lucero
+    const iConfFecha = confirmHeaders.findIndex(h => (h ?? "").toLowerCase().includes("criação") || (h ?? "").toLowerCase().includes("criacao"))
+    const confRowsLucero = confirmRows.slice(1)
+      .filter(r => iNombreCoach >= 0 && (r[iNombreCoach] ?? "").toLowerCase().trim() === nombrePersona)
+      .map(r => r[iConfFecha] ?? "")
+    const confUltimas15 = confRowsLucero.slice(-15)
+
     const resultado = {
+      hoy: new Date().toString(),
+      adherencia4DX,
+      muestras: {
+        pca: { iAdhFecha, iAdhDia, iAdhSem, iAdhTot, semanasUnicas: pcaSemanas, ultimas20: pcaUltimas20 },
+        confirmaciones: { iConfFecha, headerFecha: iConfFecha >= 0 ? confirmHeaders[iConfFecha] : "NOT FOUND", ultimas15: confUltimas15 },
+      },
       perfil: {
         nombre: perfil.persona.nombre,
         nombreNormalizado: nombrePersona,

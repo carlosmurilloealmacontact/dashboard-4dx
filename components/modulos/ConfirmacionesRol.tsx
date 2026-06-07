@@ -69,7 +69,7 @@ export default function ConfirmacionesRol() {
         })
       } else {
         setMetric({
-          valor: `${d.total} realizadas`,
+          valor: `${d.deEstaSemana} realizadas`,
           alerta: d.alertaCoach ? 1 : 0,
           color: d.deEstaSemana > 0 ? "green" : d.total > 0 ? "yellow" : "white",
         })
@@ -160,7 +160,14 @@ export default function ConfirmacionesRol() {
 
   function parseSheetDate(dateStr: string): Date | null {
     if (!dateStr) return null
-    const parts = dateStr.split("/")
+    const s = dateStr.trim()
+    // Formato ISO con guiones: "2026-06-01" o "2026-06-01 12:02"
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+    if (iso) {
+      const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
+      return isNaN(d.getTime()) ? null : d
+    }
+    const parts = s.split("/")
     if (parts.length === 3) {
       const day   = Number(parts[0])
       const month = Number(parts[1])
@@ -170,7 +177,7 @@ export default function ConfirmacionesRol() {
         return isNaN(d.getTime()) ? null : d
       }
     }
-    const d = new Date(dateStr)
+    const d = new Date(s)
     return isNaN(d.getTime()) ? null : d
   }
 
