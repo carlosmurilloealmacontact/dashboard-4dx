@@ -12,6 +12,30 @@ function parseCumplePct(v: string): number {
   return parseFloat((v ?? "").replace(",", ".").replace("%", "")) || 0
 }
 
+function parseSheetDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+  const parts = dateStr.split("/")
+  if (parts.length === 3) {
+    const day = Number(parts[0])
+    const month = Number(parts[1])
+    const year = Number(parts[2].split(" ")[0].split("T")[0])
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
+      const d = new Date(year, month - 1, day)
+      return isNaN(d.getTime()) ? null : d
+    }
+  }
+  const d = new Date(dateStr)
+  return isNaN(d.getTime()) ? null : d
+}
+
+function getISOWeek(dateStr: string): string {
+  const d = parseSheetDate(dateStr)
+  if (!d) return ""
+  const jan1 = new Date(d.getFullYear(), 0, 1)
+  const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
+  return String(week)
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
@@ -58,7 +82,7 @@ export async function GET(req: NextRequest) {
       .map(r => ({
         nombre:  r[iNombre]  ?? "",
         fecha:   r[iFecha]   ?? "",
-        semana:  r[iSemana]  ?? "",
+        semana:  getISOWeek(r[iFecha] ?? "") || (r[iSemana] ?? ""),
         total:   parseInt(r[iTotal] ?? "0") || 0,
         cumple:  r[iCumple]  ?? "",
       }))
@@ -112,7 +136,7 @@ export async function GET(req: NextRequest) {
     .filter(r => iNombre >= 0 && (r[iNombre] ?? "").toLowerCase().trim() === nombrePersona)
     .map(r => ({
       fecha:   r[iFecha]   ?? "",
-      semana:  r[iSemana]  ?? "",
+      semana:  getISOWeek(r[iFecha] ?? "") || (r[iSemana] ?? ""),
       total:   parseInt(r[iTotal] ?? "0") || 0,
       cumple:  r[iCumple]  ?? "",
     }))
