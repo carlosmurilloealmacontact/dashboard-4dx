@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
 import { obtenerPerfil } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw"
 const HOJA = "Detalle Eventos"
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const email = req.nextUrl.searchParams.get("email") ?? session.user?.email ?? ""
+  const semanaParam = req.nextUrl.searchParams.get("semana")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest) {
       }))
 
     const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-    const semanaActual = semanas.at(-1) ?? ""
+    const semanaActual = resolverSemana(semanaParam, semanas)
     const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
     // Agrupar por supervisor → deduplicar por día (varias filas-evento por día),
@@ -129,7 +131,7 @@ export async function GET(req: NextRequest) {
     }))
 
   const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-  const semanaActual = semanas.at(-1) ?? ""
+  const semanaActual = resolverSemana(semanaParam, semanas)
 
   // La columna "Fecha" viene vacía → agrupamos por (semana, dia de la semana).
   // "Total Gestión Dia" aparece en una sola fila del día (resto vacío) → tomar el MÁXIMO.

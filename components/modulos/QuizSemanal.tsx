@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
+import { useSemanaGlobal } from "@/context/SemanaGlobalContext"
 
 interface Agente {
   nombre: string
@@ -32,48 +33,36 @@ interface Data {
 export default function QuizSemanal() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [semanaSel, setSemanaSel] = useState("")
+  const { semanaGlobal, reportWeeks } = useSemanaGlobal()
   const base = useModuloUrl("/api/modulos/quiz")
-  const url = semanaSel ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaSel}` : base
+  const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
-    setCargando(true)
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
+      if (Array.isArray(d.semanas)) reportWeeks("quiz", d.semanas)
       if (d.resumen) {
         setMetric({
           valor: `${d.resumen.presento} presentaron`,
           alerta: d.resumen.noPresento,
           color: d.resumen.noPresento === 0 ? "green" : d.resumen.noPresento <= 3 ? "yellow" : "red",
         })
+      } else {
+        setMetric({ valor: "—", color: "white" })
       }
     }).finally(() => setCargando(false))
-  }, [url, setMetric])
+  }, [url, setMetric, reportWeeks])
 
   if (cargando && !data) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data?.resumen || data.total === 0) return <p className="text-xs text-gray-500 py-2">Sin datos del quiz.</p>
 
   const { resumen } = data
-  const semanaActiva = semanaSel || data.semanaActual
-
-  const selectorSemana = (data.semanas?.length ?? 0) > 0 && (
-    <select
-      className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-      value={semanaActiva}
-      onChange={e => setSemanaSel(e.target.value)}
-    >
-      {data.semanas.map(s => (
-        <option key={s} value={s}>Semana {s}</option>
-      ))}
-    </select>
-  )
 
   // ── VISTA COORDINADOR ──────────────────────────────────────────
   if (data.modo === "coordinador") {
     return (
       <div className="space-y-4">
-        {selectorSemana}
         {/* KPI global */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-800 rounded-lg p-3">
@@ -125,7 +114,6 @@ export default function QuizSemanal() {
 
   return (
     <div className="space-y-4">
-      {selectorSemana}
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-gray-800 rounded-lg p-3">

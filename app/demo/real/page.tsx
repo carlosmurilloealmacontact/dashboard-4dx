@@ -6,6 +6,8 @@ import CoachTeamView from "@/components/CoachTeamView"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
+import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
+import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 
 const USUARIOS_DEMO = [
   { nombre: "MYRYAM LUCERO CASTRO LINARES", email: "lucero.castro@latam.com", rol: "coach" },
@@ -117,21 +119,26 @@ export default function RealDemoPage() {
             {modulosVisibles.length > 0 ? (
               // emailOverride hace que useModuloUrl agregue ?email=... a todas las llamadas de módulos
               <PerfilProvider perfil={perfil} emailOverride={usuarioSeleccionado}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-                  {modulosVisibles.map(modulo => (
-                    <ModuloCard
-                      key={modulo.id}
-                      {...modulo}
-                      equipo={perfil.equipo}
-                      rol={perfil.rol}
-                    />
-                  ))}
-                </div>
+                <SemanaGlobalProvider>
+                  <div className="mb-4 flex justify-end">
+                    <SemanaGlobalSelector light />
+                  </div>
+                  <div className="flex flex-col gap-2 mb-8">
+                    {modulosVisibles.map(modulo => (
+                      <ModuloCard
+                        key={modulo.id}
+                        {...modulo}
+                        equipo={perfil.equipo}
+                        rol={perfil.rol}
+                      />
+                    ))}
+                  </div>
 
-                {/* Vista de seguimiento de equipo para coaches */}
-                {perfil.rol === "coach" && (
-                  <CoachTeamView perfilCoach={perfil} />
-                )}
+                  {/* Vista de seguimiento de equipo para coaches */}
+                  {perfil.rol === "coach" && (
+                    <CoachTeamView perfilCoach={perfil} />
+                  )}
+                </SemanaGlobalProvider>
               </PerfilProvider>
             ) : (
               <p className="text-gray-600 text-sm">No hay módulos configurados para este rol.</p>

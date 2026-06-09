@@ -1,5 +1,6 @@
 import { getSheetData } from "@/lib/sheets"
 import type { PerfilUsuario } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
 const HOJA = "Resumen_Lideres_Diario_Historico_8Sem"
@@ -31,7 +32,7 @@ function formatCDR(v: string | null): number | null {
   return n <= 1 ? Math.round(n * 100) : Math.round(n)
 }
 
-export async function getPracticasLideres(accessToken: string, perfil: PerfilUsuario) {
+export async function getPracticasLideres(accessToken: string, perfil: PerfilUsuario, semanaParam?: string | null) {
   const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:L`)
   if (rows.length < 2) return null
 
@@ -64,7 +65,7 @@ export async function getPracticasLideres(accessToken: string, perfil: PerfilUsu
       }))
 
     const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-    const semanaActual = semanas.at(-1) ?? ""
+    const semanaActual = resolverSemana(semanaParam, semanas)
     const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
     // Agrupar por supervisor
@@ -108,7 +109,7 @@ export async function getPracticasLideres(accessToken: string, perfil: PerfilUsu
     }))
 
   const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-  const semanaActual = semanas.at(-1) ?? ""
+  const semanaActual = resolverSemana(semanaParam, semanas)
   const deEstaSemana = registros.filter(r => r.semana === semanaActual && !esFinDeSemana(r.fecha))
 
   // Días requeridos esta semana (Lun-Vie)

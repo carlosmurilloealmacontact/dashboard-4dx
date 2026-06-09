@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
+import { useSemanaGlobal } from "@/context/SemanaGlobalContext"
 
 interface Registro {
   fecha: string
@@ -53,29 +54,32 @@ const DIAS = [{ num: 1, label: "Lun" }, { num: 2, label: "Mar" }, { num: 3, labe
 export default function Adherencia4DX() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [semana, setSemana] = useState("")
   const [supervisorDetalle, setSupervisorDetalle] = useState<string | null>(null)
-  const url = useModuloUrl("/api/modulos/adherencia-4dx")
+  const { semanaGlobal, reportWeeks } = useSemanaGlobal()
+  const base = useModuloUrl("/api/modulos/adherencia-4dx")
+  const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
-      if (d.semanaActual) setSemana(String(d.semanaActual))
+      if (Array.isArray(d.semanas)) reportWeeks("adherencia-4dx", d.semanas)
       if (d.kpi) {
         setMetric({
           valor: `${d.kpi.pct}%`,
           alerta: d.kpi.alertas,
           color: colorText(d.kpi.pct),
         })
+      } else {
+        setMetric({ valor: "—", color: "white" })
       }
     }).finally(() => setCargando(false))
-  }, [url, setMetric])
+  }, [url, setMetric, reportWeeks])
 
-  if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+  if (cargando && !data) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data?.kpi || !data?.registros?.length) return <p className="text-xs text-gray-500 py-2">Sin registros.</p>
 
-  const semanaActiva = semana || data.semanaActual
+  const semanaActiva = data.semanaActual
 
   // ── VISTA COORDINADOR ──────────────────────────────────────────────
   if (data.modo === "coordinador") {
@@ -148,14 +152,8 @@ export default function Adherencia4DX() {
 
     return (
       <div className="space-y-4">
-        {data.semanas?.length > 0 && (
-          <select className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            value={semanaActiva} onChange={e => setSemana(e.target.value)}>
-            {data.semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
-          </select>
-        )}
         <div className="space-y-2">
-          <p className="text-xs text-gray-500">Por supervisor</p>
+          <p className="text-xs text-gray-500">Por supervisor — sem. {semanaActiva}</p>
           {resumen.map((sv, i) => (
             <button key={i} className="w-full bg-gray-800 rounded-lg p-3 text-left hover:border hover:border-gray-600"
               onClick={() => setSupervisorDetalle(sv.supervisor)}>
@@ -197,13 +195,6 @@ export default function Adherencia4DX() {
 
   return (
     <div className="space-y-4">
-      {data.semanas?.length > 0 && (
-        <select className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-          value={semanaActiva} onChange={e => setSemana(e.target.value)}>
-          {data.semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
-        </select>
-      )}
-
       <div className="bg-gray-800 rounded-lg p-3 flex justify-between items-center">
         <div>
           <p className="text-xs text-gray-400">Cumplimiento equipo</p>

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
 import { obtenerPerfil } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
 const HOJA = "Cumplimiento_Diario_MCI"
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
 
   const emailOverride = req.nextUrl.searchParams.get("email")
   const email = emailOverride ?? session.user?.email ?? ""
+  const semanaParam = req.nextUrl.searchParams.get("semana")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -105,7 +107,7 @@ export async function GET(req: NextRequest) {
       }))
 
     const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-    const semanaActual = semanas.at(-1) ?? ""
+    const semanaActual = resolverSemana(semanaParam, semanas)
     const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
     // Agrupar por supervisor
@@ -155,7 +157,7 @@ export async function GET(req: NextRequest) {
     }))
 
   const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-  const semanaActual = semanas.at(-1) ?? ""
+  const semanaActual = resolverSemana(semanaParam, semanas)
   const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
   // KPI: % cumplimiento y alertas dinámicas

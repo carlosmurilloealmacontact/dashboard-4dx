@@ -3,6 +3,8 @@
 import { useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import { PerfilProvider } from "@/context/PerfilContext"
+import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
+import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import type { PerfilUsuario, Persona } from "@/lib/jerarquia"
 
 // Función para normalizar cargo (mismo que en jerarquia.ts)
@@ -173,6 +175,7 @@ export default function AdminView({ perfilAdmin }: Props) {
   const teamEmail = personaSeleccionada?.emailCorporativo || personaSeleccionada?.email || ""
 
   return (
+    <SemanaGlobalProvider>
     <div className="mt-10">
       {/* Separador */}
       <div className="border-t border-gray-200 mb-8" />
@@ -255,6 +258,7 @@ export default function AdminView({ perfilAdmin }: Props) {
               )
             })}
           </select>
+          <SemanaGlobalSelector light />
         </div>
       )}
 
@@ -267,7 +271,7 @@ export default function AdminView({ perfilAdmin }: Props) {
               {personaSeleccionada.cargo && <span className="text-gray-600"> · {personaSeleccionada.cargo}</span>}
               {personaSeleccionada.servicio && <span className="text-gray-600"> · {personaSeleccionada.servicio}</span>}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-2">
               {MODULOS_EQUIPO.map(m => (
                 <ModuloCard
                   key={m.id}
@@ -295,5 +299,6 @@ export default function AdminView({ perfilAdmin }: Props) {
         </div>
       ) : null}
     </div>
+    </SemanaGlobalProvider>
   )
 }

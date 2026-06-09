@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { obtenerPerfil } from "@/lib/jerarquia"
 import { getPracticasLideres } from "@/lib/practicasLideres"
@@ -7,16 +7,17 @@ import { getPracticasLideres } from "@/lib/practicasLideres"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.accessToken || !session?.user?.email)
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
+  const semanaParam = req.nextUrl.searchParams.get("semana")
   const perfil = await obtenerPerfil(session.accessToken, session.user.email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
   try {
-    const data = await getPracticasLideres(session.accessToken, perfil)
+    const data = await getPracticasLideres(session.accessToken, perfil, semanaParam)
     if (!data) return NextResponse.json({ error: "Sin datos" }, { status: 404 })
     const res = NextResponse.json(data)
     res.headers.set("Cache-Control", "no-store")

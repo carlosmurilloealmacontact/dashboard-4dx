@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
+import { useSemanaGlobal } from "@/context/SemanaGlobalContext"
 
 interface Dia {
   dia: number
@@ -49,15 +50,17 @@ export default function AdherenciaPCA() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
-  const [semana, setSemana] = useState("")
-  const url = useModuloUrl("/api/modulos/adherencia-pca")
+  const { semanaGlobal, reportWeeks } = useSemanaGlobal()
+  const base = useModuloUrl("/api/modulos/adherencia-pca")
+  const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
-      if (d.error) { setError(d.error); return }
+      if (d.error) { setError(d.error); setMetric({ valor: "—", color: "white" }); return }
+      setError("")
       setData(d)
-      if (d.semanaActual) setSemana(String(d.semanaActual))
+      if (Array.isArray(d.semanas)) reportWeeks("adherencia-pca", d.semanas)
       if (d.kpi) {
         setMetric({
           valor: `${d.kpi.pct}%`,
@@ -65,26 +68,19 @@ export default function AdherenciaPCA() {
         })
       }
     }).finally(() => setCargando(false))
-  }, [url, setMetric])
+  }, [url, setMetric, reportWeeks])
 
-  if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
-  if (error) return <p className="text-xs text-red-400 py-2">Error: {error}</p>
+  if (cargando && !data) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+  if (error && !data) return <p className="text-xs text-red-400 py-2">Error: {error}</p>
   if (!data || !data.kpi) return <p className="text-xs text-gray-500 py-2">Sin registros.</p>
 
-  const semanaActiva = semana || data.semanaActual
+  const semanaActiva = data.semanaActual
 
   // ── VISTA COORDINADOR ──────────────────────────────────────────
   if (data.modo === "coordinador") {
     const supervisores = data.porSupervisor ?? []
     return (
       <div className="space-y-4">
-        {data.semanas?.length > 0 && (
-          <select className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            value={semanaActiva} onChange={e => setSemana(e.target.value)}>
-            {data.semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
-          </select>
-        )}
-
         {/* KPI global */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-800 rounded-lg p-3">
@@ -129,12 +125,6 @@ export default function AdherenciaPCA() {
 
   return (
     <div className="space-y-4">
-      {data.semanas?.length > 0 && (
-        <select className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-          value={semanaActiva} onChange={e => setSemana(e.target.value)}>
-          {data.semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
-        </select>
-      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3">

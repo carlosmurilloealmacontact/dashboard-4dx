@@ -6,6 +6,8 @@ import { signOut } from "next-auth/react"
 import ModuloCard from "@/components/ModuloCard"
 import CoachTeamView from "@/components/CoachTeamView"
 import AdminView from "@/components/AdminView"
+import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
+import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import { usePerfil } from "@/hooks/usePerfil"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 
@@ -112,7 +114,7 @@ export default function DashboardPage() {
         {perfil?.rol?.toLowerCase() === "admin" ? (
           <AdminView perfilAdmin={perfil} />
         ) : (
-          <>
+          <SemanaGlobalProvider>
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Hola, {nombreCorto} 👋</h2>
               {error ? (
@@ -129,16 +131,21 @@ export default function DashboardPage() {
             </div>
 
             {modulosVisibles.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {modulosVisibles.map((modulo) => (
-                  <ModuloCard
-                    key={modulo.id}
-                    {...modulo}
-                    equipo={perfil?.equipo ?? []}
-                    rol={perfil?.rol ?? "desconocido"}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="mb-4 flex justify-end">
+                  <SemanaGlobalSelector light />
+                </div>
+                <div className="flex flex-col gap-2">
+                  {modulosVisibles.map((modulo) => (
+                    <ModuloCard
+                      key={modulo.id}
+                      {...modulo}
+                      equipo={perfil?.equipo ?? []}
+                      rol={perfil?.rol ?? "desconocido"}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-gray-600 text-sm">No hay módulos configurados para tu rol.</p>
             )}
@@ -151,7 +158,7 @@ export default function DashboardPage() {
             <div className="mt-8 text-center text-xs text-gray-500">
               [Fin de página - rol: {perfil?.rol?.toLowerCase()}]
             </div>
-          </>
+          </SemanaGlobalProvider>
         )}
       </main>
     </div>

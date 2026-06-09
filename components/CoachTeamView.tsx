@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import { PerfilProvider } from "@/context/PerfilContext"
+import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
+import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 import type { PerfilUsuario } from "@/lib/jerarquia"
 
@@ -143,27 +145,32 @@ export default function CoachTeamView({ perfilCoach }: Props) {
 
       {/* Módulos del equipo */}
       {teamEmail ? (
-        <PerfilProvider perfil={perfilCoach} teamEmail={teamEmail}>
-          <div>
-            {coordSeleccionado && (
-              <p className="text-xs text-gray-500 mb-4">
-                Mostrando equipo de <span className="text-white">{coordSeleccionado.nombre.split(" ").slice(0, 3).join(" ")}</span>
-                {coordSeleccionado.servicio && <span className="text-gray-600"> · {coordSeleccionado.servicio}</span>}
-              </p>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {MODULOS_EQUIPO.map(m => (
-                <ModuloCard
-                  key={m.id}
-                  {...m}
-                  equipo={[]}
-                  rol="coordinador"
-                  servicio={servicioFiltrado}
-                />
-              ))}
-            </div>
+        <SemanaGlobalProvider>
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <SemanaGlobalSelector />
           </div>
-        </PerfilProvider>
+          <PerfilProvider perfil={perfilCoach} teamEmail={teamEmail}>
+            <div>
+              {coordSeleccionado && (
+                <p className="text-xs text-gray-500 mb-4">
+                  Mostrando equipo de <span className="text-white">{coordSeleccionado.nombre.split(" ").slice(0, 3).join(" ")}</span>
+                  {coordSeleccionado.servicio && <span className="text-gray-600"> · {coordSeleccionado.servicio}</span>}
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
+                {MODULOS_EQUIPO.map(m => (
+                  <ModuloCard
+                    key={m.id}
+                    {...m}
+                    equipo={[]}
+                    rol="coordinador"
+                    servicio={servicioFiltrado}
+                  />
+                ))}
+              </div>
+            </div>
+          </PerfilProvider>
+        </SemanaGlobalProvider>
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
           <p className="text-gray-500 text-sm">Selecciona un coordinador para ver el estado de su equipo.</p>

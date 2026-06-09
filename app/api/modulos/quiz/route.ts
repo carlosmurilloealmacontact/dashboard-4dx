@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
 import { obtenerPerfil } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1ElOVG-6SQZt_ZjnWKY7vUcWK78Zgm4dr4xZv3a5iA2k"
 const HOJA = "Data2"
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
       (r[iCoord] ?? "").toLowerCase().trim() === nombrePersona
     )
     const semanas = [...new Set(registros.map(r => r[iSemana]).filter(Boolean))].sort((a, b) => Number(a.replace("W","")) - Number(b.replace("W","")))
-    const semanaActual = (semanaParam && semanas.includes(semanaParam)) ? semanaParam : (semanas.at(-1) ?? "")
+    const semanaActual = resolverSemana(semanaParam, semanas)
     const deEstaSemana = registros.filter(r => r[iSemana] === semanaActual)
 
     const jefesUnicos = [...new Set(deEstaSemana.map(r => r[iJefe]).filter(Boolean))]
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
     (r[iJefe] ?? "").toLowerCase().trim() === nombrePersona
   )
   const semanas = [...new Set(registros.map(r => r[iSemana]).filter(Boolean))].sort((a, b) => Number(a.replace("W","")) - Number(b.replace("W","")))
-  const semanaActual = (semanaParam && semanas.includes(semanaParam)) ? semanaParam : (semanas.at(-1) ?? "")
+  const semanaActual = resolverSemana(semanaParam, semanas)
   const deEstaSemana = registros.filter(r => r[iSemana] === semanaActual)
 
   const presentaron  = deEstaSemana.filter(r => presentoQuiz(r[iPres] ?? ""))

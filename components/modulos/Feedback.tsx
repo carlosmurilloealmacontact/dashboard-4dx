@@ -56,6 +56,8 @@ export default function Feedback() {
           alerta: d.resumen.nuevos,
           color: d.resumen.nuevos > 0 ? "red" : "green",
         })
+      } else {
+        setMetric({ valor: "—", color: "white" })
       }
     }).finally(() => setCargando(false))
   }, [url, setMetric])

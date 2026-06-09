@@ -18,11 +18,11 @@ const COMPONENTES: Partial<Record<string, React.LazyExoticComponent<() => React.
 }
 
 const COLOR_METRIC: Record<string, string> = {
-  green:  "text-green-400",
-  yellow: "text-yellow-400",
-  red:    "text-red-400",
-  blue:   "text-blue-400",
-  white:  "text-gray-900",
+  green:  "text-green-600",
+  yellow: "text-amber-500",
+  red:    "text-red-500",
+  blue:   "text-blue-500",
+  white:  "text-gray-500",
 }
 
 interface ModuloCardProps {
@@ -41,78 +41,71 @@ function CardInner({ id, titulo, icono, descripcion, equipo, servicio }: ModuloC
   const { metric } = useModuloMetric()
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all hover:border-gray-700">
+    <div className={`bg-white border rounded-xl overflow-hidden transition-colors ${expandido ? "border-gray-300" : "border-gray-200 hover:border-gray-300"}`}>
+      {/* ── Fila principal (siempre visible) ─────────────────────── */}
       <button
-        className="w-full p-5 text-left flex items-start justify-between gap-3"
+        className="w-full px-4 py-3.5 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors"
         onClick={() => setExpandido(!expandido)}
       >
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">{icono}</span>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">{titulo}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{descripcion}</p>
-          </div>
+        {/* Ícono */}
+        <span className="text-xl w-7 text-center flex-shrink-0 select-none">{icono}</span>
+
+        {/* Título + descripción */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 leading-tight truncate">{titulo}</p>
+          <p className="text-xs text-gray-400 mt-0.5 truncate">{descripcion}</p>
         </div>
-        <span className="text-gray-600 text-xs mt-1">{expandido ? "▲" : "▼"}</span>
+
+        {/* Métrica de la semana (inline) */}
+        <div className="flex items-center gap-2 flex-shrink-0 text-right">
+          {metric ? (
+            <>
+              <span className={`text-sm font-bold tabular-nums ${COLOR_METRIC[metric.color ?? "white"]}`}>
+                {metric.valor}
+              </span>
+              {metric.alerta !== undefined && metric.alerta > 0 && (
+                <span className="text-xs bg-red-50 text-red-500 border border-red-200 px-1.5 py-0.5 rounded-full font-semibold leading-none">
+                  ⚠&nbsp;{metric.alerta}
+                </span>
+              )}
+            </>
+          ) : Componente ? (
+            <span className="text-xs text-gray-300 tracking-widest">···</span>
+          ) : (
+            <span className="text-xs text-gray-300">—</span>
+          )}
+        </div>
+
+        {/* Chevron */}
+        <svg
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${expandido ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
 
-      {/* KPI visible sin expandir */}
-      <div className="px-5 pb-3 flex items-center gap-4 border-t border-gray-200 pt-3">
-        {metric ? (
-          <>
-            <div>
-              <p className="text-xs text-gray-500">Esta semana</p>
-              <p className={`text-lg font-bold ${COLOR_METRIC[metric.color ?? "white"]}`}>
-                {metric.valor}
-              </p>
-            </div>
-            {metric.alerta !== undefined && metric.alerta > 0 && (
-              <div>
-                <p className="text-xs text-gray-500">Alertas</p>
-                <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full font-medium">
-                  {metric.alerta}
-                </span>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div>
-              <p className="text-xs text-gray-500">Esta semana</p>
-              <p className="text-lg font-bold text-gray-600">—</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Estado</p>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${Componente ? "bg-blue-900 text-blue-300" : "bg-gray-800 text-gray-400"}`}>
-                {Componente ? "Cargando..." : "Sin datos"}
-              </span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Componente siempre montado para que cargue datos y publique KPI */}
+      {/* ── Contenido del módulo ──────────────────────────────────── */}
       {Componente && (
-        <div className={expandido ? "px-5 pb-5 border-t border-gray-200 pt-4" : "hidden"}>
-          <Suspense fallback={<p className="text-xs text-gray-500 py-2">Cargando...</p>}>
+        <div className={expandido ? "border-t border-gray-100 px-4 pb-5 pt-4" : "hidden"}>
+          <Suspense fallback={<p className="text-xs text-gray-400 py-3 text-center">Cargando...</p>}>
             <Componente />
           </Suspense>
         </div>
       )}
 
-      {/* Panel expandible sin componente */}
       {expandido && !Componente && (
-        <div className="px-5 pb-5 border-t border-gray-200 pt-4">
+        <div className="border-t border-gray-100 px-4 pb-5 pt-4">
           <div className="space-y-1 max-h-64 overflow-y-auto">
             {equipo.length > 0 ? (
               equipo.map(p => (
                 <div key={p.cedula} className="flex items-center justify-between py-1">
-                  <span className="text-xs text-gray-300">{p.nombre}</span>
-                  <span className="text-xs text-gray-600">{p.servicio}</span>
+                  <span className="text-xs text-gray-700">{p.nombre}</span>
+                  <span className="text-xs text-gray-400">{p.servicio}</span>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-gray-500 text-center py-4">Próximamente.</p>
+              <p className="text-xs text-gray-400 text-center py-4">Próximamente.</p>
             )}
           </div>
         </div>

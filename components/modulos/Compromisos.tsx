@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
+import { useSemanaGlobal } from "@/context/SemanaGlobalContext"
 
 interface Agente {
   asesor: string
@@ -38,42 +38,39 @@ const CAT_CONFIG = {
 export default function Compromisos() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [semana, setSemana] = useState("")
   const [filtro, setFiltro] = useState<string>("todos")
-  const url = useModuloUrl("/api/modulos/compromisos")
+  const { semanaGlobal, reportWeeks } = useSemanaGlobal()
+  const base = useModuloUrl("/api/modulos/compromisos")
+  const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
-      if (d.semanaActual) setSemana(d.semanaActual)
+      if (Array.isArray(d.semanas)) reportWeeks("compromisos", d.semanas)
       if (d.resumen) {
         setMetric({
           valor: `${d.total} ingresados`,
           alerta: d.resumen.sinIngreso,
           color: d.resumen.sinIngreso > 0 ? "yellow" : "green",
         })
+      } else {
+        setMetric({ valor: "—", color: "white" })
       }
     }).finally(() => setCargando(false))
-  }, [url, setMetric])
+  }, [url, setMetric, reportWeeks])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data?.resumen) return <p className="text-xs text-gray-500 py-2">Sin datos.</p>
 
-  const { resumen, agentes, semanas } = data
+  const { resumen, agentes } = data
+  const semanaActiva = semanaGlobal ?? data.semanaActual
   const agentesFiltrados = filtro === "todos" ? agentes : agentes.filter(a => a.categoria === filtro)
 
   return (
     <div className="space-y-4">
-      {/* Selector semana */}
-      {semanas?.length > 0 && (
-        <select
-          className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-          value={semana}
-          onChange={e => setSemana(e.target.value)}
-        >
-          {semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
-        </select>
+      {semanaActiva && (
+        <p className="text-xs text-gray-500">Semana {semanaActiva}</p>
       )}
 
       {/* Resumen por estado — clickeables para filtrar */}

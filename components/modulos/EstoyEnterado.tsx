@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
+import { useModuloMetric } from "@/context/ModuloMetricContext"
 
 interface TemaData {
   tema: string
@@ -28,14 +29,23 @@ export default function EstoyEnterado() {
   const [semana, setSemana] = useState("")
   const [temaSeleccionado, setTemaSeleccionado] = useState("__todos__")
   const url = useModuloUrl("/api/modulos/estoy-enterado")
+  const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
       if (d.semanaActual) setSemana(d.semanaActual)
       setTemaSeleccionado("__todos__")
+      if (typeof d.pctClaro === "number") {
+        setMetric({
+          valor: `${d.pctClaro}% claridad`,
+          color: d.pctClaro >= 80 ? "green" : d.pctClaro >= 60 ? "yellow" : "red",
+        })
+      } else {
+        setMetric({ valor: "—", color: "white" })
+      }
     }).finally(() => setCargando(false))
-  }, [url])
+  }, [url, setMetric])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data || data.total === 0 || !data.porTema) return <p className="text-xs text-gray-500 py-2">Sin registros de briefings.</p>

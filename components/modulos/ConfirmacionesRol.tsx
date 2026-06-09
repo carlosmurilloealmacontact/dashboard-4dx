@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
+import { useSemanaGlobal, normalizarSemana } from "@/context/SemanaGlobalContext"
 
 interface Dims {
   preparacion: string; involucramiento: string; herramientas: string
@@ -61,15 +62,17 @@ export default function ConfirmacionesRol() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
   const [expandida, setExpandida] = useState<number | null>(null)
-  const [semana, setSemana] = useState("")
+  const { semanaGlobal, reportWeeks } = useSemanaGlobal()
   const url = useModuloUrl("/api/modulos/confirmaciones-rol")
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
-      if (d.semanaActual) setSemana(String(d.semanaActual))
-      if (d.esSupervisor) {
+      if (Array.isArray(d.semanas)) reportWeeks("confirmaciones", d.semanas)
+      if (typeof d.total !== "number") {
+        setMetric({ valor: "—", color: "white" })
+      } else if (d.esSupervisor) {
         setMetric({
           valor: `${d.total} recibidas`,
           alerta: d.dimMasAfectada && d.dimMasAfectada.valor < 80 ? 1 : 0,
@@ -83,7 +86,7 @@ export default function ConfirmacionesRol() {
         })
       }
     }).finally(() => setCargando(false))
-  }, [url, setMetric])
+  }, [url, setMetric, reportWeeks])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data || data.total === 0 || !data.ultimas5) return <p className="text-xs text-gray-500 py-2">Sin confirmaciones registradas.</p>
@@ -167,31 +170,18 @@ export default function ConfirmacionesRol() {
   }
 
   // ── VISTA COACH/COORDINADOR — confirmaciones REALIZADAS ───────────
-  const semanaSel = semana || data.semanaActual
-  const esSemanaActual = String(semanaSel) === String(data.semanaActual)
+  const semanaSelNorm = semanaGlobal ?? normalizarSemana(data.semanaActual)
+  const esSemanaActual = semanaSelNorm === normalizarSemana(data.semanaActual)
   const lista = data.confirmaciones ?? []
-  const confirmacionesSemana = lista.filter(c => String(c.semana) === String(semanaSel))
+  const confirmacionesSemana = lista.filter(c => normalizarSemana(c.semana) === semanaSelNorm)
   const conteoSemana = confirmacionesSemana.length
 
   return (
     <div className="space-y-4">
-      {/* Selector de semana */}
-      {data.semanas && data.semanas.length > 0 && (
-        <select
-          className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-          value={semanaSel}
-          onChange={e => setSemana(e.target.value)}
-        >
-          {data.semanas.map(s => (
-            <option key={s} value={s}>Semana {s}{String(s) === String(data.semanaActual) ? " (actual)" : ""}</option>
-          ))}
-        </select>
-      )}
-
       {/* KPI */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg p-3">
-          <p className="text-xs text-gray-600">{esSemanaActual ? "Esta semana" : `Semana ${semanaSel}`}</p>
+          <p className="text-xs text-gray-600">{esSemanaActual ? "Esta semana" : `Semana ${semanaSelNorm}`}</p>
           <p className={`text-2xl font-bold ${conteoSemana > 0 ? "text-green-600" : "text-red-600"}`}>
             {conteoSemana}
           </p>
@@ -212,7 +202,7 @@ export default function ConfirmacionesRol() {
       {/* Confirmaciones de la semana seleccionada */}
       <div>
         <p className="text-xs text-gray-600 mb-2">
-          {esSemanaActual ? "Confirmaciones de esta semana" : `Confirmaciones de la semana ${semanaSel}`}
+          {esSemanaActual ? "Confirmaciones de esta semana" : `Confirmaciones de la semana ${semanaSelNorm}`}
         </p>
         {confirmacionesSemana.length > 0 ? (
           <div className="space-y-1 max-h-48 overflow-y-auto">
