@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/authOptions"
 import { obtenerPerfil } from "@/lib/jerarquia"
 import { getPracticasLideres } from "@/lib/practicasLideres"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
@@ -15,7 +18,9 @@ export async function GET(req: NextRequest) {
   try {
     const data = await getPracticasLideres(session.accessToken, perfil)
     if (!data) return NextResponse.json({ error: "Sin datos" }, { status: 404 })
-    return NextResponse.json(data)
+    const res = NextResponse.json(data)
+    res.headers.set("Cache-Control", "no-store")
+    return res
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }

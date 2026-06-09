@@ -56,6 +56,9 @@ function calcularAlertas(registrosSemana: { bp: string; fecha: string; cumple: s
   return { count: bpsConAlerta.length, bps: bpsConAlerta }
 }
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })

@@ -18,6 +18,9 @@ function aproboQuiz(puntuacion: string) {
   return parseInt(puntuacion ?? "0") >= 30
 }
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
