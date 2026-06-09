@@ -10,6 +10,16 @@ interface Meta {
   meta: number
   cumple: boolean
   cantidad: number
+  multiJefatura?: boolean
+}
+
+interface JefaturaRow {
+  jefatura: string
+  meta: number
+  total: number
+  seleccionados: number
+  pctImpl: number
+  cumple: boolean
 }
 
 interface Idea {
@@ -30,6 +40,7 @@ interface Data {
   total: number
   porEtapa: Record<string, number>
   metas: { implementacion: Meta; backlog: Meta }
+  porJefatura?: JefaturaRow[]
   ultimas5: Idea[]
   porSupervisor?: SupervisorRow[]
 }
@@ -50,30 +61,42 @@ function colorEtapa(e: string) { return COLORES_ETAPA[e] ?? "bg-gray-600" }
 export default function Resolutividad() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState("")
   const [expandida, setExpandida] = useState<number | null>(null)
   const url = useModuloUrl("/api/modulos/resolutividad")
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
+    let activo = true
+    setCargando(true)
     fetch(url).then(r => r.json()).then(d => {
-      setData(d)
-      if (d.metas) {
-        const cumpleImpl = d.metas.implementacion?.cumple
-        const cumpleBack = d.metas.backlog?.cumple
-        const ok = cumpleImpl && cumpleBack
-        setMetric({
-          valor: `${d.metas.implementacion?.valor ?? 0}%`,
-          alerta: ok ? 0 : 1,
-          color: ok ? "green" : "yellow",
-        })
+      if (!activo) return
+      // Respuesta inválida/transitoria (error de Sheets, quota): NO pisar datos buenos
+      if (d?.error || typeof d?.total !== "number" || !d?.metas) {
+        setError(d?.error || "No se pudieron cargar los datos")
+        return
       }
-    }).finally(() => setCargando(false))
+      setError("")
+      setData(d)
+      const cumpleImpl = d.metas.implementacion?.cumple
+      const cumpleBack = d.metas.backlog?.cumple
+      const ok = cumpleImpl && cumpleBack
+      setMetric({
+        valor: `${d.metas.implementacion?.valor ?? 0}%`,
+        alerta: ok ? 0 : 1,
+        color: ok ? "green" : "yellow",
+      })
+    }).catch(() => { if (activo) setError("Error de red") })
+      .finally(() => { if (activo) setCargando(false) })
+    return () => { activo = false }
   }, [url, setMetric])
 
-  if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+  if (cargando && !data) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+  // Solo mostramos error si todavía no hay datos buenos en pantalla
+  if (!data && error) return <p className="text-xs text-yellow-500 py-2">No se pudo cargar (reintenta). {error}</p>
   if (!data || data.total === 0 || !data.metas) return <p className="text-xs text-gray-500 py-2">Sin ideas registradas.</p>
 
-  const { metas, porEtapa = {}, ultimas5 = [], porSupervisor } = data
+  const { metas, porEtapa = {}, ultimas5 = [], porSupervisor, porJefatura = [] } = data
 
   return (
     <div className="space-y-4">
@@ -92,7 +115,9 @@ export default function Resolutividad() {
               style={{ width: `${Math.min(metas.implementacion.valor / metas.implementacion.meta * 100, 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-600 mt-0.5">meta: ≥{metas.implementacion.meta}%</p>
+          <p className="text-xs text-gray-600 mt-0.5">
+            meta: ≥{metas.implementacion.meta}%{metas.implementacion.multiJefatura ? " (prom.)" : ""}
+          </p>
         </div>
 
         {/* Meta backlog */}
@@ -129,6 +154,35 @@ export default function Resolutividad() {
           })}
         </div>
       </div>
+
+      {/* Desglose por jefatura (cada jefatura con su meta dinámica) — solo si hay varias */}
+      {porJefatura.length > 1 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">Implementación por jefatura</p>
+          {porJefatura.map((jf, i) => (
+            <div key={i} className="bg-gray-800 rounded-lg p-3">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-gray-300 truncate max-w-[170px]">{jf.jefatura}</span>
+                <span className={`text-xs font-bold ${jf.cumple ? "text-green-400" : "text-yellow-400"}`}>
+                  {jf.pctImpl}% / ≥{jf.meta}%
+                </span>
+              </div>
+              <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-1">
+                <div
+                  className={`h-1.5 rounded-full ${jf.cumple ? "bg-green-500" : "bg-yellow-500"}`}
+                  style={{ width: `${Math.min(jf.pctImpl / jf.meta * 100, 100)}%` }}
+                />
+              </div>
+              <div className="flex gap-3 text-xs text-gray-600">
+                <span>{jf.seleccionados}/{jf.total} seleccionadas</span>
+                <span className={jf.cumple ? "text-green-400" : "text-yellow-400"}>
+                  {jf.cumple ? "✓ cumple" : "✗ bajo meta"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Vista coordinador: por supervisor */}
       {porSupervisor && porSupervisor.length > 0 && (

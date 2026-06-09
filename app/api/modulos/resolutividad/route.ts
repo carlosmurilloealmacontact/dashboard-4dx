@@ -7,8 +7,9 @@ import { obtenerPerfil } from "@/lib/jerarquia"
 const SHEET_ID = "1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM"
 const HOJA = "Datos"
 
-const META_IMPLEMENTACION = 23  // Seleccionados ≥ 23%
-const META_BACKLOG_MAX    = 10  // Aplicados ≤ 10%
+const META_IMPLEMENTACION = 23  // Fallback si la jefatura no está en la hoja Metas
+const META_BACKLOG_MAX    = 10  // Aplicados ≤ 10% (fijo)
+const HOJA_METAS = "Metas"
 
 function normalizarEtapa(etapa: string): string {
   const e = etapa.toLowerCase().trim()
@@ -46,6 +47,21 @@ export async function GET(req: NextRequest) {
   const iNombreA  = idx("nombre asesor")
   const iLider    = idx("lider socio")
   const iCoord    = idx("coordinador")
+  const iJefatura = idx("jefatura")
+
+  // Mapa Jefatura → meta de implementación (%). La hoja Metas tiene "Jefatura | Meta" (decimal "0,27")
+  const metaMap: Record<string, number> = {}
+  try {
+    const metasRows = await getSheetData(session.accessToken, SHEET_ID, `${HOJA_METAS}!A:B`)
+    metasRows.slice(1).forEach(r => {
+      const jef = (r[0] ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim()
+      const valor = parseFloat((r[1] ?? "").replace(",", ".")) || 0
+      if (jef) metaMap[jef] = Math.round(valor * 100)
+    })
+  } catch { /* si falla, se usa el fallback META_IMPLEMENTACION */ }
+
+  const metaDeJefatura = (jef: string) =>
+    metaMap[(jef ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim()] ?? META_IMPLEMENTACION
   const iProblema = headers.findIndex(h => (h ?? "").toLowerCase().includes("problema") || (h ?? "").toLowerCase().includes("situação"))
   const iPropuesta = headers.findIndex(h => (h ?? "").toLowerCase().includes("proposta") || (h ?? "").toLowerCase().includes("propuesta"))
 
@@ -60,6 +76,7 @@ export async function GET(req: NextRequest) {
     etapa:     normalizarEtapa(r[iEtapa] ?? ""),
     etapaRaw:  r[iEtapa] ?? "",
     asesor:    r[iNombreA]  ?? "",
+    jefatura:  iJefatura >= 0 ? (r[iJefatura] ?? "") : "",
     problema:  iProblema >= 0 ? r[iProblema] : "",
     propuesta: iPropuesta >= 0 ? r[iPropuesta] : "",
   }))
@@ -76,12 +93,36 @@ export async function GET(req: NextRequest) {
   const pctImplementacion = total > 0 ? Math.round((seleccionados / total) * 100) : 0
   const pctBacklog        = total > 0 ? Math.round((aplicados     / total) * 100) : 0
 
+  // ── Meta de implementación dinámica por jefatura ──────────────────
+  // Conteo de ideas por jefatura (para meta predominante / ponderada / desglose)
+  const ideasPorJefatura: Record<string, number> = {}
+  ideas.forEach(i => { if (i.jefatura) ideasPorJefatura[i.jefatura] = (ideasPorJefatura[i.jefatura] ?? 0) + 1 })
+  const jefaturasPresentes = Object.keys(ideasPorJefatura)
+
+  // Desglose por jefatura (lo usa el coordinador; también sirve al supervisor con 1 jefatura)
+  const porJefatura = jefaturasPresentes.map(jef => {
+    const ideasJef = ideas.filter(i => i.jefatura === jef)
+    const t = ideasJef.length
+    const sel = ideasJef.filter(i => i.etapa === "Seleccionados").length
+    const pct = t > 0 ? Math.round((sel / t) * 100) : 0
+    const meta = metaDeJefatura(jef)
+    return { jefatura: jef, meta, total: t, seleccionados: sel, pctImpl: pct, cumple: pct >= meta }
+  }).sort((a, b) => (a.pctImpl - a.meta) - (b.pctImpl - b.meta))
+
+  // Meta a aplicar en el KPI global:
+  // - Supervisor (1 jefatura): la de su jefatura predominante.
+  // - Coordinador (varias): promedio ponderado por # de ideas (el desglose muestra el detalle real).
+  const metaImplementacion = total > 0 && jefaturasPresentes.length > 0
+    ? Math.round(jefaturasPresentes.reduce((s, jef) => s + metaDeJefatura(jef) * ideasPorJefatura[jef], 0) / total)
+    : META_IMPLEMENTACION
+
   const metas = {
     implementacion: {
       valor: pctImplementacion,
-      meta: META_IMPLEMENTACION,
-      cumple: pctImplementacion >= META_IMPLEMENTACION,
+      meta: metaImplementacion,
+      cumple: pctImplementacion >= metaImplementacion,
       cantidad: seleccionados,
+      multiJefatura: jefaturasPresentes.length > 1,
     },
     backlog: {
       valor: pctBacklog,
@@ -121,6 +162,7 @@ export async function GET(req: NextRequest) {
     total,
     porEtapa,
     metas,
+    porJefatura,
     ultimas5: ideas.slice(-5),
     porSupervisor,
   })

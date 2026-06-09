@@ -15,15 +15,21 @@ interface Confirmacion {
   fecha: string; ritual: string; pontos: string; oport: string; liderAcomp: string; dims: Dims
 }
 
+interface ConfLigera {
+  fecha: string; semana: string; liderAcomp: string; ritual: string
+}
+
 interface Data {
   total: number
   esSupervisor: boolean
   semanaActual: string
+  semanas?: string[]
   deEstaSemana: number
   alertaSupervisor: string | null
   alertaCoach: string | null
   promedios: Record<string, number | null>
   dimMasAfectada: { key: string; label: string; valor: number } | null
+  confirmaciones?: ConfLigera[]
   ultimas5: Confirmacion[]
 }
 
@@ -55,12 +61,14 @@ export default function ConfirmacionesRol() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
   const [expandida, setExpandida] = useState<number | null>(null)
+  const [semana, setSemana] = useState("")
   const url = useModuloUrl("/api/modulos/confirmaciones-rol")
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
+      if (d.semanaActual) setSemana(String(d.semanaActual))
       if (d.esSupervisor) {
         setMetric({
           valor: `${d.total} recibidas`,
@@ -158,54 +166,34 @@ export default function ConfirmacionesRol() {
     )
   }
 
-  function parseSheetDate(dateStr: string): Date | null {
-    if (!dateStr) return null
-    const s = dateStr.trim()
-    // Formato ISO con guiones: "2026-06-01" o "2026-06-01 12:02"
-    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
-    if (iso) {
-      const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
-      return isNaN(d.getTime()) ? null : d
-    }
-    const parts = s.split("/")
-    if (parts.length === 3) {
-      const day   = Number(parts[0])
-      const month = Number(parts[1])
-      const year  = Number(parts[2].split(" ")[0].split("T")[0])
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
-        const d = new Date(year, month - 1, day)
-        return isNaN(d.getTime()) ? null : d
-      }
-    }
-    const d = new Date(s)
-    return isNaN(d.getTime()) ? null : d
-  }
-
   // ── VISTA COACH/COORDINADOR — confirmaciones REALIZADAS ───────────
-  // Misma lógica que el backend: lunes 00:00 → domingo 23:59
-  const hoy = new Date()
-  const diaSemana = hoy.getDay()
-  const lunes = new Date(hoy)
-  lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
-  lunes.setHours(0, 0, 0, 0)
-  const domingo = new Date(lunes)
-  domingo.setDate(lunes.getDate() + 6)
-  domingo.setHours(23, 59, 59, 999)
-
-  const confirmacionesEstaSemana = data.ultimas5.filter(c => {
-    if (!c.fecha) return false
-    const d = parseSheetDate(c.fecha)
-    return d !== null && d >= lunes && d <= domingo
-  })
+  const semanaSel = semana || data.semanaActual
+  const esSemanaActual = String(semanaSel) === String(data.semanaActual)
+  const lista = data.confirmaciones ?? []
+  const confirmacionesSemana = lista.filter(c => String(c.semana) === String(semanaSel))
+  const conteoSemana = confirmacionesSemana.length
 
   return (
     <div className="space-y-4">
+      {/* Selector de semana */}
+      {data.semanas && data.semanas.length > 0 && (
+        <select
+          className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+          value={semanaSel}
+          onChange={e => setSemana(e.target.value)}
+        >
+          {data.semanas.map(s => (
+            <option key={s} value={s}>Semana {s}{String(s) === String(data.semanaActual) ? " (actual)" : ""}</option>
+          ))}
+        </select>
+      )}
+
       {/* KPI */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg p-3">
-          <p className="text-xs text-gray-600">Esta semana</p>
-          <p className={`text-2xl font-bold ${data.deEstaSemana > 0 ? "text-green-600" : "text-red-600"}`}>
-            {data.deEstaSemana}
+          <p className="text-xs text-gray-600">{esSemanaActual ? "Esta semana" : `Semana ${semanaSel}`}</p>
+          <p className={`text-2xl font-bold ${conteoSemana > 0 ? "text-green-600" : "text-red-600"}`}>
+            {conteoSemana}
           </p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-3">
@@ -214,19 +202,21 @@ export default function ConfirmacionesRol() {
         </div>
       </div>
 
-      {/* Alerta si no ha hecho esta semana */}
-      {data.alertaCoach && (
+      {/* Alerta si no ha hecho esta semana (solo en la semana actual) */}
+      {esSemanaActual && data.alertaCoach && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-xs text-red-700 font-medium">⚠ {data.alertaCoach}</p>
         </div>
       )}
 
-      {/* Confirmaciones de esta semana */}
+      {/* Confirmaciones de la semana seleccionada */}
       <div>
-        <p className="text-xs text-gray-600 mb-2">Confirmaciones de esta semana</p>
-        {confirmacionesEstaSemana.length > 0 ? (
+        <p className="text-xs text-gray-600 mb-2">
+          {esSemanaActual ? "Confirmaciones de esta semana" : `Confirmaciones de la semana ${semanaSel}`}
+        </p>
+        {confirmacionesSemana.length > 0 ? (
           <div className="space-y-1 max-h-48 overflow-y-auto">
-            {confirmacionesEstaSemana.map((c, i) => (
+            {confirmacionesSemana.map((c, i) => (
               <div key={i} className="flex items-center justify-between bg-white border border-gray-200 rounded px-3 py-2">
                 <span className="text-xs text-gray-700 truncate max-w-[160px]">{c.liderAcomp.split(" ").slice(0, 3).join(" ")}</span>
                 {c.ritual && <span className="text-xs text-gray-500 truncate max-w-[80px]">{c.ritual}</span>}

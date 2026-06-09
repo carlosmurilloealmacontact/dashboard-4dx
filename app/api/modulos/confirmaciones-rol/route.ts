@@ -184,15 +184,24 @@ export async function GET(req: NextRequest) {
     ? "Sin confirmaciones esta semana"
     : null
 
+  // Semanas con confirmaciones (para el filtro)
+  const semanas = [...new Set(confirmaciones.map(c => c.semana).filter(Boolean))]
+    .sort((a, b) => Number(a) - Number(b))
+
   const response = NextResponse.json({
     total: confirmaciones.length,
     esSupervisor,
     semanaActual,
+    semanas,
     deEstaSemana: deEstaSemana.length,
     alertaSupervisor,
     alertaCoach,
     promedios,
     dimMasAfectada: dimMasAfectada ? { key: dimMasAfectada[0], label: DIMS_LABELS[dimMasAfectada[0]], valor: dimMasAfectada[1] } : null,
+    // Lista completa (ligera) para filtrar por semana en el frontend
+    confirmaciones: confirmaciones.map(c => ({
+      fecha: c.fecha, semana: c.semana, liderAcomp: c.liderAcomp, ritual: c.ritual,
+    })),
     ultimas5: confirmaciones.slice(-10),
   })
 

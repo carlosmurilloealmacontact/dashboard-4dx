@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const email = req.nextUrl.searchParams.get("email") ?? session.user?.email ?? ""
+  const semanaParam = req.nextUrl.searchParams.get("semana")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
       (r[iCoord] ?? "").toLowerCase().trim() === nombrePersona
     )
     const semanas = [...new Set(registros.map(r => r[iSemana]).filter(Boolean))].sort((a, b) => Number(a.replace("W","")) - Number(b.replace("W","")))
-    const semanaActual = semanas.at(-1) ?? ""
+    const semanaActual = (semanaParam && semanas.includes(semanaParam)) ? semanaParam : (semanas.at(-1) ?? "")
     const deEstaSemana = registros.filter(r => r[iSemana] === semanaActual)
 
     const jefesUnicos = [...new Set(deEstaSemana.map(r => r[iJefe]).filter(Boolean))]
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
     (r[iJefe] ?? "").toLowerCase().trim() === nombrePersona
   )
   const semanas = [...new Set(registros.map(r => r[iSemana]).filter(Boolean))].sort((a, b) => Number(a.replace("W","")) - Number(b.replace("W","")))
-  const semanaActual = semanas.at(-1) ?? ""
+  const semanaActual = (semanaParam && semanas.includes(semanaParam)) ? semanaParam : (semanas.at(-1) ?? "")
   const deEstaSemana = registros.filter(r => r[iSemana] === semanaActual)
 
   const presentaron  = deEstaSemana.filter(r => presentoQuiz(r[iPres] ?? ""))
