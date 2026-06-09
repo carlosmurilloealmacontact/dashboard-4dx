@@ -8,7 +8,11 @@ const SHEET_ID = "1ElOVG-6SQZt_ZjnWKY7vUcWK78Zgm4dr4xZv3a5iA2k"
 const HOJA = "Data2"
 
 function presentoQuiz(v: string) {
-  return (v ?? "").toLowerCase().includes("presentó") || (v ?? "").toLowerCase().includes("presento")
+  // Normalizar acentos: "Presentó" → "presento", "No Presentó" → "no presento"
+  const s = (v ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim()
+  // "No Presentó" contiene "presento" → hay que excluirlo explícitamente
+  if (s.includes("no presento")) return false
+  return s.includes("presento")
 }
 function aproboQuiz(puntuacion: string) {
   return parseInt(puntuacion ?? "0") >= 30
