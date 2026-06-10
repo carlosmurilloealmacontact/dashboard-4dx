@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
-import { obtenerPerfil } from "@/lib/jerarquia"
+import { obtenerPerfil, cargarPersonas, type Persona } from "@/lib/jerarquia"
 import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID_PCA   = "1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw"
@@ -79,19 +79,40 @@ function promedio(vals: number[]): number {
 // Combina los registros PCA/PTA y Pauta de un mismo supervisor en un arreglo de
 // días (semana + día 1-5) con totales y % de cumplimiento por tipo y combinado.
 function combinarDias(
-  pca: { semana: string; dia: number; total: number; cumple: string }[],
+  pca: { semana: string; dia: number; origen: string; total: number; cumple: string }[],
   pauta: { semana: string; dia: number; nota: number }[]
 ): DiaCombinado[] {
-  // PCA/PTA: varias filas-evento por día → tomar el MÁXIMO de "total" y el cumple asociado
-  const porDiaPCA: Record<string, { total: number; cumple: number }> = {}
+  // PCA y PTA llegan en filas separadas (col "Origen"): varias filas-evento por
+  // día/origen → tomar el MÁXIMO de "total" y el cumple asociado dentro de cada origen.
+  const porDiaOrigen: Record<string, { total: number; cumple: number }> = {}
   pca.forEach(r => {
     if (!r.semana || !r.dia) return
-    const key = `${r.semana}-${r.dia}`
-    const prev = porDiaPCA[key]
+    const key = `${r.semana}-${r.dia}-${r.origen}`
+    const prev = porDiaOrigen[key]
     const cumple = parseCumplePct(r.cumple)
-    porDiaPCA[key] = {
+    porDiaOrigen[key] = {
       total:  prev ? Math.max(prev.total, r.total) : r.total,
       cumple: cumple || prev?.cumple || 0,
+    }
+  })
+
+  // Combinar PCA + PTA por día: SUMAR los totales de cada origen y promediar el
+  // cumplimiento ponderado por el total de cada uno.
+  const acumDia: Record<string, { total: number; sumaPonderada: number }> = {}
+  Object.entries(porDiaOrigen).forEach(([key, val]) => {
+    const [semana, dia] = key.split("-")
+    const diaKey = `${semana}-${dia}`
+    const prev = acumDia[diaKey] ?? { total: 0, sumaPonderada: 0 }
+    acumDia[diaKey] = {
+      total: prev.total + val.total,
+      sumaPonderada: prev.sumaPonderada + val.cumple * val.total,
+    }
+  })
+  const porDiaPCA: Record<string, { total: number; cumple: number }> = {}
+  Object.entries(acumDia).forEach(([diaKey, val]) => {
+    porDiaPCA[diaKey] = {
+      total: val.total,
+      cumple: val.total > 0 ? Math.round(val.sumaPonderada / val.total) : 0,
     }
   })
 
@@ -155,9 +176,10 @@ export async function GET(req: NextRequest) {
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
-  const [pcaResult, pautaResult] = await Promise.allSettled([
+  const [pcaResult, pautaResult, personasResult] = await Promise.allSettled([
     getSheetData(session.accessToken, SHEET_ID_PCA, `${HOJA_PCA}!A:P`),
     getSheetData(session.accessToken, SHEET_ID_PAUTA, `'${HOJA_PAUTA}'!A:R`),
+    cargarPersonas(session.accessToken),
   ])
 
   if (pcaResult.status === "rejected" && pautaResult.status === "rejected") {
@@ -166,6 +188,16 @@ export async function GET(req: NextRequest) {
 
   const rowsPCA = pcaResult.status === "fulfilled" ? pcaResult.value : []
   const rowsPauta = pautaResult.status === "fulfilled" ? pautaResult.value : []
+  const personas = personasResult.status === "fulfilled" ? personasResult.value : []
+
+  // Mapa BP (usuario_gestor_1) -> persona, para resolver el líder real que hizo
+  // el monitoreo (jefe_inmediato del asesor evaluado), ya que la columna
+  // "Supervisor" de Alertas en realidad es el jefe inmediato del evaluado.
+  const personasPorBP = new Map<string, Persona>()
+  personas.forEach(p => {
+    const bp = (p.usuarioLatam ?? "").toString().trim().toLowerCase()
+    if (bp) personasPorBP.set(bp, p)
+  })
 
   const idxOf = (headers: string[], n: string) => headers.findIndex(h =>
     (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase()
@@ -177,11 +209,12 @@ export async function GET(req: NextRequest) {
   const nombrePersona = normNombre(perfil.persona.nombre ?? "")
 
   // ── Parsear PCA/PTA ("Detalle Eventos") ──────────────────────────────
-  let registrosPCA: { nombre: string; dia: number; semana: string; total: number; cumple: string }[] = []
+  let registrosPCA: { nombre: string; dia: number; semana: string; origen: string; total: number; cumple: string }[] = []
   if (rowsPCA.length >= 2) {
     const headers = rowsPCA[0]
     const iNombre  = idxOf(headers, "nombre")
     const iJefe    = idxOf(headers, "jefe inmediato")
+    const iOrigen  = idxOf(headers, "origen")
     const iDia     = idxOf(headers, "dia semana")
     const iSemana  = idxOf(headers, "semana")
     const iTotal   = idxOf(headers, "total gestion dia")
@@ -197,6 +230,7 @@ export async function GET(req: NextRequest) {
         nombre:  r[iNombre]  ?? "",
         dia:     parseInt(r[iDia] ?? "0") || 0,
         semana:  normSemana(r[iSemana] ?? ""),
+        origen:  r[iOrigen]  ?? "",
         total:   parseInt(r[iTotal] ?? "0") || 0,
         cumple:  r[iCumple]  ?? "",
       }))
@@ -207,28 +241,37 @@ export async function GET(req: NextRequest) {
   if (rowsPauta.length >= 2) {
     const headers = rowsPauta[0]
     const iSupervisor = idxOf(headers, "supervisor")
+    const iBP         = idxOf(headers, "bp")
+    const iEvaluador  = idxOf(headers, "evaluador")
     const iSemana     = idxOf(headers, "semana")
     const iFecha      = idxOf(headers, "fecha auditoria")
     const iNota       = idxOf(headers, "notafinal")
 
     registrosPauta = rowsPauta.slice(1)
-      .filter(r => {
-        const supervisor = normNombre(r[iSupervisor] ?? "")
-        if (!supervisor) return false
-        if (esAdmin) return true
-        if (esCoord) {
-          return perfil.supervisores.some(s => normNombre(s.nombre ?? "") === supervisor)
-        }
-        return supervisor === nombrePersona
-      })
+      // El campo "Evaluador" indica quién hizo el monitoreo: solo cuentan los
+      // hechos por LL.OO (el propio líder); QMOS y SUPERVISOR no se contabilizan.
+      .filter(r => normNombre(r[iEvaluador] ?? "") === "ll.oo")
       .map(r => {
+        const bp = (r[iBP] ?? "").toString().trim().toLowerCase()
+        // La columna "Supervisor" es en realidad el jefe inmediato del evaluado.
+        // El líder real que hizo el monitoreo es el jefe inmediato del asesor (BP).
+        const lider = personasPorBP.get(bp)?.jefeInmediato || r[iSupervisor] || ""
         const fecha = parseSheetDate(r[iFecha] ?? "")
         return {
-          nombre:  r[iSupervisor] ?? "",
+          nombre:  lider,
           dia:     fecha ? fecha.getDay() : 0, // 1=Lun .. 5=Vie
           semana:  normSemana(r[iSemana] ?? ""),
           nota:    parseCumplePct(r[iNota] ?? ""),
         }
+      })
+      .filter(r => {
+        const lider = normNombre(r.nombre ?? "")
+        if (!lider) return false
+        if (esAdmin) return true
+        if (esCoord) {
+          return perfil.supervisores.some(s => normNombre(s.nombre ?? "") === lider)
+        }
+        return lider === nombrePersona
       })
       .filter(r => r.dia >= 1 && r.dia <= 5)
   }
@@ -261,7 +304,7 @@ export async function GET(req: NextRequest) {
 
     const porSupervisor = [...supervisoresMap.entries()].map(([key, nombre]) => {
       const filasPCA = pcaSemana.filter(r => normNombre(r.nombre) === key)
-        .map(({ dia, semana, total, cumple }) => ({ dia, semana, total, cumple }))
+        .map(({ dia, semana, origen, total, cumple }) => ({ dia, semana, origen, total, cumple }))
       const filasPauta = pautaSemana.filter(r => normNombre(r.nombre) === key)
         .map(({ dia, semana, nota }) => ({ dia, semana, nota }))
 
@@ -284,7 +327,7 @@ export async function GET(req: NextRequest) {
     const pctGlobal = promedio(porSupervisor.map(p => p.promCumple))
     const totalMonitoreos = porSupervisor.reduce((s, p) => s + p.totalMonitoreos, 0)
     const diasGlobal = [...supervisoresMap.keys()].flatMap(key => combinarDias(
-      pcaSemana.filter(r => normNombre(r.nombre) === key).map(({ dia, semana, total, cumple }) => ({ dia, semana, total, cumple })),
+      pcaSemana.filter(r => normNombre(r.nombre) === key).map(({ dia, semana, origen, total, cumple }) => ({ dia, semana, origen, total, cumple })),
       pautaSemana.filter(r => normNombre(r.nombre) === key).map(({ dia, semana, nota }) => ({ dia, semana, nota })),
     ))
 
@@ -300,7 +343,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Vista supervisor/coach: sus propios monitoreos ───────────────────
-  const filasPCA = registrosPCA.map(({ dia, semana, total, cumple }) => ({ dia, semana, total, cumple }))
+  const filasPCA = registrosPCA.map(({ dia, semana, origen, total, cumple }) => ({ dia, semana, origen, total, cumple }))
   const filasPauta = registrosPauta.map(({ dia, semana, nota }) => ({ dia, semana, nota }))
   const todosLosDias = combinarDias(filasPCA, filasPauta)
 

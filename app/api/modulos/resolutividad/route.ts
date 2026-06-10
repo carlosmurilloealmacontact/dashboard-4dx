@@ -42,7 +42,11 @@ export async function GET(req: NextRequest) {
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }
-  if (rows.length < 2) return NextResponse.json({ total: 0, porEtapa: {}, metas: {} })
+  if (rows.length < 2) {
+    const vacio = NextResponse.json({ total: 0, porEtapa: {}, metas: {} })
+    vacio.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=60')
+    return vacio
+  }
 
   const headers = rows[0]
   const idx = (n: string) => headers.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase())
@@ -185,7 +189,7 @@ export async function GET(req: NextRequest) {
     }).filter(s => s.total > 0)
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     total,
     porEtapa,
     metas,
@@ -193,4 +197,8 @@ export async function GET(req: NextRequest) {
     ultimas5: ideas.slice(-5),
     porSupervisor,
   })
+
+  // Caché corta: la hoja "Datos" es grande, sin caché agota la quota
+  response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=60')
+  return response
 }

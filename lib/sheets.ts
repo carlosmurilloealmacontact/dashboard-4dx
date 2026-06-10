@@ -9,20 +9,34 @@ export async function getSheetsClient(accessToken: string) {
   return google.sheets({ version: "v4", auth })
 }
 
+function esErrorDeCuota(error: unknown): boolean {
+  const codigo = (error as { code?: number; response?: { status?: number } })?.code
+    ?? (error as { response?: { status?: number } })?.response?.status
+  return codigo === 429 || codigo === 403
+}
+
+const ESPERAS_MS = [1000, 2000, 4000] // reintentos ante error de cuota de Sheets API
+
 export async function getSheetData(
   accessToken: string,
   spreadsheetId: string,
   range: string
 ): Promise<string[][]> {
-  try {
-    const sheets = await getSheetsClient(accessToken)
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range,
-    })
-    return response.data.values ?? []
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    throw new Error(`Error leyendo Sheet [${range}]: ${msg}`)
+  for (let intento = 0; ; intento++) {
+    try {
+      const sheets = await getSheetsClient(accessToken)
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+      })
+      return response.data.values ?? []
+    } catch (error: unknown) {
+      if (esErrorDeCuota(error) && intento < ESPERAS_MS.length) {
+        await new Promise(r => setTimeout(r, ESPERAS_MS[intento]))
+        continue
+      }
+      const msg = error instanceof Error ? error.message : String(error)
+      throw new Error(`Error leyendo Sheet [${range}]: ${msg}`)
+    }
   }
 }

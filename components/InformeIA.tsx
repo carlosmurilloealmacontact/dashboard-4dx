@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import type { PerfilUsuario } from "@/lib/jerarquia"
 
 interface Props {
-  perfil: PerfilUsuario
+  supervisores: { nombre: string }[]
+  email?: string
 }
 
 interface ResultadoInforme {
@@ -37,7 +37,7 @@ function renderTexto(texto: string) {
   })
 }
 
-export default function InformeIA({ perfil }: Props) {
+export default function InformeIA({ supervisores, email }: Props) {
   const [supervisor, setSupervisor] = useState("")
   const [tipoInforme, setTipoInforme] = useState<"parcial" | "cierre">("parcial")
   const [semanas, setSemanas] = useState("")
@@ -59,6 +59,7 @@ export default function InformeIA({ perfil }: Props) {
     try {
       const params = new URLSearchParams({ semanas: semanasLimpias, tipo: tipoInforme })
       if (supervisor) params.set("supervisor", supervisor)
+      if (email) params.set("email", email)
       const res = await fetch(`/api/informes/generar?${params.toString()}`)
       const data = await res.json()
       if (!res.ok) {
@@ -96,7 +97,7 @@ export default function InformeIA({ perfil }: Props) {
             onChange={e => setSupervisor(e.target.value)}
           >
             <option value="">Todo mi equipo</option>
-            {perfil.supervisores.map(s => (
+            {supervisores.map(s => (
               <option key={s.nombre} value={s.nombre}>{s.nombre}</option>
             ))}
           </select>

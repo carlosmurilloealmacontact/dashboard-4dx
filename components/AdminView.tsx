@@ -3,6 +3,7 @@
 import { useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
 import CoachTeamView from "@/components/CoachTeamView"
+import InformeIA from "@/components/InformeIA"
 import { PerfilProvider } from "@/context/PerfilContext"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
@@ -186,6 +187,14 @@ export default function AdminView({ perfilAdmin }: Props) {
   const rolPersona = filtroRol as RolNormalizado
   const modulosPersona = TODOS_MODULOS.filter(m => MODULOS_POR_ROL[rolPersona]?.includes(m.id))
 
+  // Supervisores a cargo de la persona seleccionada (para el informe IA, si es coordinador/jefatura/gerente)
+  const supervisoresDePersona = personaSeleccionada
+    ? equipoCompleto.filter(p =>
+        (p.coordinador ?? "").toLowerCase().trim() === personaSeleccionada.nombre.toLowerCase().trim()
+        && normalizarCargo(p.cargo) === "supervisor"
+      )
+    : []
+
   return (
     <SemanaGlobalProvider>
     <div className="mt-10">
@@ -301,6 +310,11 @@ export default function AdminView({ perfilAdmin }: Props) {
               {personaSeleccionada.cargo && <span className="text-gray-600"> · {personaSeleccionada.cargo}</span>}
               {personaSeleccionada.servicio && <span className="text-gray-600"> · {personaSeleccionada.servicio}</span>}
             </p>
+            {!personaSeleccionada.emailCorporativo && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
+                ⚠️ Esta persona no tiene &quot;usuario gestor 4&quot; (correo corporativo) en la base — se está usando su correo personal ({personaSeleccionada.email}). Complétalo en la base para evitar inconsistencias.
+              </p>
+            )}
             {modulosPersona.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {modulosPersona.map(m => (
@@ -319,6 +333,11 @@ export default function AdminView({ perfilAdmin }: Props) {
             {/* Si la persona es coach, mostrar también su vista de seguimiento de equipo */}
             {rolPersona === "coach" && (
               <CoachTeamView perfilCoach={perfilAdmin} />
+            )}
+
+            {/* Informe de cumplimiento generado con IA, para coordinadores y jefaturas */}
+            {["coordinador", "jefatura", "gerente"].includes(rolPersona) && (
+              <InformeIA supervisores={supervisoresDePersona} email={teamEmail} />
             )}
           </div>
         </PerfilProvider>

@@ -160,7 +160,7 @@ export default function DashboardPage() {
 
             {/* Informe de cumplimiento generado con IA, para coordinadores y jefaturas */}
             {perfil && ["coordinador", "jefatura", "gerente"].includes(perfil.rol) && (
-              <InformeIA perfil={perfil} />
+              <InformeIA supervisores={perfil.supervisores} />
             )}
 
             <div className="mt-8 text-center text-xs text-gray-500">
