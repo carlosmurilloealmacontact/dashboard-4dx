@@ -36,6 +36,11 @@ const MODULOS_EQUIPO = [
 
 const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
 
+const MODULOS_GLOBAL = [
+  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
+  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
+]
+
 const COORDINADORES_PERMITIDOS = [
   "ROJAS LEGUIZAMO ANDRES FELIPE",
   "HERNANDEZ URREGO CRISTIAN ENRIQUE",
@@ -106,6 +111,42 @@ const COACHES_PERMITIDOS = [
   "Ivonne Mella",
 ]
 
+// Aplica las reglas especiales por rol (listas de líderes/coaches permitidos, etc.)
+function filtrarPorRol(equipo: Persona[], rol: string): Persona[] {
+  if (!rol) return equipo
+  return equipo.filter(p => {
+    if (normalizarCargo(p.cargo) !== rol) return false
+
+    // Filtro especial para supervisores: solo los 41 líderes de la lista
+    if (rol === "supervisor") {
+      const nombre = p.nombre.toUpperCase().trim()
+      return LIDERES.some(l => l.toUpperCase().trim() === nombre)
+    }
+
+    // Filtro especial para coaches: solo los 14 específicos + 2 admins
+    if (rol === "coach") {
+      const nombre = p.nombre.toUpperCase().trim()
+      const coachEnLista = COACHES_PERMITIDOS.some(c => c.toUpperCase().trim() === nombre)
+      const email = p.email.toLowerCase()
+      const esAdmin = email === "carlosmurilloe.almacontact@outsourcing-account.com" ||
+                     email === "mariarestrepoh.almacontact@outsourcing-account.com"
+      return coachEnLista || esAdmin
+    }
+
+    // Para coordinadores: mostrar jefes inmediatos de los supervisores líderes
+    if (rol === "coordinador") {
+      const supervisoresLideres = equipo.filter(p => {
+        const nombre = p.nombre.toUpperCase().trim()
+        return LIDERES.some(l => l.toUpperCase().trim() === nombre)
+      })
+      const jefesUnicos = [...new Set(supervisoresLideres.map(s => s.jefeInmediato).filter(Boolean))]
+      return jefesUnicos.some(jefe => jefe === p.nombre.toUpperCase().trim())
+    }
+
+    return true
+  })
+}
+
 export default function AdminView({ perfilAdmin }: Props) {
   const [filtroRol, setFiltroRol] = useState("")
   const [filtroServicio, setFiltroServicio] = useState("")
@@ -116,56 +157,22 @@ export default function AdminView({ perfilAdmin }: Props) {
   const cargandoFiltros = false
   const errorFiltros = ""
 
-  // PASO 1: Filtrar por rol
-  let equipoFiltradoPorRol = equipoCompleto
+  // ── Filtros cruzados (bidireccionales) ───────────────────────────────
+  // - Si hay un rol elegido → los servicios disponibles son los de ese rol.
+  // - Si no → la unión de servicios de todos los roles disponibles.
+  const serviciosDisponibles = filtroRol
+    ? [...new Set(filtrarPorRol(equipoCompleto, filtroRol).map(p => p.servicio).filter(Boolean))].sort()
+    : [...new Set(ROLES_DISPONIBLES.flatMap(r => filtrarPorRol(equipoCompleto, r)).map(p => p.servicio).filter(Boolean))].sort()
 
-  if (filtroRol) {
-    equipoFiltradoPorRol = equipoCompleto.filter(p => {
-      const rol = normalizarCargo(p.cargo)
+  // - Si hay un servicio elegido → solo se ofrecen los roles que tienen gente en ese servicio.
+  // - Si no → todos los roles disponibles.
+  const rolesDisponibles = filtroServicio
+    ? ROLES_DISPONIBLES.filter(r => filtrarPorRol(equipoCompleto, r).some(p => p.servicio === filtroServicio))
+    : ROLES_DISPONIBLES
 
-      if (rol !== filtroRol) return false
-
-      // Filtro especial para supervisores: solo los 41 líderes de la lista
-      if (filtroRol === "supervisor") {
-        const nombre = p.nombre.toUpperCase().trim()
-        return LIDERES.some(l => l.toUpperCase().trim() === nombre)
-      }
-
-      // Filtro especial para coaches: solo los 14 específicos + 2 admins
-      if (filtroRol === "coach") {
-        const nombre = p.nombre.toUpperCase().trim()
-        const coachEnLista = COACHES_PERMITIDOS.some(c => c.toUpperCase().trim() === nombre)
-        const email = p.email.toLowerCase()
-        const esAdmin = email === "carlosmurilloe.almacontact@outsourcing-account.com" ||
-                       email === "mariarestrepoh.almacontact@outsourcing-account.com"
-        return coachEnLista || esAdmin
-      }
-
-      // Para coordinadores: mostrar jefes inmediatos de los supervisores líderes
-      if (filtroRol === "coordinador") {
-        // Obtener jefes de los supervisores líderes (de la lista de 41)
-        const supervisoresLideres = equipoCompleto.filter(p => {
-          const nombre = p.nombre.toUpperCase().trim()
-          return LIDERES.some(l => l.toUpperCase().trim() === nombre)
-        })
-        const jefesUnicos = [...new Set(supervisoresLideres.map(s => s.jefeInmediato).filter(Boolean))]
-        return jefesUnicos.some(jefe => jefe === p.nombre.toUpperCase().trim())
-      }
-
-      return true
-    })
-  }
-
-  // PASO 2: Obtener servicios disponibles
-  const serviciosUnicos = [...new Set(
-    equipoFiltradoPorRol.map(p => p.servicio).filter(Boolean)
-  )].sort()
-
-  // PASO 3: Aplicar filtro de servicio
-  const equipoFiltrado = equipoFiltradoPorRol.filter(p => {
-    if (filtroServicio && p.servicio !== filtroServicio) return false
-    return true
-  })
+  // Equipo final: aplicar rol y servicio elegidos
+  const equipoFiltrado = filtrarPorRol(equipoCompleto, filtroRol)
+    .filter(p => !filtroServicio || p.servicio === filtroServicio)
 
   // Persona seleccionada explícitamente por el admin
   const personaSeleccionada = equipoFiltrado.find(p => {
@@ -180,6 +187,22 @@ export default function AdminView({ perfilAdmin }: Props) {
       {/* Separador */}
       <div className="border-t border-gray-200 mb-8" />
 
+      {/* Vista global de la operación (todos los líderes) */}
+      <div className="mb-10">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Vista General</h3>
+        <p className="text-gray-600 text-sm mb-4">Resumen de toda la operación, sin filtrar por persona.</p>
+        <div className="flex flex-col gap-2">
+          {MODULOS_GLOBAL.map(m => (
+            <ModuloCard
+              key={m.id}
+              {...m}
+              equipo={[]}
+              rol="admin"
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Seguimiento Administrativo</h3>
         {errorFiltros && (
@@ -193,17 +216,26 @@ export default function AdminView({ perfilAdmin }: Props) {
         )}
       </div>
 
-      {/* Filtros - Rol y Servicio */}
+      {/* Filtros - Rol y Servicio (bidireccionales) */}
       <div className="flex gap-3 mb-6 flex-wrap items-center">
         {/* Filtro de rol */}
         <select
           className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
           value={filtroRol}
-          onChange={e => { setFiltroRol(e.target.value); setPersonaSeleccionadaEmail("") }}
+          onChange={e => {
+            const nuevo = e.target.value
+            setFiltroRol(nuevo)
+            // Si el servicio elegido no aplica para el nuevo rol, lo limpiamos
+            if (filtroServicio && nuevo) {
+              const serviciosDelRol = new Set(filtrarPorRol(equipoCompleto, nuevo).map(p => p.servicio))
+              if (!serviciosDelRol.has(filtroServicio)) setFiltroServicio("")
+            }
+            setPersonaSeleccionadaEmail("")
+          }}
           disabled={cargandoFiltros}
         >
           <option value="">— Selecciona un rol —</option>
-          {ROLES_DISPONIBLES.map(rol => (
+          {rolesDisponibles.map(rol => (
             <option key={rol} value={rol} className="capitalize">
               {rol.charAt(0).toUpperCase() + rol.slice(1)}
             </option>
@@ -211,15 +243,24 @@ export default function AdminView({ perfilAdmin }: Props) {
         </select>
 
         {/* Filtro de servicio */}
-        {filtroRol && (
+        {serviciosDisponibles.length > 0 && (
           <select
             className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
             value={filtroServicio}
-            onChange={e => { setFiltroServicio(e.target.value); setPersonaSeleccionadaEmail("") }}
+            onChange={e => {
+              const nuevo = e.target.value
+              setFiltroServicio(nuevo)
+              // Si el rol elegido no tiene gente en el nuevo servicio, lo limpiamos
+              if (filtroRol && nuevo) {
+                const tieneGente = filtrarPorRol(equipoCompleto, filtroRol).some(p => p.servicio === nuevo)
+                if (!tieneGente) setFiltroRol("")
+              }
+              setPersonaSeleccionadaEmail("")
+            }}
             disabled={cargandoFiltros}
           >
             <option value="">— Todos los servicios —</option>
-            {serviciosUnicos.map(srv => (
+            {serviciosDisponibles.map(srv => (
               <option key={srv} value={srv}>{srv}</option>
             ))}
           </select>
