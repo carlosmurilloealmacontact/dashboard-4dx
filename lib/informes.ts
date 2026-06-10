@@ -77,6 +77,34 @@ export interface ResolutividadResumen {
   pctBacklog: number
 }
 
+export interface PcaPtaSemana {
+  semana: string
+  pct: number
+  totalMonitoreos: number
+  diasConDatos: number
+}
+
+export interface AgendaLiderSemana {
+  semana: string
+  pct: number
+  cdr: number | null
+  totalDias: number
+}
+
+export interface CopilotSemana {
+  semana: string
+  pctDialogo: number
+  pctCDR: number
+  agentesConFaltaDialogo: number
+  agentesConFaltaCDR: number
+}
+
+export interface ConfirmacionesRolResumen {
+  total: number
+  dimMasAfectada: { label: string; valor: number } | null
+  sinConfirmacionesEstaSemana: boolean
+}
+
 export interface TendenciaMetrica {
   actual: number
   anterior: number
@@ -88,6 +116,9 @@ export interface Tendencia {
   compromisos: { pctSinIngreso: TendenciaMetrica; pctCerradoMejora: TendenciaMetrica } | null
   quiz: { pctPresento: TendenciaMetrica; pctAprueba: TendenciaMetrica } | null
   feedback: { nuevos: TendenciaMetrica } | null
+  pcaPta: { pct: TendenciaMetrica } | null
+  agendaLider: { pct: TendenciaMetrica } | null
+  compromisosCopilot: { pctDialogo: TendenciaMetrica; pctCDR: TendenciaMetrica } | null
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
@@ -104,10 +135,24 @@ function tendenciaMetrica(actual: number, anterior: number, mayorEsMejor: boolea
  * el dato actual o el anterior (sin registros esa semana).
  */
 export function calcularTendencia(
-  actual: { compromisos: CompromisosSemana | null; quiz: QuizSemana | null; feedback: FeedbackSemana | null },
-  anterior: { compromisos: CompromisosSemana | null; quiz: QuizSemana | null; feedback: FeedbackSemana | null } | undefined,
+  actual: {
+    compromisos: CompromisosSemana | null
+    quiz: QuizSemana | null
+    feedback: FeedbackSemana | null
+    pcaPta: PcaPtaSemana | null
+    agendaLider: AgendaLiderSemana | null
+    compromisosCopilot: CopilotSemana | null
+  },
+  anterior: {
+    compromisos: CompromisosSemana | null
+    quiz: QuizSemana | null
+    feedback: FeedbackSemana | null
+    pcaPta: PcaPtaSemana | null
+    agendaLider: AgendaLiderSemana | null
+    compromisosCopilot: CopilotSemana | null
+  } | undefined,
 ): Tendencia {
-  const a = anterior ?? { compromisos: null, quiz: null, feedback: null }
+  const a = anterior ?? { compromisos: null, quiz: null, feedback: null, pcaPta: null, agendaLider: null, compromisosCopilot: null }
 
   const compromisos = (actual.compromisos && a.compromisos && actual.compromisos.total > 0 && a.compromisos.total > 0)
     ? {
@@ -143,7 +188,22 @@ export function calcularTendencia(
     ? { nuevos: tendenciaMetrica(actual.feedback.nuevos, a.feedback.nuevos, false) }
     : null
 
-  return { compromisos, quiz, feedback }
+  const pcaPta = (actual.pcaPta && a.pcaPta)
+    ? { pct: tendenciaMetrica(actual.pcaPta.pct, a.pcaPta.pct, true) }
+    : null
+
+  const agendaLider = (actual.agendaLider && a.agendaLider)
+    ? { pct: tendenciaMetrica(actual.agendaLider.pct, a.agendaLider.pct, true) }
+    : null
+
+  const compromisosCopilot = (actual.compromisosCopilot && a.compromisosCopilot)
+    ? {
+        pctDialogo: tendenciaMetrica(actual.compromisosCopilot.pctDialogo, a.compromisosCopilot.pctDialogo, true),
+        pctCDR: tendenciaMetrica(actual.compromisosCopilot.pctCDR, a.compromisosCopilot.pctCDR, true),
+      }
+    : null
+
+  return { compromisos, quiz, feedback, pcaPta, agendaLider, compromisosCopilot }
 }
 
 export interface DatosInforme {
@@ -156,9 +216,13 @@ export interface DatosInforme {
       compromisos: CompromisosSemana | null
       quiz: QuizSemana | null
       feedback: FeedbackSemana | null
+      pcaPta: PcaPtaSemana | null
+      agendaLider: AgendaLiderSemana | null
+      compromisosCopilot: CopilotSemana | null
       tendencia: Tendencia
     }[]
     resolutividad: ResolutividadResumen | null
+    confirmacionesRol: ConfirmacionesRolResumen | null
   }[]
 }
 
@@ -177,16 +241,25 @@ export async function construirDatosInforme(
   const semanaPrevia = String(Number(semanas[0]) - 1)
   const semanasFetch = [...new Set([semanaPrevia, ...semanas])]
 
-  const [compromisos, quiz, feedback, resolutividad] = await Promise.all([
+  const equipoParaSoporte = soloSupervisor ? [soloSupervisor] : supervisoresEquipo
+
+  const [compromisos, quiz, feedback, resolutividad, pcaPta, agendaLider, compromisosCopilot, confirmacionesRol] = await Promise.all([
     aggCompromisos(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggQuiz(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggFeedback(accessToken, supervisoresEquipo, semanasFetch, soloSupervisor),
     aggResolutividad(accessToken, nombreCoord, soloSupervisor),
+    aggPcaPta(accessToken, equipoParaSoporte, semanasFetch),
+    aggAgendaLider(accessToken, equipoParaSoporte, semanasFetch),
+    aggCompromisosCopilot(accessToken, equipoParaSoporte, semanasFetch),
+    aggConfirmacionesRol(accessToken, equipoParaSoporte),
   ])
 
   const supervisores = soloSupervisor
     ? [soloSupervisor]
-    : [...new Set([...compromisos.keys(), ...quiz.keys(), ...feedback.keys(), ...resolutividad.keys()])]
+    : [...new Set([
+        ...compromisos.keys(), ...quiz.keys(), ...feedback.keys(), ...resolutividad.keys(),
+        ...pcaPta.keys(), ...agendaLider.keys(), ...compromisosCopilot.keys(), ...confirmacionesRol.keys(),
+      ])]
 
   const buscar = <T extends { semana: string }>(mapa: Map<string, T[]>, sup: string, sem: string): T | null =>
     (mapa.get(sup) ?? []).find(f => f.semana === sem) ?? null
@@ -198,11 +271,17 @@ export async function construirDatosInforme(
         compromisos: buscar(compromisos, sup, sem),
         quiz:        buscar(quiz, sup, sem),
         feedback:    buscar(feedback, sup, sem),
+        pcaPta:             buscar(pcaPta, sup, sem),
+        agendaLider:        buscar(agendaLider, sup, sem),
+        compromisosCopilot: buscar(compromisosCopilot, sup, sem),
       }
       const datosAnterior = {
         compromisos: buscar(compromisos, sup, String(Number(sem) - 1)),
         quiz:        buscar(quiz, sup, String(Number(sem) - 1)),
         feedback:    buscar(feedback, sup, String(Number(sem) - 1)),
+        pcaPta:             buscar(pcaPta, sup, String(Number(sem) - 1)),
+        agendaLider:        buscar(agendaLider, sup, String(Number(sem) - 1)),
+        compromisosCopilot: buscar(compromisosCopilot, sup, String(Number(sem) - 1)),
       }
       return {
         semana: sem,
@@ -211,6 +290,7 @@ export async function construirDatosInforme(
       }
     }),
     resolutividad: resolutividad.get(sup) ?? null,
+    confirmacionesRol: confirmacionesRol.get(sup) ?? null,
   }))
 
   return {
@@ -441,6 +521,360 @@ export async function aggResolutividad(
       total: t,
       pctImpl: t > 0 ? Math.round((sel / t) * 100) : 0,
       pctBacklog: t > 0 ? Math.round((apl / t) * 100) : 0,
+    })
+  })
+
+  return resultado
+}
+
+/**
+ * Trae el histórico de "Adherencia PCA/PTA" (hoja "Detalle Eventos", Panel Lea)
+ * y agrupa por (jefe inmediato, semana): % de cumplimiento ponderado por
+ * gestiones del día y total de monitoreos de la semana.
+ */
+export async function aggPcaPta(
+  accessToken: string,
+  supervisoresEquipo: string[],
+  semanas: string[],
+): Promise<Map<string, PcaPtaSemana[]>> {
+  const SHEET_ID = "1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw"
+  const HOJA = "Detalle Eventos"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:P`)
+  const resultado = new Map<string, PcaPtaSemana[]>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iJefe   = idx("jefe inmediato")
+  const iOrigen = idx("origen")
+  const iDia    = idx("dia semana")
+  const iSemana = idx("semana")
+  const iTotal  = idx("total gestion dia")
+  const iCumple = idx("cumplimiento dia")
+
+  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  const semSet = new Set(semanas)
+
+  // jefe|||semana|||dia|||origen -> {total, cumple} (varias filas-evento por día/origen -> máximo)
+  const porDiaOrigen = new Map<string, { total: number; cumple: number }>()
+  rows.slice(1).forEach(r => {
+    const jefe = r[iJefe] ?? ""
+    if (!validos.has(jefe.toLowerCase().trim())) return
+    const sem = normSemana(r[iSemana])
+    if (!semSet.has(sem)) return
+    const dia = parseInt(r[iDia] ?? "0") || 0
+    if (!dia) return
+    const total = parseInt(r[iTotal] ?? "0") || 0
+    const cumple = parseFloat((r[iCumple] ?? "").replace(",", ".").replace("%", "")) || 0
+    const key = `${jefe}|||${sem}|||${dia}|||${r[iOrigen] ?? ""}`
+    const prev = porDiaOrigen.get(key)
+    porDiaOrigen.set(key, {
+      total:  prev ? Math.max(prev.total, total) : total,
+      cumple: cumple || prev?.cumple || 0,
+    })
+  })
+
+  // Combinar PCA + PTA por día: sumar totales, promediar cumplimiento ponderado
+  const porDia = new Map<string, { total: number; sumaPonderada: number }>()
+  porDiaOrigen.forEach((val, key) => {
+    const [jefe, sem, dia] = key.split("|||")
+    const diaKey = `${jefe}|||${sem}|||${dia}`
+    const prev = porDia.get(diaKey) ?? { total: 0, sumaPonderada: 0 }
+    porDia.set(diaKey, {
+      total: prev.total + val.total,
+      sumaPonderada: prev.sumaPonderada + val.cumple * val.total,
+    })
+  })
+
+  // Agrupar por jefe + semana
+  const porSemana = new Map<string, { totalMonitoreos: number; sumaPct: number; diasConDatos: number }>()
+  porDia.forEach((val, key) => {
+    const [jefe, sem] = key.split("|||")
+    const semKey = `${jefe}|||${sem}`
+    const prev = porSemana.get(semKey) ?? { totalMonitoreos: 0, sumaPct: 0, diasConDatos: 0 }
+    if (val.total > 0) {
+      porSemana.set(semKey, {
+        totalMonitoreos: prev.totalMonitoreos + val.total,
+        sumaPct: prev.sumaPct + (val.sumaPonderada / val.total),
+        diasConDatos: prev.diasConDatos + 1,
+      })
+    } else {
+      porSemana.set(semKey, prev)
+    }
+  })
+
+  porSemana.forEach((val, key) => {
+    const [jefe, sem] = key.split("|||")
+    const fila: PcaPtaSemana = {
+      semana: sem,
+      pct: val.diasConDatos > 0 ? Math.round(val.sumaPct / val.diasConDatos) : 0,
+      totalMonitoreos: val.totalMonitoreos,
+      diasConDatos: val.diasConDatos,
+    }
+    if (!resultado.has(jefe)) resultado.set(jefe, [])
+    resultado.get(jefe)!.push(fila)
+  })
+
+  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  return resultado
+}
+
+/**
+ * Trae el histórico de "Agenda del líder" (hoja "Resumen_Lideres_Diario_Historico_8Sem")
+ * y agrupa por (lider, semana): % de días de agenda cumplidos y CDR simulado promedio.
+ */
+export async function aggAgendaLider(
+  accessToken: string,
+  supervisoresEquipo: string[],
+  semanas: string[],
+): Promise<Map<string, AgendaLiderSemana[]>> {
+  const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
+  const HOJA = "Resumen_Lideres_Diario_Historico_8Sem"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:L`)
+  const resultado = new Map<string, AgendaLiderSemana[]>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iLider  = idx("lider")
+  const iSemana = idx("semana")
+  const iCumple = idx("cumple")
+  const iCDR    = idx("cdr_sim")
+
+  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  const semSet = new Set(semanas)
+
+  const buckets = new Map<string, { totalDias: number; cumplidos: number; cdrVals: number[] }>()
+  rows.slice(1).forEach(r => {
+    const lider = r[iLider] ?? ""
+    if (!validos.has(lider.toLowerCase().trim())) return
+    const sem = normSemana(r[iSemana])
+    if (!semSet.has(sem)) return
+    const key = `${lider}|||${sem}`
+    if (!buckets.has(key)) buckets.set(key, { totalDias: 0, cumplidos: 0, cdrVals: [] })
+    const b = buckets.get(key)!
+    b.totalDias++
+    if ((r[iCumple] ?? "") === "1") b.cumplidos++
+    const cdrRaw = r[iCDR] ?? ""
+    if (cdrRaw && cdrRaw !== "0") {
+      const n = parseFloat(cdrRaw.replace(",", "."))
+      if (!isNaN(n)) b.cdrVals.push(n <= 1 ? n * 100 : n)
+    }
+  })
+
+  buckets.forEach((b, key) => {
+    const [lider, sem] = key.split("|||")
+    const fila: AgendaLiderSemana = {
+      semana: sem,
+      pct: b.totalDias > 0 ? Math.round((b.cumplidos / b.totalDias) * 100) : 0,
+      cdr: b.cdrVals.length > 0 ? Math.round(b.cdrVals.reduce((s, v) => s + v, 0) / b.cdrVals.length) : null,
+      totalDias: b.totalDias,
+    }
+    if (!resultado.has(lider)) resultado.set(lider, [])
+    resultado.get(lider)!.push(fila)
+  })
+
+  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  return resultado
+}
+
+// Semana ISO (jueves de la semana) a partir de una fecha "yyyy-mm-dd", igual
+// que en /api/modulos/pausas-4dx, para cruzar "Pausas 4DX Raw" (sin columna semana).
+function fechaAIsoSemanaPausas(fechaStr: string): string {
+  const [y, m, d] = (fechaStr ?? "").split("-").map(Number)
+  if (!y || !m || !d) return ""
+  const date = new Date(y, m - 1, d)
+  const thu = new Date(date)
+  thu.setDate(date.getDate() + (4 - (date.getDay() || 7)))
+  const yearStart = new Date(thu.getFullYear(), 0, 1)
+  return String(Math.ceil(((thu.getTime() - yearStart.getTime()) / 86400000 + 1) / 7))
+}
+
+/**
+ * Trae el histórico de "Compromisos Copilot" (hoja "Pausas 4DX Raw": pausas de
+ * Diálogo y CDR) y agrupa por (jefe_inmediato, semana): % de participación en
+ * cada tipo de pausa y cantidad de agentes con al menos una falta.
+ */
+export async function aggCompromisosCopilot(
+  accessToken: string,
+  supervisoresEquipo: string[],
+  semanas: string[],
+): Promise<Map<string, CopilotSemana[]>> {
+  const SHEET_ID = "17Jftow3b5V9AFhndlt1MNe6ZBKQD1xBCrQfNqM0vDl4"
+  const HOJA = "Pausas 4DX Raw"
+  const rows = await getSheetData(accessToken, SHEET_ID, `'${HOJA}'!A:J`)
+  const resultado = new Map<string, CopilotSemana[]>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iFecha    = idx("fecha")
+  const iAgenteId = idx("agente_id")
+  const iTipo     = idx("tipo")
+  const iEstado   = idx("estado")
+  const iJefe     = idx("jefe_inmediato")
+
+  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  const semSet = new Set(semanas)
+
+  const buckets = new Map<string, {
+    dialogo: { total: number; participo: number; faltantes: Set<string> }
+    cdr: { total: number; participo: number; faltantes: Set<string> }
+  }>()
+  rows.slice(1).forEach(r => {
+    const jefe = r[iJefe] ?? ""
+    if (!validos.has(jefe.toLowerCase().trim())) return
+    const sem = normSemana(fechaAIsoSemanaPausas(r[iFecha] ?? ""))
+    if (!semSet.has(sem)) return
+    const tipo = r[iTipo] ?? ""
+    if (tipo !== "Diálogo" && tipo !== "CDR") return
+    const estado = (r[iEstado] ?? "").toLowerCase()
+    const participo = tipo === "CDR"
+      ? !estado.includes("sin cdr")
+      : !estado.includes("sin diálogo") && !estado.includes("sin dialogo")
+    const key = `${jefe}|||${sem}`
+    if (!buckets.has(key)) buckets.set(key, {
+      dialogo: { total: 0, participo: 0, faltantes: new Set() },
+      cdr: { total: 0, participo: 0, faltantes: new Set() },
+    })
+    const b = buckets.get(key)!
+    const grupo = tipo === "CDR" ? b.cdr : b.dialogo
+    grupo.total++
+    if (participo) grupo.participo++
+    else grupo.faltantes.add(r[iAgenteId] ?? "")
+  })
+
+  buckets.forEach((b, key) => {
+    const [jefe, sem] = key.split("|||")
+    const fila: CopilotSemana = {
+      semana: sem,
+      pctDialogo: b.dialogo.total > 0 ? Math.round((b.dialogo.participo / b.dialogo.total) * 100) : 0,
+      pctCDR: b.cdr.total > 0 ? Math.round((b.cdr.participo / b.cdr.total) * 100) : 0,
+      agentesConFaltaDialogo: b.dialogo.faltantes.size,
+      agentesConFaltaCDR: b.cdr.faltantes.size,
+    }
+    if (!resultado.has(jefe)) resultado.set(jefe, [])
+    resultado.get(jefe)!.push(fila)
+  })
+
+  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  return resultado
+}
+
+const DIMS_LABELS_CONFIRMACIONES: Record<string, string> = {
+  preparacion: "Preparación", involucramiento: "Involucramiento",
+  herramientas: "Herramientas", alineacion: "Alineación",
+  reconocimiento: "Reconocimiento", retroalimentacion: "Retroalimentación",
+  seguimiento: "Seguimiento", tips: "Tips", resumen: "Resumen",
+}
+
+function textoANumConfirmacion(v: string): number | null {
+  if (!v) return null
+  const lower = v.toLowerCase()
+  if (lower === "1" || lower.includes("completa")) return 1
+  if (lower.includes("parcial")) return 0.5
+  if (lower.includes("observado") || lower === "0") return 0
+  const n = parseFloat(v)
+  return isNaN(n) ? null : n
+}
+
+function parseSheetDateConfirmacion(dateStr: string): Date | null {
+  if (!dateStr) return null
+  const s = dateStr.trim()
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (iso) {
+    const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
+    return isNaN(d.getTime()) ? null : d
+  }
+  const parts = s.split("/")
+  if (parts.length === 3) {
+    const day = Number(parts[0])
+    const month = Number(parts[1])
+    const year = Number(parts[2].split(" ")[0].split("T")[0])
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
+      const d = new Date(year, month - 1, day)
+      return isNaN(d.getTime()) ? null : d
+    }
+  }
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d
+}
+
+/**
+ * Resumen acumulado (no es por semana) de "Confirmaciones de Rol" por
+ * supervisor (lider acompañado): dimensión más afectada y si tuvo
+ * acompañamientos esta semana (lunes-domingo).
+ */
+export async function aggConfirmacionesRol(
+  accessToken: string,
+  supervisoresEquipo: string[],
+): Promise<Map<string, ConfirmacionesRolResumen>> {
+  const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
+  const HOJA = "Confirmaciones de Rol"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:BJ`)
+  const resultado = new Map<string, ConfirmacionesRolResumen>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iLiderAcomp = idx("lider acompanado")
+  const iFecha = headers.findIndex(h => (h ?? "").toLowerCase().includes("criação") || (h ?? "").toLowerCase().includes("criacao"))
+  const iPrep   = idx("preparacion")
+  const iInvol  = idx("involucramiento")
+  const iHerr   = headers.findIndex(h => (h ?? "").toLowerCase().includes("ferramenta"))
+  const iAlin   = headers.findIndex(h => (h ?? "").toLowerCase().includes("resultados") && headers.indexOf(h) > 28)
+  const iRecon  = headers.findIndex(h => (h ?? "").toLowerCase().includes("celebra"))
+  const iRetro  = headers.findIndex(h => (h ?? "").toLowerCase().includes("reforça") || (h ?? "").toLowerCase().includes("reforca"))
+  const iSeg    = headers.findIndex(h => (h ?? "").toLowerCase().includes("escalamento"))
+  const iTips   = headers.findIndex(h => (h ?? "").toLowerCase().includes("dicas"))
+  const iResumen = headers.findIndex(h => (h ?? "").toLowerCase().includes("encerra"))
+
+  const dimsIdx: Record<string, number> = {
+    preparacion: iPrep, involucramiento: iInvol, herramientas: iHerr,
+    alineacion: iAlin, reconocimiento: iRecon, retroalimentacion: iRetro,
+    seguimiento: iSeg, tips: iTips, resumen: iResumen,
+  }
+
+  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+
+  // Semana actual: lunes 00:00 -> domingo 23:59
+  const hoy = new Date()
+  const diaSemana = hoy.getDay()
+  const lunes = new Date(hoy)
+  lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
+  lunes.setHours(0, 0, 0, 0)
+  const domingo = new Date(lunes)
+  domingo.setDate(lunes.getDate() + 6)
+  domingo.setHours(23, 59, 59, 999)
+
+  const buckets = new Map<string, { dims: Record<string, number[]>; total: number; estaSemana: number }>()
+  rows.slice(1).forEach(r => {
+    const lider = r[iLiderAcomp] ?? ""
+    if (!validos.has(lider.toLowerCase().trim())) return
+    if (!buckets.has(lider)) buckets.set(lider, { dims: {}, total: 0, estaSemana: 0 })
+    const b = buckets.get(lider)!
+    b.total++
+    const fecha = parseSheetDateConfirmacion(iFecha >= 0 ? (r[iFecha] ?? "") : "")
+    if (fecha && fecha >= lunes && fecha <= domingo) b.estaSemana++
+    Object.entries(dimsIdx).forEach(([key, i]) => {
+      if (i < 0) return
+      const v = textoANumConfirmacion(r[i] ?? "")
+      if (v === null) return
+      if (!b.dims[key]) b.dims[key] = []
+      b.dims[key].push(v)
+    })
+  })
+
+  buckets.forEach((b, lider) => {
+    const promedios = Object.entries(b.dims).map(([key, vals]) => ({
+      label: DIMS_LABELS_CONFIRMACIONES[key],
+      valor: Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100),
+    }))
+    const peor = promedios.sort((x, y) => x.valor - y.valor)[0] ?? null
+    resultado.set(lider, {
+      total: b.total,
+      dimMasAfectada: peor ? { label: peor.label, valor: peor.valor } : null,
+      sinConfirmacionesEstaSemana: b.total > 0 && b.estaSemana === 0,
     })
   })
 
