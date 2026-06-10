@@ -106,7 +106,7 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
             <tbody className="divide-y divide-gray-800">
               {agentes.map(({ id, nombre }) => (
                 <tr key={id}>
-                  <td className="py-1 pr-2 truncate max-w-[120px] text-gray-100">
+                  <td className="py-1 pr-2 truncate max-w-[120px] text-gray-900">
                     {nombre.split(" ").slice(0, 3).join(" ")}
                   </td>
                   {DIAS.map(d => {
