@@ -21,6 +21,7 @@ interface SupervisorRow {
   cumplidos: number
   pct: number
   cdr: number | null
+  dias?: { dia: number; cumple: boolean | null }[]
 }
 
 interface Data {
@@ -118,9 +119,23 @@ export default function PracticasLideres() {
                   <span className={`text-xs font-bold ${colorPct(sv.pct)}`}>{sv.pct}%</span>
                 </div>
               </div>
-              <div className="flex-1 bg-gray-700 rounded-full h-1.5">
-                <div className={`h-1.5 rounded-full ${barColor(sv.pct)}`} style={{ width: `${sv.pct}%` }} />
-              </div>
+              {sv.dias ? (
+                <div className="flex gap-1 mt-2">
+                  {sv.dias.map(({ dia, cumple }) => {
+                    const color = cumple === null ? "bg-gray-700" : cumple ? "bg-green-500" : "bg-red-500"
+                    return (
+                      <div key={dia} className="flex-1 flex flex-col items-center gap-1">
+                        <div className={`w-full h-4 rounded ${color}`} />
+                        <span className="text-xs text-gray-600">{DIAS_LABEL[dia]}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${barColor(sv.pct)}`} style={{ width: `${sv.pct}%` }} />
+                </div>
+              )}
               <p className="text-xs text-gray-600 mt-1">{sv.cumplidos} de {sv.totalDias} días</p>
             </div>
           ))}

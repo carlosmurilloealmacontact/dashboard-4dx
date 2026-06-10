@@ -84,7 +84,11 @@ export async function getPracticasLideres(accessToken: string, perfil: PerfilUsu
       const pct = dias.length > 0 ? Math.round((cumplidos / dias.length) * 100) : 0
       const cdrReg = regs.find(r => r.cdr && r.cdr !== "0")
       const cdr = formatCDR(cdrReg?.cdr ?? null)
-      return { supervisor: lider, totalDias: dias.length, cumplidos, pct, cdr }
+      const diasSemana = [1, 2, 3, 4, 5].map(numDia => {
+        const reg = regs.find(r => parseFecha(r.fecha)?.getDay() === numDia)
+        return { dia: numDia, cumple: reg ? reg.cumple === "1" : null }
+      })
+      return { supervisor: lider, totalDias: dias.length, cumplidos, pct, cdr, dias: diasSemana }
     }).sort((a, b) => a.pct - b.pct)
 
     const totalDias = deEstaSemana.length
