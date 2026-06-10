@@ -17,8 +17,13 @@ function parseCumplePct(v: string): number {
   return parseFloat((v ?? "").replace(",", ".").replace("%", "")) || 0
 }
 
+// Normaliza el número de semana quitando ceros a la izquierda, igual que
+// normalizarSemana() en SemanaGlobalContext, para que "2" y "02" sean la
+// misma semana al cruzar PCA/PTA ("Detalle Eventos") con Pauta ("Alertas").
 function normSemana(s: string): string {
-  return (s ?? "").replace(/\D/g, "")
+  const digitos = (s ?? "").replace(/\D/g, "")
+  if (!digitos) return ""
+  return String(Number(digitos))
 }
 
 // Normaliza nombres para comparar entre hojas distintas (Detalle Eventos, Alertas,
