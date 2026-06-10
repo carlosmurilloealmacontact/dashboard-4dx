@@ -5,8 +5,8 @@
  */
 export function resolverSemana(param: string | null | undefined, semanas: string[]): string {
   if (param) {
-    const objetivo = String(param).replace(/\D/g, "")
-    const match = semanas.find(s => String(s).replace(/\D/g, "") === objetivo)
+    const objetivo = Number(String(param).replace(/\D/g, ""))
+    const match = semanas.find(s => Number(String(s).replace(/\D/g, "")) === objetivo)
     if (match) return match
   }
   return semanas.at(-1) ?? ""

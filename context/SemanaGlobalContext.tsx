@@ -16,7 +16,17 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, u
  */
 
 export function normalizarSemana(s: string | number | null | undefined): string {
-  return String(s ?? "").replace(/\D/g, "")
+  const digitos = String(s ?? "").replace(/\D/g, "")
+  if (!digitos) return ""
+  // Quita ceros a la izquierda para que "2" y "02" sean la misma semana
+  return String(Number(digitos))
+}
+
+// Semana ISO actual (mismo cálculo que usan los módulos basados en fecha)
+function semanaISOActual(): number {
+  const d = new Date()
+  const jan1 = new Date(d.getFullYear(), 0, 1)
+  return Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
 }
 
 interface SemanaGlobalValue {
@@ -52,7 +62,19 @@ export function SemanaGlobalProvider({ children }: { children: React.ReactNode }
     void version // recalcula cuando cambia la unión
     const todas = new Set<string>()
     Object.values(porModulo.current).forEach(arr => arr.forEach(s => todas.add(s)))
-    return [...todas].sort((a, b) => Number(a) - Number(b))
+
+    // Las semanas ISO no llevan año: una semana 44-52 reportada cuando vamos
+    // por la semana ~2-24 del año actual es del ciclo anterior (año pasado),
+    // no una semana futura. Las "rotamos" para que ordenen antes que las del
+    // año en curso, en vez de aparecer al final como si fueran futuras.
+    const actual = semanaISOActual()
+    const margen = 4
+    const orden = (s: string) => {
+      const n = Number(s)
+      return n > actual + margen ? n - 100 : n
+    }
+
+    return [...todas].sort((a, b) => orden(a) - orden(b))
   }, [version])
 
   // Default: la semana más reciente, una vez que haya semanas disponibles
