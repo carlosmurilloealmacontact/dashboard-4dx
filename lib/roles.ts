@@ -58,5 +58,6 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
   admin: [
     "confirmaciones_rol",
     "pausas_4dx",
+    "adherencia_pca",
   ],
 }

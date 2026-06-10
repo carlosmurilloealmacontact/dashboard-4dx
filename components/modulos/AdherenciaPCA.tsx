@@ -6,12 +6,18 @@ import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
 import { useSemanaGlobal } from "@/context/SemanaGlobalContext"
 
+interface PorTipo {
+  pcapta: { pct: number; total: number }
+  pauta: { pct: number; total: number }
+}
+
 interface Dia {
   dia: number
   semana: string
   total: number
   cumple: string
   cumpleMeta: boolean
+  porTipo?: { pcapta: { total: number; cumple: number }; pauta: { total: number; cumple: number } }
 }
 
 interface SupervisorRow {
@@ -20,13 +26,14 @@ interface SupervisorRow {
   promCumple: number
   totalMonitoreos: number
   diasConMeta: number
+  porTipo?: PorTipo
 }
 
 interface Data {
   modo: "supervisor" | "coordinador"
   semanas: string[]
   semanaActual: string
-  kpi: { pct: number; totalMonitoreos: number; diasConMeta?: number; meta?: number }
+  kpi: { pct: number; totalMonitoreos: number; diasConMeta?: number; meta?: number; porTipo?: PorTipo }
   dias?: Dia[]
   porSupervisor?: SupervisorRow[]
 }
@@ -44,6 +51,26 @@ function barColor(n: number) {
   if (n >= 80) return "bg-green-500"
   if (n >= 60) return "bg-yellow-500"
   return "bg-red-500"
+}
+
+function DesglosePorTipo({ porTipo }: { porTipo?: PorTipo }) {
+  if (!porTipo) return null
+  const { pcapta, pauta } = porTipo
+  if (pcapta.total === 0 && pauta.total === 0) return null
+  return (
+    <div className="flex gap-3 text-xs text-gray-500">
+      {pcapta.total > 0 && (
+        <span>
+          PCA/PTA: <span className={`font-semibold ${colorPct(pcapta.pct)}`}>{pcapta.pct}%</span> ({pcapta.total})
+        </span>
+      )}
+      {pauta.total > 0 && (
+        <span>
+          Pauta: <span className={`font-semibold ${colorPct(pauta.pct)}`}>{pauta.pct}%</span> ({pauta.total})
+        </span>
+      )}
+    </div>
+  )
 }
 
 export default function AdherenciaPCA() {
@@ -93,6 +120,8 @@ export default function AdherenciaPCA() {
           </div>
         </div>
 
+        <DesglosePorTipo porTipo={data.kpi.porTipo} />
+
         {/* Por supervisor */}
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Por supervisor — sem. {semanaActiva}</p>
@@ -110,6 +139,9 @@ export default function AdherenciaPCA() {
               <div className="flex gap-3 text-xs text-gray-600">
                 <span>{sv.totalMonitoreos} monitoreos</span>
                 <span>{sv.diasConMeta}/{sv.dias} días con meta</span>
+              </div>
+              <div className="mt-1">
+                <DesglosePorTipo porTipo={sv.porTipo} />
               </div>
             </div>
           ))}
@@ -139,6 +171,8 @@ export default function AdherenciaPCA() {
           <p className="text-xs text-gray-500">meta: {META}/día</p>
         </div>
       </div>
+
+      <DesglosePorTipo porTipo={data.kpi.porTipo} />
 
       {/* Barras por día con conteo vs meta */}
       <div>
