@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
   const iEstado    = idx("estado")
   const iJefe      = idx("jefe_inmediato")
   const iCoord     = idx("coordinador")
+  const iDuracion  = idx("duracion_min")
 
   const rol = perfil.rol?.toLowerCase()
   const esAdmin = rol === "admin"
@@ -92,6 +93,7 @@ export async function GET(req: NextRequest) {
         estado,
         participo,
         jefe:     r[iJefe]     ?? "",
+        duracionMin: parseFloat((r[iDuracion] ?? "").replace(",", ".")) || 0,
       }
     })
 

@@ -13,6 +13,14 @@ interface Registro {
   estado: string
   participo: boolean
   jefe: string
+  duracionMin: number
+}
+
+function formatoDuracion(min: number): string {
+  if (!min) return "Sin registro"
+  const horas = Math.floor(min / 60)
+  const minutos = Math.round(min % 60)
+  return horas > 0 ? `${horas}h ${minutos}min` : `${minutos} min`
 }
 
 interface SupervisorResumen {
@@ -98,7 +106,7 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
             <tbody className="divide-y divide-gray-800">
               {agentes.map(({ id, nombre }) => (
                 <tr key={id}>
-                  <td className="py-1 pr-2 truncate max-w-[120px] text-gray-300">
+                  <td className="py-1 pr-2 truncate max-w-[120px] text-gray-100">
                     {nombre.split(" ").slice(0, 3).join(" ")}
                   </td>
                   {DIAS.map(d => {
@@ -108,7 +116,7 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
                       <td key={d.num} className="text-center py-1 px-1">
                         <div
                           className={`w-5 h-5 rounded mx-auto ${color}`}
-                          title={r ? r.estado : "Sin registro"}
+                          title={r ? formatoDuracion(r.duracionMin) : "Sin registro"}
                         />
                       </td>
                     )
@@ -116,6 +124,19 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-gray-800">
+                <td className="py-1 pr-2 text-gray-500">Participaron</td>
+                {DIAS.map(d => {
+                  const conDialogo = agentes.filter(({ id }) => getRegistro(id, d.num)?.participo).length
+                  return (
+                    <td key={d.num} className="text-center py-1 px-1 text-gray-300 font-medium">
+                      {conDialogo}
+                    </td>
+                  )
+                })}
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
