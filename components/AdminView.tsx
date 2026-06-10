@@ -42,11 +42,6 @@ const TODOS_MODULOS = [
 
 const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
 
-const MODULOS_GLOBAL = [
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
-  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
-]
-
 const COORDINADORES_PERMITIDOS = [
   "ROJAS LEGUIZAMO ANDRES FELIPE",
   "HERNANDEZ URREGO CRISTIAN ENRIQUE",
@@ -196,22 +191,6 @@ export default function AdminView({ perfilAdmin }: Props) {
     <div className="mt-10">
       {/* Separador */}
       <div className="border-t border-gray-200 mb-8" />
-
-      {/* Vista global de la operación (todos los líderes) */}
-      <div className="mb-10">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Vista General</h3>
-        <p className="text-gray-600 text-sm mb-4">Resumen de toda la operación, sin filtrar por persona.</p>
-        <div className="flex flex-col gap-2">
-          {MODULOS_GLOBAL.map(m => (
-            <ModuloCard
-              key={m.id}
-              {...m}
-              equipo={[]}
-              rol="admin"
-            />
-          ))}
-        </div>
-      </div>
 
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Seguimiento Administrativo</h3>
