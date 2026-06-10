@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import ModuloCard from "@/components/ModuloCard"
+import CoachTeamView from "@/components/CoachTeamView"
 import { PerfilProvider } from "@/context/PerfilContext"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
-import type { PerfilUsuario, Persona } from "@/lib/jerarquia"
+import { MODULOS_POR_ROL } from "@/lib/roles"
+import type { PerfilUsuario, Persona, RolNormalizado } from "@/lib/jerarquia"
 
 // Función para normalizar cargo (mismo que en jerarquia.ts)
 function normalizarCargo(cargo: string): string {
@@ -23,15 +25,19 @@ interface Props {
   perfilAdmin: PerfilUsuario
 }
 
-const MODULOS_EQUIPO = [
+// Catálogo completo de módulos — se filtra según el rol de la persona seleccionada
+const TODOS_MODULOS = [
   { id: "adherencia", titulo: "Adherencia 4DX", icono: "📋", descripcion: "Ingresos diarios del equipo" },
   { id: "practicas_lideres", titulo: "Prácticas Líderes", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
-  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del equipo" },
+  { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
+  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
+  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
+  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
   { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
+  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
   { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
   { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
-  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
+  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
 ]
 
 const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
@@ -181,6 +187,10 @@ export default function AdminView({ perfilAdmin }: Props) {
   })
   const teamEmail = personaSeleccionada?.emailCorporativo || personaSeleccionada?.email || ""
 
+  // Módulos visibles para el rol de la persona seleccionada (misma vista que vería ella)
+  const rolPersona = filtroRol as RolNormalizado
+  const modulosPersona = TODOS_MODULOS.filter(m => MODULOS_POR_ROL[rolPersona]?.includes(m.id))
+
   return (
     <SemanaGlobalProvider>
     <div className="mt-10">
@@ -308,20 +318,29 @@ export default function AdminView({ perfilAdmin }: Props) {
         <PerfilProvider perfil={perfilAdmin} teamEmail={teamEmail}>
           <div>
             <p className="text-xs text-gray-600 mb-4">
-              Seguimiento de <span className="text-gray-900 font-semibold">{personaSeleccionada.nombre.split(" ").slice(0, 3).join(" ")}</span>
+              Viendo como <span className="text-gray-900 font-semibold">{personaSeleccionada.nombre.split(" ").slice(0, 3).join(" ")}</span>
               {personaSeleccionada.cargo && <span className="text-gray-600"> · {personaSeleccionada.cargo}</span>}
               {personaSeleccionada.servicio && <span className="text-gray-600"> · {personaSeleccionada.servicio}</span>}
             </p>
-            <div className="flex flex-col gap-2">
-              {MODULOS_EQUIPO.map(m => (
-                <ModuloCard
-                  key={m.id}
-                  {...m}
-                  equipo={[]}
-                  rol="admin"
-                />
-              ))}
-            </div>
+            {modulosPersona.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {modulosPersona.map(m => (
+                  <ModuloCard
+                    key={m.id}
+                    {...m}
+                    equipo={[]}
+                    rol={rolPersona}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600 text-sm">No hay módulos configurados para este rol.</p>
+            )}
+
+            {/* Si la persona es coach, mostrar también su vista de seguimiento de equipo */}
+            {rolPersona === "coach" && (
+              <CoachTeamView perfilCoach={perfilAdmin} />
+            )}
           </div>
         </PerfilProvider>
       ) : filtroRol && equipoFiltrado.length > 0 ? (
