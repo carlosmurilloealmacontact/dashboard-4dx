@@ -78,15 +78,23 @@ export default function ConfirmacionesRol() {
           alerta: d.dimMasAfectada && d.dimMasAfectada.valor < 80 ? 1 : 0,
           color: d.total > 0 ? "green" : "white",
         })
-      } else {
-        setMetric({
-          valor: `${d.deEstaSemana} realizadas`,
-          alerta: d.alertaCoach ? 1 : 0,
-          color: d.deEstaSemana > 0 ? "green" : d.total > 0 ? "yellow" : "white",
-        })
       }
     }).finally(() => setCargando(false))
   }, [url, setMetric, reportWeeks])
+
+  // Para coach/coordinador, el indicador debe reflejar la semana seleccionada
+  // (la misma que se muestra en el cuerpo del módulo), no siempre la semana actual.
+  useEffect(() => {
+    if (!data || data.esSupervisor || typeof data.total !== "number") return
+    const semanaSel = semanaGlobal ?? normalizarSemana(data.semanaActual)
+    const esActual = semanaSel === normalizarSemana(data.semanaActual)
+    const conteo = (data.confirmaciones ?? []).filter(c => normalizarSemana(c.semana) === semanaSel).length
+    setMetric({
+      valor: `${conteo} realizadas`,
+      alerta: esActual && conteo === 0 && data.total > 0 ? 1 : 0,
+      color: conteo > 0 ? "green" : data.total > 0 ? "yellow" : "white",
+    })
+  }, [data, semanaGlobal, setMetric])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data || data.total === 0 || !data.ultimas5) return <p className="text-xs text-gray-500 py-2">Sin confirmaciones registradas.</p>
