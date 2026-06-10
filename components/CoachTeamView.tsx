@@ -25,6 +25,7 @@ const MODULOS_EQUIPO = [
   { id: "estoy_enterado",    titulo: "Estoy Enterado",            icono: "📢", descripcion: "Seguimiento de briefings" },
   { id: "feedback",          titulo: "Feedback Interfábricas",    icono: "💬", descripcion: "Feedback entre compañeros" },
   { id: "resolutividad",     titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
+  { id: "pausas_4dx",        titulo: "Pausas 4DX",                icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
 ]
 
 interface Props {

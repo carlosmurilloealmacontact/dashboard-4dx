@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
 
   const email = req.nextUrl.searchParams.get("email") ?? session.user?.email ?? ""
   const semanaParam = req.nextUrl.searchParams.get("semana")
+  const servicioParam = req.nextUrl.searchParams.get("servicio")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -61,11 +62,20 @@ export async function GET(req: NextRequest) {
   const esCoord = esAdmin || ["coordinador", "jefatura", "gerente"].includes(rol)
   const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
 
+  const supervisoresServicio = servicioParam
+    ? new Set(perfil.supervisores
+        .filter(s => (s.servicio ?? "").toLowerCase().trim() === servicioParam.toLowerCase().trim())
+        .map(s => (s.nombre ?? "").toLowerCase().trim()))
+    : null
+
   const todos = rows.slice(1)
     .filter(r => {
-      if (esAdmin) return true
-      const col = esCoord ? (r[iCoord] ?? "") : (r[iJefe] ?? "")
-      return col.toLowerCase().trim() === nombrePersona
+      if (!esAdmin) {
+        const col = esCoord ? (r[iCoord] ?? "") : (r[iJefe] ?? "")
+        if (col.toLowerCase().trim() !== nombrePersona) return false
+      }
+      if (esCoord && supervisoresServicio && !supervisoresServicio.has((r[iJefe] ?? "").toLowerCase().trim())) return false
+      return true
     })
     .map(r => {
       const tipo   = r[iTipo]   ?? ""
