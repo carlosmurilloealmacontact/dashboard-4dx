@@ -149,7 +149,7 @@ export default function CoachTeamView({ perfilCoach }: Props) {
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <SemanaGlobalSelector />
           </div>
-          <PerfilProvider perfil={perfilCoach} teamEmail={teamEmail}>
+          <PerfilProvider perfil={perfilCoach} teamEmail={teamEmail} servicio={servicioFiltrado}>
             <div>
               {coordSeleccionado && (
                 <p className="text-xs text-gray-500 mb-4">

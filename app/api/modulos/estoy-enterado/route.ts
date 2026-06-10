@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
 import { obtenerPerfil } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1sxqnABVcemnPaWivLHmW1SDChBSBQyBYGTAN3sb9q44"
 const HOJA = "Base_Dashboard"
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const email = req.nextUrl.searchParams.get("email") ?? session.user?.email ?? ""
+  const semanaParam = req.nextUrl.searchParams.get("semana")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -59,7 +61,7 @@ export async function GET(req: NextRequest) {
       return pesoA - pesoB
     })
 
-  const semanaActual = semanas.at(-1) ?? ""
+  const semanaActual = resolverSemana(semanaParam, semanas)
   const deEstaSemana = registros.filter(r => r.semana === semanaActual)
 
   // Temas únicos esta semana

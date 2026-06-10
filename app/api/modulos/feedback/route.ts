@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
   if (!session?.accessToken) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const email = req.nextUrl.searchParams.get("email") ?? session.user?.email ?? ""
+  const servicioParam = req.nextUrl.searchParams.get("servicio")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -57,7 +58,9 @@ export async function GET(req: NextRequest) {
 
   // Para coordinador, necesitamos los supervisores bajo su cargo
   const supervisoresCoord = esCoord
-    ? perfil.supervisores.map(s => (s.nombre ?? "").toLowerCase().trim())
+    ? perfil.supervisores
+        .filter(s => !servicioParam || (s.servicio ?? "").toLowerCase().trim() === servicioParam.toLowerCase().trim())
+        .map(s => (s.nombre ?? "").toLowerCase().trim())
     : []
 
   const feedbacks = rows.slice(1)

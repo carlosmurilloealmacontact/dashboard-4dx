@@ -12,12 +12,14 @@ export async function GET(req: NextRequest) {
   if (!session?.accessToken || !session?.user?.email)
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
+  const email = req.nextUrl.searchParams.get("email") ?? session.user.email
   const semanaParam = req.nextUrl.searchParams.get("semana")
-  const perfil = await obtenerPerfil(session.accessToken, session.user.email)
+  const servicioParam = req.nextUrl.searchParams.get("servicio")
+  const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
   try {
-    const data = await getPracticasLideres(session.accessToken, perfil, semanaParam)
+    const data = await getPracticasLideres(session.accessToken, perfil, semanaParam, servicioParam)
     if (!data) return NextResponse.json({ error: "Sin datos" }, { status: 404 })
     const res = NextResponse.json(data)
     res.headers.set("Cache-Control", "no-store")

@@ -32,7 +32,7 @@ function formatCDR(v: string | null): number | null {
   return n <= 1 ? Math.round(n * 100) : Math.round(n)
 }
 
-export async function getPracticasLideres(accessToken: string, perfil: PerfilUsuario, semanaParam?: string | null) {
+export async function getPracticasLideres(accessToken: string, perfil: PerfilUsuario, semanaParam?: string | null, servicioParam?: string | null) {
   const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:L`)
   if (rows.length < 2) return null
 
@@ -53,8 +53,15 @@ export async function getPracticasLideres(accessToken: string, perfil: PerfilUsu
 
   if (esCoord) {
     // Vista coordinador: agrupar por supervisor (filtrar por Jefe_Inmediato)
+    const supervisoresServicio = servicioParam
+      ? new Set(perfil.supervisores
+          .filter(s => (s.servicio ?? "").toLowerCase().trim() === servicioParam.toLowerCase().trim())
+          .map(s => (s.nombre ?? "").toLowerCase().trim()))
+      : null
+
     const registros = rows.slice(1)
       .filter(r => (r[iJefe] ?? "").toLowerCase().trim() === nombrePersona)
+      .filter(r => !supervisoresServicio || supervisoresServicio.has((r[iLider] ?? "").toLowerCase().trim()))
       .map(r => ({
         lider:  r[iLider]  ?? "",
         fecha:  r[iFecha]  ?? "",

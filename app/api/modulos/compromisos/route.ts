@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
 
   const email = req.nextUrl.searchParams.get("email") ?? session.user?.email ?? ""
   const semanaParam = req.nextUrl.searchParams.get("semana")
+  const servicioParam = req.nextUrl.searchParams.get("servicio")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -49,10 +50,21 @@ export async function GET(req: NextRequest) {
   const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
   const esCoord = ["coordinador", "jefatura", "gerente"].includes(perfil.rol)
 
+  const supervisoresServicio = servicioParam
+    ? new Set(perfil.supervisores
+        .filter(s => (s.servicio ?? "").toLowerCase().trim() === servicioParam.toLowerCase().trim())
+        .map(s => (s.nombre ?? "").toLowerCase().trim()))
+    : null
+
   const registros = rows.slice(1).filter(r => {
     const lider = (r[iLider] ?? "").toLowerCase().trim()
     const coord = (r[iCoord] ?? "").toLowerCase().trim()
-    return esCoord ? coord === nombrePersona : lider === nombrePersona
+    if (esCoord) {
+      if (coord !== nombrePersona) return false
+      if (supervisoresServicio && !supervisoresServicio.has(lider)) return false
+      return true
+    }
+    return lider === nombrePersona
   })
 
   const semanas = [...new Set(registros.map(r => r[iSemana]).filter(Boolean))].sort((a, b) => Number(a) - Number(b))

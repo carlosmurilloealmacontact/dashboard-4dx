@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
+import { useSemanaGlobal } from "@/context/SemanaGlobalContext"
 
 interface TemaData {
   tema: string
@@ -26,15 +26,16 @@ interface Data {
 export default function EstoyEnterado() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [semana, setSemana] = useState("")
   const [temaSeleccionado, setTemaSeleccionado] = useState("__todos__")
-  const url = useModuloUrl("/api/modulos/estoy-enterado")
+  const { semanaGlobal, reportWeeks } = useSemanaGlobal()
+  const base = useModuloUrl("/api/modulos/estoy-enterado")
+  const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
   const { setMetric } = useModuloMetric()
 
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
-      if (d.semanaActual) setSemana(d.semanaActual)
+      if (Array.isArray(d.semanas)) reportWeeks("estoy-enterado", d.semanas)
       setTemaSeleccionado("__todos__")
       if (typeof d.pctClaro === "number") {
         setMetric({
@@ -45,7 +46,7 @@ export default function EstoyEnterado() {
         setMetric({ valor: "—", color: "white" })
       }
     }).finally(() => setCargando(false))
-  }, [url, setMetric])
+  }, [url, setMetric, reportWeeks])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
   if (!data || data.total === 0 || !data.porTema) return <p className="text-xs text-gray-500 py-2">Sin registros de briefings.</p>
@@ -60,17 +61,8 @@ export default function EstoyEnterado() {
 
   return (
     <div className="space-y-4">
-      {/* Filtros: semana + tema */}
+      {/* Filtro: tema (la semana usa el selector global) */}
       <div className="space-y-2">
-        {data.semanas?.length > 0 && (
-          <select
-            className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            value={semana}
-            onChange={e => setSemana(e.target.value)}
-          >
-            {data.semanas.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
         {data.porTema.length > 1 && (
           <select
             className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"

@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
   const emailOverride = req.nextUrl.searchParams.get("email")
   const email = emailOverride ?? session.user?.email ?? ""
   const semanaParam = req.nextUrl.searchParams.get("semana")
+  const servicioParam = req.nextUrl.searchParams.get("servicio")
   const perfil = await obtenerPerfil(session.accessToken, email)
   if (!perfil) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -95,8 +96,15 @@ export async function GET(req: NextRequest) {
   if (esCoord) {
     // --- VISTA COORDINADOR: agrupar por supervisor ---
     // Filtramos por la columna "Coordinador" de la hoja (perfil.supervisores puede venir vacío).
+    const supervisoresServicio = servicioParam
+      ? new Set(perfil.supervisores
+          .filter(s => (s.servicio ?? "").toLowerCase().trim() === servicioParam.toLowerCase().trim())
+          .map(s => (s.nombre ?? "").toLowerCase().trim()))
+      : null
+
     const registros = rows.slice(1)
       .filter(r => iCoordinador >= 0 && (r[iCoordinador] ?? "").toLowerCase().trim() === nombrePersonaCoord)
+      .filter(r => !supervisoresServicio || supervisoresServicio.has((r[iJefe] ?? "").toLowerCase().trim()))
       .map(r => ({
         fecha:  r[iFecha]  ?? "",
         semana: r[iSemana] ?? "",

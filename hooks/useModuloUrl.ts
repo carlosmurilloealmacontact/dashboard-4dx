@@ -9,7 +9,11 @@ import { usePerfilContext } from "@/context/PerfilContext"
  * - Si no hay nada: llama al endpoint sin parámetro (usa la sesión del usuario)
  */
 export function useModuloUrl(endpoint: string): string {
-  const { emailOverride, teamEmail } = usePerfilContext()
+  const { emailOverride, teamEmail, servicio } = usePerfilContext()
   const email = teamEmail || emailOverride
-  return email ? `${endpoint}?email=${email}` : endpoint
+  const params = new URLSearchParams()
+  if (email) params.set("email", email)
+  if (servicio) params.set("servicio", servicio)
+  const query = params.toString()
+  return query ? `${endpoint}?${query}` : endpoint
 }
