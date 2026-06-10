@@ -21,6 +21,17 @@ function normSemana(s: string): string {
   return (s ?? "").replace(/\D/g, "")
 }
 
+// Normaliza nombres para comparar entre hojas distintas (Detalle Eventos, Alertas,
+// base de personas) que pueden tener distinto formato de mayúsculas/acentos/espacios.
+function normNombre(s: string): string {
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr) return null
   const s = dateStr.trim()
@@ -158,7 +169,7 @@ export async function GET(req: NextRequest) {
   const rol = perfil.rol?.toLowerCase()
   const esAdmin = rol === "admin"
   const esCoord = esAdmin || ["coordinador", "jefatura", "gerente"].includes(rol)
-  const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
+  const nombrePersona = normNombre(perfil.persona.nombre ?? "")
 
   // ── Parsear PCA/PTA ("Detalle Eventos") ──────────────────────────────
   let registrosPCA: { nombre: string; dia: number; semana: string; total: number; cumple: string }[] = []
@@ -175,7 +186,7 @@ export async function GET(req: NextRequest) {
       .filter(r => {
         if (esAdmin) return true
         const col = esCoord ? (r[iJefe] ?? "") : (r[iNombre] ?? "")
-        return col.toLowerCase().trim() === nombrePersona
+        return normNombre(col) === nombrePersona
       })
       .map(r => ({
         nombre:  r[iNombre]  ?? "",
@@ -197,11 +208,11 @@ export async function GET(req: NextRequest) {
 
     registrosPauta = rowsPauta.slice(1)
       .filter(r => {
-        const supervisor = (r[iSupervisor] ?? "").toLowerCase().trim()
+        const supervisor = normNombre(r[iSupervisor] ?? "")
         if (!supervisor) return false
         if (esAdmin) return true
         if (esCoord) {
-          return perfil.supervisores.some(s => (s.nombre ?? "").toLowerCase().trim() === supervisor)
+          return perfil.supervisores.some(s => normNombre(s.nombre ?? "") === supervisor)
         }
         return supervisor === nombrePersona
       })
@@ -233,16 +244,20 @@ export async function GET(req: NextRequest) {
   const pautaSemana = registrosPauta.filter(r => r.semana === semanaActual)
 
   if (esCoord) {
-    // Vista coordinador/admin: agrupar por supervisor (nombre evaluado)
-    const supervisores = [...new Set([
-      ...pcaSemana.map(r => r.nombre),
-      ...pautaSemana.map(r => r.nombre),
-    ].filter(Boolean))]
+    // Vista coordinador/admin: agrupar por supervisor (nombre evaluado, normalizado
+    // para fusionar el mismo supervisor aunque venga con distinto formato en cada hoja)
+    const supervisoresMap = new Map<string, string>()
+    pcaSemana.forEach(r => {
+      if (r.nombre && !supervisoresMap.has(normNombre(r.nombre))) supervisoresMap.set(normNombre(r.nombre), r.nombre)
+    })
+    pautaSemana.forEach(r => {
+      if (r.nombre && !supervisoresMap.has(normNombre(r.nombre))) supervisoresMap.set(normNombre(r.nombre), r.nombre)
+    })
 
-    const porSupervisor = supervisores.map(nombre => {
-      const filasPCA = pcaSemana.filter(r => r.nombre === nombre)
+    const porSupervisor = [...supervisoresMap.entries()].map(([key, nombre]) => {
+      const filasPCA = pcaSemana.filter(r => normNombre(r.nombre) === key)
         .map(({ dia, semana, total, cumple }) => ({ dia, semana, total, cumple }))
-      const filasPauta = pautaSemana.filter(r => r.nombre.toLowerCase().trim() === nombre.toLowerCase().trim())
+      const filasPauta = pautaSemana.filter(r => normNombre(r.nombre) === key)
         .map(({ dia, semana, nota }) => ({ dia, semana, nota }))
 
       const dias = combinarDias(filasPCA, filasPauta)
@@ -263,9 +278,9 @@ export async function GET(req: NextRequest) {
 
     const pctGlobal = promedio(porSupervisor.map(p => p.promCumple))
     const totalMonitoreos = porSupervisor.reduce((s, p) => s + p.totalMonitoreos, 0)
-    const diasGlobal = supervisores.flatMap(nombre => combinarDias(
-      pcaSemana.filter(r => r.nombre === nombre).map(({ dia, semana, total, cumple }) => ({ dia, semana, total, cumple })),
-      pautaSemana.filter(r => r.nombre.toLowerCase().trim() === nombre.toLowerCase().trim()).map(({ dia, semana, nota }) => ({ dia, semana, nota })),
+    const diasGlobal = [...supervisoresMap.keys()].flatMap(key => combinarDias(
+      pcaSemana.filter(r => normNombre(r.nombre) === key).map(({ dia, semana, total, cumple }) => ({ dia, semana, total, cumple })),
+      pautaSemana.filter(r => normNombre(r.nombre) === key).map(({ dia, semana, nota }) => ({ dia, semana, nota })),
     ))
 
     const resCoord = NextResponse.json({
