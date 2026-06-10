@@ -97,26 +97,39 @@ export async function GET(req: NextRequest) {
   const cerradoSin     = agentes.filter(a => a.categoria === "cerrado_sin_mejora").length
 
   // Vista coordinador: resumen por supervisor
-  let porSupervisor: { supervisor: string; total: number; sinIngreso: number; abiertos: number; cerradoMejora: number }[] | undefined
+  let porSupervisor: {
+    supervisor: string
+    total: number
+    sinIngreso: number
+    abiertos: number
+    cerradoMejora: number
+    agentes: { asesor: string; estado: string; categoria: ReturnType<typeof categorizarEstado> }[]
+  }[] | undefined
   if (esCoord) {
     const lideresUnicos = [...new Set(deEstaSemana.map(r => r[iLider]).filter(Boolean))]
     porSupervisor = lideresUnicos.map(lider => {
       const deEste = deEstaSemana.filter(r => r[iLider] === lider)
-      const porAg: Record<string, ReturnType<typeof categorizarEstado>> = {}
+      const porAg: Record<string, { asesor: string; estado: string; categoria: ReturnType<typeof categorizarEstado> }> = {}
       deEste.forEach(r => {
         const nombre = r[iNombreA] ?? ""
         if (!nombre) return
         const cat = categorizarEstado(r[iEstado] ?? "")
         const prioridad = { cerrado_mejora: 4, abierto: 3, cerrado_sin_mejora: 2, sin_ingreso: 1 }
-        if (!porAg[nombre] || prioridad[cat] > prioridad[porAg[nombre]]) porAg[nombre] = cat
+        if (!porAg[nombre] || prioridad[cat] > prioridad[porAg[nombre].categoria]) {
+          porAg[nombre] = { asesor: nombre, estado: r[iEstado] ?? "", categoria: cat }
+        }
       })
-      const cats = Object.values(porAg)
+      const agentesSup = Object.values(porAg).sort((a, b) => {
+        const ord = { sin_ingreso: 0, abierto: 1, cerrado_sin_mejora: 2, cerrado_mejora: 3 }
+        return ord[a.categoria] - ord[b.categoria]
+      })
       return {
         supervisor: lider,
-        total: cats.length,
-        sinIngreso: cats.filter(c => c === "sin_ingreso").length,
-        abiertos: cats.filter(c => c === "abierto").length,
-        cerradoMejora: cats.filter(c => c === "cerrado_mejora").length,
+        total: agentesSup.length,
+        sinIngreso: agentesSup.filter(a => a.categoria === "sin_ingreso").length,
+        abiertos: agentesSup.filter(a => a.categoria === "abierto").length,
+        cerradoMejora: agentesSup.filter(a => a.categoria === "cerrado_mejora").length,
+        agentes: agentesSup,
       }
     }).sort((a, b) => b.sinIngreso - a.sinIngreso)
   }

@@ -148,7 +148,13 @@ export async function GET(req: NextRequest) {
   }
 
   // Para coordinador: agrupar por supervisor
-  let porSupervisor: { supervisor: string; total: number; pctImpl: number; pctBacklog: number }[] | undefined
+  let porSupervisor: {
+    supervisor: string
+    total: number
+    pctImpl: number
+    pctBacklog: number
+    ideas: { etapa: string; asesor: string; problema: string; propuesta: string }[]
+  }[] | undefined
   if (esCoord) {
     const supervisores = [...new Set(ideas.map(i => {
       const row = rows.slice(1).find(r => normalizarEtapa(r[iEtapa] ?? "") === i.etapa && (r[iNombreA] ?? "") === i.asesor)
@@ -160,15 +166,21 @@ export async function GET(req: NextRequest) {
       const ideasSup = rows.slice(1)
         .filter(r => (r[iLider] ?? "").toLowerCase().trim() === sup.toLowerCase().trim() &&
                      (r[iCoord] ?? "").toLowerCase().trim() === nombrePersona)
-        .map(r => normalizarEtapa(r[iEtapa] ?? ""))
+        .map(r => ({
+          etapa:     normalizarEtapa(r[iEtapa] ?? ""),
+          asesor:    r[iNombreA]  ?? "",
+          problema:  iProblema >= 0 ? r[iProblema] : "",
+          propuesta: iPropuesta >= 0 ? r[iPropuesta] : "",
+        }))
       const t = ideasSup.length
-      const sel = ideasSup.filter(e => e === "Seleccionados").length
-      const apl = ideasSup.filter(e => e === "Aplicados").length
+      const sel = ideasSup.filter(i => i.etapa === "Seleccionados").length
+      const apl = ideasSup.filter(i => i.etapa === "Aplicados").length
       return {
         supervisor: sup,
         total: t,
         pctImpl:    t > 0 ? Math.round((sel / t) * 100) : 0,
         pctBacklog: t > 0 ? Math.round((apl / t) * 100) : 0,
+        ideas: ideasSup,
       }
     }).filter(s => s.total > 0)
   }

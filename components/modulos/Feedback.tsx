@@ -22,6 +22,7 @@ interface SupervisorFeed {
   nuevos: number
   gestionados: number
   rechazados: number
+  items: FeedbackItem[]
 }
 
 interface Data {
@@ -44,6 +45,8 @@ export default function Feedback() {
   const [cargando, setCargando] = useState(true)
   const [expandido, setExpandido] = useState<number | null>(null)
   const [filtro, setFiltro] = useState<"todos" | "nuevo" | "gestionado" | "rechazado">("nuevo")
+  const [supervisorExpandido, setSupervisorExpandido] = useState<string | null>(null)
+  const [itemExpandido, setItemExpandido] = useState<number | null>(null)
   const url = useModuloUrl("/api/modulos/feedback")
   const { setMetric } = useModuloMetric()
 
@@ -111,18 +114,72 @@ export default function Feedback() {
       {data.esCoord && porSupervisor && porSupervisor.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Por supervisor</p>
-          {(porSupervisor ?? []).map((sv, i) => (
-            <div key={i} className="bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-300 truncate mb-1">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
-              <div className="flex gap-3 text-xs">
-                <span className={sv.nuevos > 0 ? "text-orange-400" : "text-gray-500"}>
-                  {sv.nuevos} nuevos
-                </span>
-                <span className="text-blue-400">{sv.gestionados} gestionados</span>
-                <span className="text-gray-500">{sv.rechazados} rechazados</span>
+          {(porSupervisor ?? []).map((sv, i) => {
+            const expandidoSup = supervisorExpandido === sv.supervisor
+            return (
+              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
+                <button
+                  className="w-full p-3 text-left"
+                  onClick={() => {
+                    setSupervisorExpandido(expandidoSup ? null : sv.supervisor)
+                    setItemExpandido(null)
+                  }}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs text-gray-300 truncate">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+                    <span className="text-gray-600 text-xs">{expandidoSup ? "▲" : "▼"}</span>
+                  </div>
+                  <div className="flex gap-3 text-xs">
+                    <span className={sv.nuevos > 0 ? "text-orange-400" : "text-gray-500"}>
+                      {sv.nuevos} nuevos
+                    </span>
+                    <span className="text-blue-400">{sv.gestionados} gestionados</span>
+                    <span className="text-gray-500">{sv.rechazados} rechazados</span>
+                  </div>
+                </button>
+                {expandidoSup && (
+                  <div className="px-3 pb-3 border-t border-gray-700 pt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {sv.items.length === 0 && (
+                      <p className="text-xs text-gray-500 text-center py-2">Sin feedbacks.</p>
+                    )}
+                    {sv.items.map((f, j) => {
+                      const cfg = ESTADO_CONFIG[f.estado]
+                      const expandidoItem = itemExpandido === j
+                      return (
+                        <div key={j} className="bg-gray-900 rounded-lg overflow-hidden">
+                          <button
+                            className="w-full px-3 py-2 text-left flex items-start gap-2 justify-between"
+                            onClick={() => setItemExpandido(expandidoItem ? null : j)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-300 truncate">
+                                {f.asesor.split(" ").slice(0, 2).join(" ")}
+                              </p>
+                              <div className="flex gap-1 mt-0.5 flex-wrap">
+                                <span className={`text-xs px-1.5 py-0.5 rounded text-white ${cfg.color}`}>
+                                  {cfg.label}
+                                </span>
+                                {f.causa && (
+                                  <span className="text-xs text-gray-500 truncate max-w-[120px]">{f.causa}</span>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-gray-600 text-xs mt-1">{expandidoItem ? "▲" : "▼"}</span>
+                          </button>
+                          {expandidoItem && (
+                            <div className="px-3 pb-3 border-t border-gray-800">
+                              <p className="text-xs text-gray-500 mt-2 mb-1">Sem. {f.semana} · {f.quien.split(" ").slice(0, 2).join(" ")}</p>
+                              {f.feedback && <p className="text-xs text-gray-300">{f.feedback}</p>}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

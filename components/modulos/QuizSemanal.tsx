@@ -18,6 +18,7 @@ interface SupervisorQuiz {
   presento: number
   noPresento: number
   aprueba: number
+  agentes: Agente[]
 }
 
 interface Data {
@@ -33,6 +34,7 @@ interface Data {
 export default function QuizSemanal() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [supervisorExpandido, setSupervisorExpandido] = useState<string | null>(null)
   const { semanaGlobal, reportWeeks } = useSemanaGlobal()
   const base = useModuloUrl("/api/modulos/quiz")
   const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
@@ -82,23 +84,65 @@ export default function QuizSemanal() {
         {/* Por supervisor */}
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Por equipo</p>
-          {(data.porSupervisor ?? []).map((sv, i) => (
-            <div key={i} className="bg-gray-800 rounded-lg p-3">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[150px]">
-                  {sv.supervisor.split(" ").slice(0, 3).join(" ")}
-                </span>
-                {sv.noPresento > 0 && (
-                  <span className="text-xs text-red-400">⚠ {sv.noPresento} pendientes</span>
+          {(data.porSupervisor ?? []).map((sv, i) => {
+            const expandido = supervisorExpandido === sv.supervisor
+            const ordenados = [...sv.agentes].sort((a, b) => {
+              const peso = (x: Agente) => !x.presento ? 0 : !x.aprueba ? 1 : 2
+              return peso(a) - peso(b)
+            })
+            return (
+              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
+                <button
+                  className="w-full p-3 text-left"
+                  onClick={() => setSupervisorExpandido(expandido ? null : sv.supervisor)}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-300 truncate max-w-[150px]">
+                      {sv.supervisor.split(" ").slice(0, 3).join(" ")}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {sv.noPresento > 0 && (
+                        <span className="text-xs text-red-400">⚠ {sv.noPresento} pendientes</span>
+                      )}
+                      <span className="text-gray-600 text-xs">{expandido ? "▲" : "▼"}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 text-xs text-gray-500">
+                    <span className="text-green-400">{sv.presento} presentaron</span>
+                    <span className="text-blue-400">{sv.aprueba} aprobaron</span>
+                    <span>{sv.total} total</span>
+                  </div>
+                </button>
+                {expandido && (
+                  <div className="px-3 pb-3 border-t border-gray-700 pt-2 space-y-1 max-h-56 overflow-y-auto">
+                    {ordenados.map((a, j) => {
+                      const noPresento = !a.presento
+                      const reprueba = a.presento && !a.aprueba
+                      return (
+                        <div key={j} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-900">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {noPresento && <span className="text-red-400 text-xs">⚠</span>}
+                            <span className={`text-xs truncate ${noPresento ? "text-red-400 font-medium" : reprueba ? "text-yellow-400" : "text-gray-300"}`}>
+                              {a.nombre.split(" ").slice(0, 3).join(" ")}
+                            </span>
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0 ml-2">
+                            {noPresento ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-red-900/40 text-red-300">No presentó</span>
+                            ) : a.aprueba ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-green-900/40 text-green-300">✓ Aprobó</span>
+                            ) : (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-900/40 text-yellow-300">✗ Reprobó</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
-              <div className="flex gap-3 text-xs text-gray-500">
-                <span className="text-green-400">{sv.presento} presentaron</span>
-                <span className="text-blue-400">{sv.aprueba} aprobaron</span>
-                <span>{sv.total} total</span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     )

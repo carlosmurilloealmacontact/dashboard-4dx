@@ -17,6 +17,7 @@ interface SupervisorComp {
   sinIngreso: number
   abiertos: number
   cerradoMejora: number
+  agentes: Agente[]
 }
 
 interface Data {
@@ -39,6 +40,7 @@ export default function Compromisos() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
   const [filtro, setFiltro] = useState<string>("todos")
+  const [supervisorExpandido, setSupervisorExpandido] = useState<string | null>(null)
   const { semanaGlobal, reportWeeks } = useSemanaGlobal()
   const base = useModuloUrl("/api/modulos/compromisos")
   const url = semanaGlobal ? `${base}${base.includes("?") ? "&" : "?"}semana=${semanaGlobal}` : base
@@ -113,16 +115,48 @@ export default function Compromisos() {
       {data.porSupervisor && data.porSupervisor.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Por supervisor</p>
-          {data.porSupervisor.map((sv, i) => (
-            <div key={i} className="bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-300 truncate mb-1">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
-              <div className="flex gap-3 text-xs">
-                {sv.sinIngreso > 0 && <span className="text-red-400">⚠ {sv.sinIngreso} sin ingreso</span>}
-                <span className="text-yellow-400">{sv.abiertos} abiertos</span>
-                <span className="text-green-400">{sv.cerradoMejora} con mejora</span>
+          {data.porSupervisor.map((sv, i) => {
+            const expandido = supervisorExpandido === sv.supervisor
+            return (
+              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
+                <button
+                  className="w-full p-3 text-left"
+                  onClick={() => setSupervisorExpandido(expandido ? null : sv.supervisor)}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs text-gray-300 truncate">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+                    <span className="text-gray-600 text-xs">{expandido ? "▲" : "▼"}</span>
+                  </div>
+                  <div className="flex gap-3 text-xs">
+                    {sv.sinIngreso > 0 && <span className="text-red-400">⚠ {sv.sinIngreso} sin ingreso</span>}
+                    <span className="text-yellow-400">{sv.abiertos} abiertos</span>
+                    <span className="text-green-400">{sv.cerradoMejora} con mejora</span>
+                  </div>
+                </button>
+                {expandido && (
+                  <div className="px-3 pb-3 border-t border-gray-700 pt-2 space-y-1 max-h-56 overflow-y-auto">
+                    {sv.agentes.map((a, j) => {
+                      const cfg = CAT_CONFIG[a.categoria]
+                      const esAlerta = a.categoria === "sin_ingreso"
+                      return (
+                        <div key={j} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-900">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {esAlerta && <span className="text-red-400 text-xs flex-shrink-0">⚠</span>}
+                            <span className={`text-xs truncate ${esAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                              {a.asesor.split(" ").slice(0, 3).join(" ")}
+                            </span>
+                          </div>
+                          <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ml-2 ${cfg.badge}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

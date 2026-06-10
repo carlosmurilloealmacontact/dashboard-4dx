@@ -34,6 +34,7 @@ interface SupervisorRow {
   total: number
   pctImpl: number
   pctBacklog: number
+  ideas: Idea[]
 }
 
 interface Data {
@@ -63,6 +64,8 @@ export default function Resolutividad() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
   const [expandida, setExpandida] = useState<number | null>(null)
+  const [supervisorExpandido, setSupervisorExpandido] = useState<string | null>(null)
+  const [ideaExpandida, setIdeaExpandida] = useState<number | null>(null)
   const url = useModuloUrl("/api/modulos/resolutividad")
   const { setMetric } = useModuloMetric()
 
@@ -188,20 +191,76 @@ export default function Resolutividad() {
       {porSupervisor && porSupervisor.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Por supervisor</p>
-          {porSupervisor.map((sv, i) => (
-            <div key={i} className="bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-300 truncate mb-1">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
-              <div className="flex gap-3 text-xs">
-                <span className={sv.pctImpl >= 23 ? "text-green-400" : "text-yellow-400"}>
-                  Impl: {sv.pctImpl}%
-                </span>
-                <span className={sv.pctBacklog <= 10 ? "text-green-400" : "text-red-400"}>
-                  Backlog: {sv.pctBacklog}%
-                </span>
-                <span className="text-gray-600">{sv.total} ideas</span>
+          {porSupervisor.map((sv, i) => {
+            const expandidoSup = supervisorExpandido === sv.supervisor
+            return (
+              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
+                <button
+                  className="w-full p-3 text-left"
+                  onClick={() => {
+                    setSupervisorExpandido(expandidoSup ? null : sv.supervisor)
+                    setIdeaExpandida(null)
+                  }}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs text-gray-300 truncate">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+                    <span className="text-gray-600 text-xs">{expandidoSup ? "▲" : "▼"}</span>
+                  </div>
+                  <div className="flex gap-3 text-xs">
+                    <span className={sv.pctImpl >= 23 ? "text-green-400" : "text-yellow-400"}>
+                      Impl: {sv.pctImpl}%
+                    </span>
+                    <span className={sv.pctBacklog <= 10 ? "text-green-400" : "text-red-400"}>
+                      Backlog: {sv.pctBacklog}%
+                    </span>
+                    <span className="text-gray-600">{sv.total} ideas</span>
+                  </div>
+                </button>
+                {expandidoSup && (
+                  <div className="px-3 pb-3 border-t border-gray-700 pt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {sv.ideas.map((idea, j) => {
+                      const expandidaIdea = ideaExpandida === j
+                      return (
+                        <div key={j} className="bg-gray-900 rounded-lg overflow-hidden">
+                          <button
+                            className="w-full px-3 py-2 text-left flex items-start gap-2 justify-between"
+                            onClick={() => setIdeaExpandida(expandidaIdea ? null : j)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-300 truncate">{idea.asesor.split(" ").slice(0, 2).join(" ")}</p>
+                              <span className={`text-xs px-1.5 py-0.5 rounded mt-0.5 inline-block text-white ${colorEtapa(idea.etapa)}`}>
+                                {idea.etapa}
+                              </span>
+                            </div>
+                            <span className="text-gray-600 text-xs mt-1">{expandidaIdea ? "▲" : "▼"}</span>
+                          </button>
+                          {expandidaIdea && (
+                            <div className="px-3 pb-3 space-y-2 border-t border-gray-800">
+                              {idea.problema && (
+                                <div>
+                                  <p className="text-xs text-gray-500 mt-2 mb-1">Problema</p>
+                                  <p className="text-xs text-gray-300 line-clamp-3">{idea.problema}</p>
+                                </div>
+                              )}
+                              {idea.propuesta && (
+                                <div>
+                                  <p className="text-xs text-blue-400 mb-1">Propuesta</p>
+                                  <p className="text-xs text-gray-300 line-clamp-3">{idea.propuesta}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {sv.ideas.length === 0 && (
+                      <p className="text-xs text-gray-500 text-center py-2">Sin ideas.</p>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

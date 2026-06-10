@@ -90,26 +90,38 @@ export async function GET(req: NextRequest) {
   const causaTop = Object.entries(porCausa).sort((a, b) => b[1] - a[1]).slice(0, 4)
 
   // Vista coordinador: resumen por supervisor
-  let porSupervisor: { supervisor: string; nuevos: number; gestionados: number; rechazados: number; total: number }[] | undefined
+  let porSupervisor: {
+    supervisor: string
+    nuevos: number
+    gestionados: number
+    rechazados: number
+    total: number
+    items: typeof feedbacks
+  }[] | undefined
   if (esCoord) {
     porSupervisor = supervisoresCoord.map(sup => {
-      const del = feedbacks.filter(f => {
-        const row = rows.slice(1).find(r =>
-          (r[iJefe] ?? "").toLowerCase().trim() === sup &&
-          (r[iNombreA] ?? "") === f.asesor
-        )
-        return !!row
-      })
-      // Recalcular desde rows directamente para este supervisor
-      const feedsSup = rows.slice(1)
+      const itemsSup = rows.slice(1)
         .filter(r => (r[iJefe] ?? "").toLowerCase().trim() === sup)
-        .map(r => condensarEstado(r[iEtapa] ?? ""))
+        .map(r => ({
+          etapaRaw:   r[iEtapa]    ?? "",
+          estado:     condensarEstado(r[iEtapa] ?? ""),
+          quien:      r[iNombreQ]  ?? "",
+          asesor:     r[iNombreA]  ?? "",
+          motivo:     r[iMotivo]   ?? "",
+          causa:      r[iCausa]    ?? "",
+          feedback:   iFeedback >= 0 ? r[iFeedback] : "",
+          semana:     r[iSemana]   ?? "",
+        }))
+      const nuevosSup      = itemsSup.filter(f => f.estado === "nuevo")
+      const gestionadosSup = itemsSup.filter(f => f.estado === "gestionado")
+      const rechazadosSup  = itemsSup.filter(f => f.estado === "rechazado")
       return {
         supervisor: sup,
-        total: feedsSup.length,
-        nuevos: feedsSup.filter(e => e === "nuevo").length,
-        gestionados: feedsSup.filter(e => e === "gestionado").length,
-        rechazados: feedsSup.filter(e => e === "rechazado").length,
+        total: itemsSup.length,
+        nuevos: nuevosSup.length,
+        gestionados: gestionadosSup.length,
+        rechazados: rechazadosSup.length,
+        items: [...nuevosSup.slice(-10), ...gestionadosSup.slice(-5)],
       }
     }).filter(s => s.total > 0)
       .sort((a, b) => b.nuevos - a.nuevos)

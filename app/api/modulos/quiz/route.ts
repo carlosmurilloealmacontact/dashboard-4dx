@@ -76,12 +76,18 @@ export async function GET(req: NextRequest) {
       const equipo = deEstaSemana.filter(r => r[iJefe] === jefe)
       const presentaron = equipo.filter(r => presentoQuiz(r[iPres] ?? ""))
       const aprobaron = equipo.filter(r => presentoQuiz(r[iPres] ?? "") && aproboQuiz(r[iPunt] ?? ""))
+      const agentes = equipo.map(r => ({
+        nombre:   r[iNombre] ?? "",
+        presento: presentoQuiz(r[iPres] ?? ""),
+        aprueba:  presentoQuiz(r[iPres] ?? "") && aproboQuiz(r[iPunt] ?? ""),
+      }))
       return {
         supervisor: jefe,
         total: equipo.length,
         presento: presentaron.length,
         noPresento: equipo.length - presentaron.length,
         aprueba: aprobaron.length,
+        agentes,
       }
     }).sort((a, b) => b.noPresento - a.noPresento)
 
