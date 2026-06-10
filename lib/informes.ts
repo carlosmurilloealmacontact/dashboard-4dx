@@ -15,6 +15,32 @@ export function normSemana(s: string | number | null | undefined): string {
 const idxFactory = (headers: string[]) => (n: string) =>
   headers.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase())
 
+/**
+ * Normaliza nombres de personas para comparar entre hojas de distintos sistemas
+ * fuente (jerarquía, Detalle Eventos, Pausas 4DX, Resumen_Lideres, Confirmaciones
+ * de Rol), que pueden traer distinto formato de mayúsculas/acentos/espacios.
+ */
+function normNombre(s: string | null | undefined): string {
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/**
+ * Busca, dentro de `supervisoresEquipo` (nombres "canónicos" de la jerarquía),
+ * el que coincide (normalizando acentos/espacios) con `raw` —el nombre tal como
+ * viene de una hoja de otro sistema fuente. Devuelve el nombre canónico para
+ * usarlo como llave y poder cruzar con las demás prácticas.
+ */
+function matchSupervisor(raw: string | null | undefined, supervisoresEquipo: string[]): string | null {
+  const norm = normNombre(raw)
+  if (!norm) return null
+  return supervisoresEquipo.find(s => normNombre(s) === norm) ?? null
+}
+
 function categorizarEstadoCompromiso(estado: string): "sin_ingreso" | "abierto" | "cerrado_mejora" | "cerrado_sin_mejora" {
   const e = (estado ?? "").trim().toLowerCase()
   if (!e || e.includes("sin ingreso")) return "sin_ingreso"
@@ -99,10 +125,12 @@ export interface CopilotSemana {
   agentesConFaltaCDR: number
 }
 
-export interface ConfirmacionesRolResumen {
-  total: number
-  dimMasAfectada: { label: string; valor: number } | null
-  sinConfirmacionesEstaSemana: boolean
+export interface ConfirmacionesCoordinador {
+  totalEstaSemana: number
+  meta: number
+  cumpleMeta: boolean
+  ultimoIngreso: string | null
+  diasDesdeUltimoIngreso: number | null
 }
 
 export interface TendenciaMetrica {
@@ -222,8 +250,8 @@ export interface DatosInforme {
       tendencia: Tendencia
     }[]
     resolutividad: ResolutividadResumen | null
-    confirmacionesRol: ConfirmacionesRolResumen | null
   }[]
+  confirmacionesCoordinador: ConfirmacionesCoordinador
 }
 
 /**
@@ -243,22 +271,22 @@ export async function construirDatosInforme(
 
   const equipoParaSoporte = soloSupervisor ? [soloSupervisor] : supervisoresEquipo
 
-  const [compromisos, quiz, feedback, resolutividad, pcaPta, agendaLider, compromisosCopilot, confirmacionesRol] = await Promise.all([
+  const [compromisos, quiz, feedback, resolutividad, pcaPta, agendaLider, compromisosCopilot, confirmacionesCoordinador] = await Promise.all([
     aggCompromisos(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggQuiz(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggFeedback(accessToken, supervisoresEquipo, semanasFetch, soloSupervisor),
     aggResolutividad(accessToken, nombreCoord, soloSupervisor),
-    aggPcaPta(accessToken, equipoParaSoporte, semanasFetch),
-    aggAgendaLider(accessToken, equipoParaSoporte, semanasFetch),
-    aggCompromisosCopilot(accessToken, equipoParaSoporte, semanasFetch),
-    aggConfirmacionesRol(accessToken, equipoParaSoporte),
+    aggPcaPta(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggAgendaLider(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggCompromisosCopilot(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggConfirmacionesCoordinador(accessToken, nombreCoord),
   ])
 
   const supervisores = soloSupervisor
     ? [soloSupervisor]
     : [...new Set([
         ...compromisos.keys(), ...quiz.keys(), ...feedback.keys(), ...resolutividad.keys(),
-        ...pcaPta.keys(), ...agendaLider.keys(), ...compromisosCopilot.keys(), ...confirmacionesRol.keys(),
+        ...pcaPta.keys(), ...agendaLider.keys(), ...compromisosCopilot.keys(),
       ])]
 
   const buscar = <T extends { semana: string }>(mapa: Map<string, T[]>, sup: string, sem: string): T | null =>
@@ -290,7 +318,6 @@ export async function construirDatosInforme(
       }
     }),
     resolutividad: resolutividad.get(sup) ?? null,
-    confirmacionesRol: confirmacionesRol.get(sup) ?? null,
   }))
 
   return {
@@ -299,6 +326,7 @@ export async function construirDatosInforme(
       : { tipo: "coordinador", nombre: nombreCoord },
     semanas,
     porSupervisor,
+    confirmacionesCoordinador,
   }
 }
 
@@ -452,14 +480,12 @@ export async function aggFeedback(
   const iSemana = idx("semana")
 
   const semSet = new Set(semanas)
-  const validos = new Set(supervisoresValidos.map(s => s.toLowerCase().trim()))
 
   const buckets = new Map<string, { nuevos: number; gestionados: number; rechazados: number }>()
   rows.slice(1).forEach(r => {
-    const jefe = r[iJefe] ?? ""
-    const jefeNorm = jefe.toLowerCase().trim()
-    if (!validos.has(jefeNorm)) return
-    if (soloSupervisor && jefeNorm !== soloSupervisor.toLowerCase().trim()) return
+    const jefe = matchSupervisor(r[iJefe], supervisoresValidos)
+    if (!jefe) return
+    if (soloSupervisor && normNombre(jefe) !== normNombre(soloSupervisor)) return
     const sem = normSemana(r[iSemana])
     if (!semSet.has(sem)) return
     const key = `${jefe}|||${sem}`
@@ -534,6 +560,7 @@ export async function aggResolutividad(
  */
 export async function aggPcaPta(
   accessToken: string,
+  nombreCoord: string,
   supervisoresEquipo: string[],
   semanas: string[],
 ): Promise<Map<string, PcaPtaSemana[]>> {
@@ -545,6 +572,7 @@ export async function aggPcaPta(
 
   const headers = rows[0]
   const idx = idxFactory(headers)
+  const iNombre = idx("nombre")
   const iJefe   = idx("jefe inmediato")
   const iOrigen = idx("origen")
   const iDia    = idx("dia semana")
@@ -552,21 +580,24 @@ export async function aggPcaPta(
   const iTotal  = idx("total gestion dia")
   const iCumple = idx("cumplimiento dia")
 
-  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  // En "Detalle Eventos", "Jefe Inmediato" es el coordinador y "Nombre" es el
+  // supervisor evaluado (igual que en /api/modulos/adherencia-pca).
+  const coordNorm = normNombre(nombreCoord)
   const semSet = new Set(semanas)
 
-  // jefe|||semana|||dia|||origen -> {total, cumple} (varias filas-evento por día/origen -> máximo)
+  // supervisor|||semana|||dia|||origen -> {total, cumple} (varias filas-evento por día/origen -> máximo)
   const porDiaOrigen = new Map<string, { total: number; cumple: number }>()
   rows.slice(1).forEach(r => {
-    const jefe = r[iJefe] ?? ""
-    if (!validos.has(jefe.toLowerCase().trim())) return
+    if (normNombre(r[iJefe]) !== coordNorm) return
+    const sup = matchSupervisor(r[iNombre], supervisoresEquipo)
+    if (!sup) return
     const sem = normSemana(r[iSemana])
     if (!semSet.has(sem)) return
     const dia = parseInt(r[iDia] ?? "0") || 0
     if (!dia) return
     const total = parseInt(r[iTotal] ?? "0") || 0
     const cumple = parseFloat((r[iCumple] ?? "").replace(",", ".").replace("%", "")) || 0
-    const key = `${jefe}|||${sem}|||${dia}|||${r[iOrigen] ?? ""}`
+    const key = `${sup}|||${sem}|||${dia}|||${r[iOrigen] ?? ""}`
     const prev = porDiaOrigen.get(key)
     porDiaOrigen.set(key, {
       total:  prev ? Math.max(prev.total, total) : total,
@@ -625,6 +656,7 @@ export async function aggPcaPta(
  */
 export async function aggAgendaLider(
   accessToken: string,
+  nombreCoord: string,
   supervisoresEquipo: string[],
   semanas: string[],
 ): Promise<Map<string, AgendaLiderSemana[]>> {
@@ -637,17 +669,21 @@ export async function aggAgendaLider(
   const headers = rows[0]
   const idx = idxFactory(headers)
   const iLider  = idx("lider")
+  const iJefe   = idx("jefe_inmediato")
   const iSemana = idx("semana")
   const iCumple = idx("cumple")
   const iCDR    = idx("cdr_sim")
 
-  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  // "Jefe_Inmediato" es el coordinador y "Lider" es el supervisor (igual que
+  // en getPracticasLideres, vista coordinador).
+  const coordNorm = normNombre(nombreCoord)
   const semSet = new Set(semanas)
 
   const buckets = new Map<string, { totalDias: number; cumplidos: number; cdrVals: number[] }>()
   rows.slice(1).forEach(r => {
-    const lider = r[iLider] ?? ""
-    if (!validos.has(lider.toLowerCase().trim())) return
+    if (normNombre(r[iJefe]) !== coordNorm) return
+    const lider = matchSupervisor(r[iLider], supervisoresEquipo)
+    if (!lider) return
     const sem = normSemana(r[iSemana])
     if (!semSet.has(sem)) return
     const key = `${lider}|||${sem}`
@@ -697,6 +733,7 @@ function fechaAIsoSemanaPausas(fechaStr: string): string {
  */
 export async function aggCompromisosCopilot(
   accessToken: string,
+  nombreCoord: string,
   supervisoresEquipo: string[],
   semanas: string[],
 ): Promise<Map<string, CopilotSemana[]>> {
@@ -713,8 +750,11 @@ export async function aggCompromisosCopilot(
   const iTipo     = idx("tipo")
   const iEstado   = idx("estado")
   const iJefe     = idx("jefe_inmediato")
+  const iCoord    = idx("coordinador")
 
-  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  // "Coordinador" filtra el equipo y "Jefe_Inmediato" es el supervisor (igual
+  // que en /api/modulos/pausas-4dx, vista coordinador).
+  const coordNorm = normNombre(nombreCoord)
   const semSet = new Set(semanas)
 
   const buckets = new Map<string, {
@@ -722,8 +762,9 @@ export async function aggCompromisosCopilot(
     cdr: { total: number; participo: number; faltantes: Set<string> }
   }>()
   rows.slice(1).forEach(r => {
-    const jefe = r[iJefe] ?? ""
-    if (!validos.has(jefe.toLowerCase().trim())) return
+    if (normNombre(r[iCoord]) !== coordNorm) return
+    const jefe = matchSupervisor(r[iJefe], supervisoresEquipo)
+    if (!jefe) return
     const sem = normSemana(fechaAIsoSemanaPausas(r[iFecha] ?? ""))
     if (!semSet.has(sem)) return
     const tipo = r[iTipo] ?? ""
@@ -761,23 +802,6 @@ export async function aggCompromisosCopilot(
   return resultado
 }
 
-const DIMS_LABELS_CONFIRMACIONES: Record<string, string> = {
-  preparacion: "Preparación", involucramiento: "Involucramiento",
-  herramientas: "Herramientas", alineacion: "Alineación",
-  reconocimiento: "Reconocimiento", retroalimentacion: "Retroalimentación",
-  seguimiento: "Seguimiento", tips: "Tips", resumen: "Resumen",
-}
-
-function textoANumConfirmacion(v: string): number | null {
-  if (!v) return null
-  const lower = v.toLowerCase()
-  if (lower === "1" || lower.includes("completa")) return 1
-  if (lower.includes("parcial")) return 0.5
-  if (lower.includes("observado") || lower === "0") return 0
-  const n = parseFloat(v)
-  return isNaN(n) ? null : n
-}
-
 function parseSheetDateConfirmacion(dateStr: string): Date | null {
   if (!dateStr) return null
   const s = dateStr.trim()
@@ -801,41 +825,41 @@ function parseSheetDateConfirmacion(dateStr: string): Date | null {
 }
 
 /**
- * Resumen acumulado (no es por semana) de "Confirmaciones de Rol" por
- * supervisor (lider acompañado): dimensión más afectada y si tuvo
- * acompañamientos esta semana (lunes-domingo).
+ * Cumplimiento del propio coordinador en "Confirmaciones de Rol" como coach
+ * de sus supervisores: cuántas confirmaciones hizo esta semana (meta: 2) y
+ * cuándo fue su último ingreso a la hoja.
  */
-export async function aggConfirmacionesRol(
+export async function aggConfirmacionesCoordinador(
   accessToken: string,
-  supervisoresEquipo: string[],
-): Promise<Map<string, ConfirmacionesRolResumen>> {
+  nombreCoord: string,
+): Promise<ConfirmacionesCoordinador> {
   const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
   const HOJA = "Confirmaciones de Rol"
-  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:BJ`)
-  const resultado = new Map<string, ConfirmacionesRolResumen>()
-  if (rows.length < 2) return resultado
-
-  const headers = rows[0]
-  const idx = idxFactory(headers)
-  const iLiderAcomp = idx("lider acompanado")
-  const iFecha = headers.findIndex(h => (h ?? "").toLowerCase().includes("criação") || (h ?? "").toLowerCase().includes("criacao"))
-  const iPrep   = idx("preparacion")
-  const iInvol  = idx("involucramiento")
-  const iHerr   = headers.findIndex(h => (h ?? "").toLowerCase().includes("ferramenta"))
-  const iAlin   = headers.findIndex(h => (h ?? "").toLowerCase().includes("resultados") && headers.indexOf(h) > 28)
-  const iRecon  = headers.findIndex(h => (h ?? "").toLowerCase().includes("celebra"))
-  const iRetro  = headers.findIndex(h => (h ?? "").toLowerCase().includes("reforça") || (h ?? "").toLowerCase().includes("reforca"))
-  const iSeg    = headers.findIndex(h => (h ?? "").toLowerCase().includes("escalamento"))
-  const iTips   = headers.findIndex(h => (h ?? "").toLowerCase().includes("dicas"))
-  const iResumen = headers.findIndex(h => (h ?? "").toLowerCase().includes("encerra"))
-
-  const dimsIdx: Record<string, number> = {
-    preparacion: iPrep, involucramiento: iInvol, herramientas: iHerr,
-    alineacion: iAlin, reconocimiento: iRecon, retroalimentacion: iRetro,
-    seguimiento: iSeg, tips: iTips, resumen: iResumen,
+  const META_SEMANAL = 2
+  const vacio: ConfirmacionesCoordinador = {
+    totalEstaSemana: 0,
+    meta: META_SEMANAL,
+    cumpleMeta: false,
+    ultimoIngreso: null,
+    diasDesdeUltimoIngreso: null,
   }
 
-  const validos = new Set(supervisoresEquipo.map(s => s.toLowerCase().trim()))
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:BJ`)
+  if (rows.length < 2) return vacio
+
+  const headers = rows[0]
+  const iFecha = headers.findIndex(h => (h ?? "").toLowerCase().includes("criação") || (h ?? "").toLowerCase().includes("criacao"))
+
+  // El nombre del coach está en la columna "Nombre" más cercana al índice 45 (AT),
+  // ya que "Nombre" también aparece más temprano en la hoja con otro significado.
+  const nombrePositions: number[] = []
+  headers.forEach((h, i) => { if ((h ?? "").toLowerCase().trim() === "nombre") nombrePositions.push(i) })
+  const iNombreCoach = nombrePositions.length > 0
+    ? nombrePositions.reduce((closest, current) => Math.abs(current - 45) < Math.abs(closest - 45) ? current : closest)
+    : -1
+  if (iNombreCoach < 0) return vacio
+
+  const coordNorm = normNombre(nombreCoord)
 
   // Semana actual: lunes 00:00 -> domingo 23:59
   const hoy = new Date()
@@ -847,36 +871,25 @@ export async function aggConfirmacionesRol(
   domingo.setDate(lunes.getDate() + 6)
   domingo.setHours(23, 59, 59, 999)
 
-  const buckets = new Map<string, { dims: Record<string, number[]>; total: number; estaSemana: number }>()
+  let totalEstaSemana = 0
+  let ultima: Date | null = null
   rows.slice(1).forEach(r => {
-    const lider = r[iLiderAcomp] ?? ""
-    if (!validos.has(lider.toLowerCase().trim())) return
-    if (!buckets.has(lider)) buckets.set(lider, { dims: {}, total: 0, estaSemana: 0 })
-    const b = buckets.get(lider)!
-    b.total++
+    if (normNombre(r[iNombreCoach]) !== coordNorm) return
     const fecha = parseSheetDateConfirmacion(iFecha >= 0 ? (r[iFecha] ?? "") : "")
-    if (fecha && fecha >= lunes && fecha <= domingo) b.estaSemana++
-    Object.entries(dimsIdx).forEach(([key, i]) => {
-      if (i < 0) return
-      const v = textoANumConfirmacion(r[i] ?? "")
-      if (v === null) return
-      if (!b.dims[key]) b.dims[key] = []
-      b.dims[key].push(v)
-    })
+    if (!fecha) return
+    if (fecha >= lunes && fecha <= domingo) totalEstaSemana++
+    if (!ultima || fecha > ultima) ultima = fecha
   })
 
-  buckets.forEach((b, lider) => {
-    const promedios = Object.entries(b.dims).map(([key, vals]) => ({
-      label: DIMS_LABELS_CONFIRMACIONES[key],
-      valor: Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100),
-    }))
-    const peor = promedios.sort((x, y) => x.valor - y.valor)[0] ?? null
-    resultado.set(lider, {
-      total: b.total,
-      dimMasAfectada: peor ? { label: peor.label, valor: peor.valor } : null,
-      sinConfirmacionesEstaSemana: b.total > 0 && b.estaSemana === 0,
-    })
-  })
+  const diasDesdeUltimoIngreso = ultima
+    ? Math.floor((hoy.getTime() - (ultima as Date).getTime()) / (1000 * 60 * 60 * 24))
+    : null
 
-  return resultado
+  return {
+    totalEstaSemana,
+    meta: META_SEMANAL,
+    cumpleMeta: totalEstaSemana >= META_SEMANAL,
+    ultimoIngreso: ultima ? (ultima as Date).toISOString().slice(0, 10) : null,
+    diasDesdeUltimoIngreso,
+  }
 }
