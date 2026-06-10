@@ -49,8 +49,9 @@ export default function Compromisos() {
       setData(d)
       if (Array.isArray(d.semanas)) reportWeeks("compromisos", d.semanas)
       if (d.resumen) {
+        const ingresados = d.total - d.resumen.sinIngreso
         setMetric({
-          valor: `${d.total} ingresados`,
+          valor: `${ingresados} de ${d.total} ingresados`,
           alerta: d.resumen.sinIngreso,
           color: d.resumen.sinIngreso > 0 ? "yellow" : "green",
         })
