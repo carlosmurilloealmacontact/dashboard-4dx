@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react"
 import ModuloCard from "@/components/ModuloCard"
 import CoachTeamView from "@/components/CoachTeamView"
 import AdminView from "@/components/AdminView"
+import InformeIA from "@/components/InformeIA"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import { usePerfil } from "@/hooks/usePerfil"
@@ -156,6 +157,11 @@ export default function DashboardPage() {
             {perfil?.rol?.toLowerCase() === "coach" ? (
               <CoachTeamView perfilCoach={perfil} />
             ) : null}
+
+            {/* Informe de cumplimiento generado con IA, para coordinadores y jefaturas */}
+            {perfil && ["coordinador", "jefatura", "gerente"].includes(perfil.rol) && (
+              <InformeIA perfil={perfil} />
+            )}
 
             <div className="mt-8 text-center text-xs text-gray-500">
               [Fin de página - rol: {perfil?.rol?.toLowerCase()}]
