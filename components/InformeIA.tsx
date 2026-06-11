@@ -406,19 +406,43 @@ export default function InformeIA({ supervisores, email }: Props) {
 
       {resultado && (
         <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-start justify-between mb-2">
+          <div className="flex items-start justify-between mb-2 informe-toolbar">
             <p className="text-xs text-gray-500">
               {resultado.alcance.tipo === "supervisor" ? "Supervisor" : "Coordinador"}: {resultado.alcance.nombre}
               {" · "}Semana(s): {resultado.semanas.join(", ")}
               {" · "}{resultado.tipoInforme === "parcial" ? "Parcial" : "Cierre"}
             </p>
-            <button onClick={copiar} className="text-xs text-blue-600 hover:text-blue-800 flex-shrink-0">
-              {copiado ? "✓ Copiado" : "Copiar"}
-            </button>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button onClick={copiar} className="text-xs text-blue-600 hover:text-blue-800">
+                {copiado ? "✓ Copiado" : "Copiar"}
+              </button>
+              <button onClick={() => window.print()} className="text-xs text-blue-600 hover:text-blue-800">
+                Descargar PDF
+              </button>
+            </div>
           </div>
-          <InformeRenderizado resultado={resultado} />
+          <div id="informe-imprimible">
+            <InformeRenderizado resultado={resultado} />
+          </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #informe-imprimible, #informe-imprimible * {
+            visibility: visible;
+          }
+          #informe-imprimible {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   )
 }
