@@ -33,20 +33,43 @@ function normTokens(s: string): string[] {
     .filter(Boolean)
 }
 
+// Distancia de edición (Levenshtein) entre dos strings.
+function distanciaEdicion(a: string, b: string): number {
+  const m = a.length
+  const n = b.length
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1])
+    }
+  }
+  return dp[m][n]
+}
+
+// Dos palabras "coinciden" si son iguales, o si difieren por a lo sumo 1
+// edición y tienen 4+ letras (cubre variantes de ortografía como "jhon"/"john").
+function palabrasCoinciden(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length < 4 || b.length < 4) return false
+  return distanciaEdicion(a, b) <= 1
+}
+
 // Coincide si el conjunto de palabras más corto está completamente contenido
-// en el más largo (sin importar el orden). Se exige al menos 2 palabras en
-// común para evitar falsos positivos con un solo apellido compartido. Esto
-// permite que un nombre con más partes (ej. "Rojas Leguizamo Andres Felipe"
-// en la jerarquía) coincida con una versión abreviada en Drive (ej. "Equipo
-// Felipe Rojas"), y viceversa.
+// en el más largo (sin importar el orden, tolerando variantes de ortografía).
+// Se exige al menos 2 palabras en común para evitar falsos positivos con un
+// solo apellido compartido. Esto permite que un nombre con más partes (ej.
+// "Rojas Leguizamo Andres Felipe" en la jerarquía) coincida con una versión
+// abreviada en Drive (ej. "Equipo Felipe Rojas"), y viceversa.
 export function nombresCoinciden(nombreA: string, nombreB: string): boolean {
   const tokensA = normTokens(nombreA)
-  const tokensB = new Set(normTokens(nombreB))
-  if (tokensA.length === 0 || tokensB.size === 0) return false
-  const [menor, mayor] = tokensA.length <= tokensB.size
-    ? [tokensA, tokensB]
-    : [[...tokensB], new Set(tokensA)]
-  return menor.length >= 2 && menor.every(t => mayor.has(t))
+  const tokensB = normTokens(nombreB)
+  if (tokensA.length === 0 || tokensB.length === 0) return false
+  const [menor, mayor] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA]
+  return menor.length >= 2 && menor.every(t => mayor.some(m => palabrasCoinciden(t, m)))
 }
 
 /**

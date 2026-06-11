@@ -326,6 +326,20 @@ independientes**:
      `app/api/debug/informe-coord`, `app/api/debug/informe-supervisores`,
      `app/api/debug/persona-cargo` (todos admin-only).
 
+2b. **"Agenda del líder" en blanco para MARTINEZ PEREZ JHON ALEXANDER** pese a
+   que los archivos sí existen en Drive (carpeta "Equipo John Martinez").
+   - **Causa**: `nombresCoinciden()` (`lib/drive.ts`) exigía coincidencia
+     exacta de palabras; la carpeta de Drive dice "**John** Martinez" pero la
+     jerarquía tiene "MARTINEZ PEREZ **JHON** ALEXANDER" — "john" ≠ "jhon" →
+     nunca encontraba la carpeta del coordinador → mapa de agendas vacío →
+     "Sin archivo" para todo el equipo.
+   - **✅ Corregido en código** (2026-06-11): `nombresCoinciden()` ahora tolera
+     variantes de ortografía (distancia de edición ≤1 en palabras de 4+
+     letras), cubriendo casos como "jhon"/"john".
+   - Pendiente: confirmar en producción que "Agenda del líder" de Martínez
+     Pérez ahora muestra los 4 archivos (Ramirez Rios, Salazar Sanmartin,
+     Orixas Castro, Rodriguez Restrepo).
+
 3. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
    — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
    filtro de semana). No bloqueante, pendiente desde sesión anterior.
