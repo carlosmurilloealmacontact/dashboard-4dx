@@ -189,10 +189,14 @@ export async function obtenerPerfil(
     p => (p.jefeInmediato ?? "").toLowerCase().trim() === nombrePersona
   )
 
-  // Supervisores: para coordinadores, quienes tienen a esta persona como coordinador
+  // Supervisores: para coordinadores, quienes tienen a esta persona como coordinador.
+  // En la hoja base, algunos supervisores tienen mal el campo "coordinador"
+  // (apunta a la jefatura en vez del coordinador real), pero "jefe_inmediato"
+  // sí es correcto — se acepta cualquiera de los dos como match.
   const supervisores = activos.filter(
-    p => (p.coordinador ?? "").toLowerCase().trim() === nombrePersona
-      && normalizarCargo(p.cargo) === "supervisor"
+    p => normalizarCargo(p.cargo) === "supervisor"
+      && ((p.coordinador ?? "").toLowerCase().trim() === nombrePersona
+        || (p.jefeInmediato ?? "").toLowerCase().trim() === nombrePersona)
   )
 
   return { persona, rol, equipo, supervisores }

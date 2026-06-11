@@ -312,10 +312,15 @@ independientes**:
        GRAJALES MENA JESUS ENRIQUE (AMX 14190 / Socio 2042), BARRERA VALENCIA
        MARIA ALEJANDRA (AMX 14212 / Socio 2063), OVALLES ORTEGANA YENNIFEER
        ANDREINA (AMX 14316 / Socio 2158).
-   - **No es un bug de código** — corrección manual de la columna `coordinador`
-     en la hoja base de jerarquía.
-   - Pendiente: tras corregir, regenerar el Informe IA de los 3 coordinadores
-     semana 24 y confirmar que las 4 secciones muestran datos.
+   - **✅ Corregido en código** (2026-06-11): como corregir la hoja de origen no
+     es viable a corto plazo, `obtenerPerfil()` en `lib/jerarquia.ts` ahora
+     calcula `supervisores` aceptando coincidencia por `coordinador` **o** por
+     `jefeInmediato` (este último siempre estaba correcto). Esto resuelve los 3
+     casos sin tocar la hoja. La corrección manual de la columna `coordinador`
+     (filas listadas arriba) sigue siendo recomendable a futuro para limpiar el
+     dato de origen, pero ya no bloquea el Informe IA.
+   - Pendiente: regenerar el Informe IA de los 3 coordinadores semana 24 y
+     confirmar que las 4 secciones muestran datos.
    - Endpoints de debug creados para esta investigación:
      `app/api/debug/pca-eventos`, `app/api/debug/pauta-eventos`,
      `app/api/debug/informe-coord`, `app/api/debug/informe-supervisores`,
