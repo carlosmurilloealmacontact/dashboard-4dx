@@ -74,6 +74,27 @@ function normalizarEtapaResolutividad(etapa: string): string {
   return etapa
 }
 
+export interface Adherencia4dxSemana {
+  semana: string
+  pct: number
+  totalAgentes: number
+  totalRegistros: number
+}
+
+export interface PracticasLiderSemana {
+  semana: string
+  pct: number
+  cdr: number | null
+  totalDias: number
+}
+
+export interface PcaPtaSemana {
+  semana: string
+  pct: number
+  totalMonitoreos: number
+  diasConDatos: number
+}
+
 export interface CompromisosSemana {
   semana: string
   total: number
@@ -91,31 +112,13 @@ export interface QuizSemana {
   aprueba: number
 }
 
-export interface FeedbackSemana {
+export interface EstoyEnteradoSemana {
   semana: string
-  nuevos: number
-  gestionados: number
-  rechazados: number
-}
-
-export interface ResolutividadResumen {
   total: number
-  pctImpl: number
-  pctBacklog: number
-}
-
-export interface PcaPtaSemana {
-  semana: string
-  pct: number
-  totalMonitoreos: number
-  diasConDatos: number
-}
-
-export interface AgendaLiderSemana {
-  semana: string
-  pct: number
-  cdr: number | null
-  totalDias: number
+  si: number
+  no: number
+  sinRespuesta: number
+  pctClaro: number
 }
 
 export interface CopilotSemana {
@@ -124,6 +127,19 @@ export interface CopilotSemana {
   pctCDR: number
   agentesConFaltaDialogo: number
   agentesConFaltaCDR: number
+}
+
+export interface ResolutividadResumen {
+  total: number
+  pctImpl: number
+  pctBacklog: number
+}
+
+export interface FeedbackResumen {
+  total: number
+  nuevos: number
+  gestionados: number
+  rechazados: number
 }
 
 export interface ConfirmacionesCoordinador {
@@ -142,11 +158,12 @@ export interface TendenciaMetrica {
 }
 
 export interface Tendencia {
+  adherencia4dx: { pct: TendenciaMetrica } | null
+  practicasLideres: { pct: TendenciaMetrica } | null
+  pcaPta: { pct: TendenciaMetrica } | null
   compromisos: { pctSinIngreso: TendenciaMetrica; pctCerradoMejora: TendenciaMetrica } | null
   quiz: { pctPresento: TendenciaMetrica; pctAprueba: TendenciaMetrica } | null
-  feedback: { nuevos: TendenciaMetrica } | null
-  pcaPta: { pct: TendenciaMetrica } | null
-  agendaLider: { pct: TendenciaMetrica } | null
+  estoyEnterado: { pctClaro: TendenciaMetrica } | null
   compromisosCopilot: { pctDialogo: TendenciaMetrica; pctCDR: TendenciaMetrica } | null
 }
 
@@ -158,30 +175,37 @@ function tendenciaMetrica(actual: number, anterior: number, mayorEsMejor: boolea
   return { actual: round1(actual), anterior: round1(anterior), delta, direccion }
 }
 
+interface DatosSemana {
+  adherencia4dx: Adherencia4dxSemana | null
+  practicasLideres: PracticasLiderSemana | null
+  pcaPta: PcaPtaSemana | null
+  compromisos: CompromisosSemana | null
+  quiz: QuizSemana | null
+  estoyEnterado: EstoyEnteradoSemana | null
+  compromisosCopilot: CopilotSemana | null
+}
+
 /**
  * Compara los datos de una semana contra la semana inmediatamente anterior
  * y devuelve los deltas por práctica. Devuelve `null` por práctica si falta
  * el dato actual o el anterior (sin registros esa semana).
  */
-export function calcularTendencia(
-  actual: {
-    compromisos: CompromisosSemana | null
-    quiz: QuizSemana | null
-    feedback: FeedbackSemana | null
-    pcaPta: PcaPtaSemana | null
-    agendaLider: AgendaLiderSemana | null
-    compromisosCopilot: CopilotSemana | null
-  },
-  anterior: {
-    compromisos: CompromisosSemana | null
-    quiz: QuizSemana | null
-    feedback: FeedbackSemana | null
-    pcaPta: PcaPtaSemana | null
-    agendaLider: AgendaLiderSemana | null
-    compromisosCopilot: CopilotSemana | null
-  } | undefined,
-): Tendencia {
-  const a = anterior ?? { compromisos: null, quiz: null, feedback: null, pcaPta: null, agendaLider: null, compromisosCopilot: null }
+export function calcularTendencia(actual: DatosSemana, anterior: DatosSemana | undefined): Tendencia {
+  const a: DatosSemana = anterior ?? {
+    adherencia4dx: null, practicasLideres: null, pcaPta: null, compromisos: null, quiz: null, estoyEnterado: null, compromisosCopilot: null,
+  }
+
+  const adherencia4dx = (actual.adherencia4dx && a.adherencia4dx)
+    ? { pct: tendenciaMetrica(actual.adherencia4dx.pct, a.adherencia4dx.pct, true) }
+    : null
+
+  const practicasLideres = (actual.practicasLideres && a.practicasLideres)
+    ? { pct: tendenciaMetrica(actual.practicasLideres.pct, a.practicasLideres.pct, true) }
+    : null
+
+  const pcaPta = (actual.pcaPta && a.pcaPta)
+    ? { pct: tendenciaMetrica(actual.pcaPta.pct, a.pcaPta.pct, true) }
+    : null
 
   const compromisos = (actual.compromisos && a.compromisos && actual.compromisos.total > 0 && a.compromisos.total > 0)
     ? {
@@ -213,16 +237,8 @@ export function calcularTendencia(
       }
     : null
 
-  const feedback = (actual.feedback && a.feedback)
-    ? { nuevos: tendenciaMetrica(actual.feedback.nuevos, a.feedback.nuevos, false) }
-    : null
-
-  const pcaPta = (actual.pcaPta && a.pcaPta)
-    ? { pct: tendenciaMetrica(actual.pcaPta.pct, a.pcaPta.pct, true) }
-    : null
-
-  const agendaLider = (actual.agendaLider && a.agendaLider)
-    ? { pct: tendenciaMetrica(actual.agendaLider.pct, a.agendaLider.pct, true) }
+  const estoyEnterado = (actual.estoyEnterado && a.estoyEnterado && actual.estoyEnterado.total > 0 && a.estoyEnterado.total > 0)
+    ? { pctClaro: tendenciaMetrica(actual.estoyEnterado.pctClaro, a.estoyEnterado.pctClaro, true) }
     : null
 
   const compromisosCopilot = (actual.compromisosCopilot && a.compromisosCopilot)
@@ -232,7 +248,7 @@ export function calcularTendencia(
       }
     : null
 
-  return { compromisos, quiz, feedback, pcaPta, agendaLider, compromisosCopilot }
+  return { adherencia4dx, practicasLideres, pcaPta, compromisos, quiz, estoyEnterado, compromisosCopilot }
 }
 
 export interface DatosInforme {
@@ -240,26 +256,18 @@ export interface DatosInforme {
   semanas: string[]
   porSupervisor: {
     supervisor: string
-    porSemana: {
-      semana: string
-      compromisos: CompromisosSemana | null
-      quiz: QuizSemana | null
-      feedback: FeedbackSemana | null
-      pcaPta: PcaPtaSemana | null
-      agendaLider: AgendaLiderSemana | null
-      compromisosCopilot: CopilotSemana | null
-      tendencia: Tendencia
-    }[]
+    porSemana: (DatosSemana & { semana: string; tendencia: Tendencia })[]
     resolutividad: ResolutividadResumen | null
+    feedback: FeedbackResumen | null
     agendaLiderArchivo: AgendaLiderArchivo | null
   }[]
   confirmacionesCoordinador: ConfirmacionesCoordinador
 }
 
 /**
- * Agrega los datos de las 4 prácticas (Compromisos, Quiz, Feedback, Resolutividad)
- * por supervisor y semana, incluyendo tendencia vs. la semana anterior.
- * Usado tanto por /api/informes (datos crudos) como por /api/informes/generar (narrativa IA).
+ * Agrega los datos de las prácticas 4DX por supervisor y semana, incluyendo
+ * tendencia vs. la semana anterior. Usado tanto por /api/informes (datos
+ * crudos) como por /api/informes/generar (narrativa IA).
  */
 export async function construirDatosInforme(
   accessToken: string,
@@ -273,14 +281,19 @@ export async function construirDatosInforme(
 
   const equipoParaSoporte = soloSupervisor ? [soloSupervisor] : supervisoresEquipo
 
-  const [compromisos, quiz, feedback, resolutividad, pcaPta, agendaLider, compromisosCopilot, confirmacionesCoordinador, agendaLiderArchivo] = await Promise.all([
+  const [
+    adherencia4dx, practicasLideres, pcaPta, compromisos, quiz, estoyEnterado, compromisosCopilot,
+    resolutividad, feedback, confirmacionesCoordinador, agendaLiderArchivo,
+  ] = await Promise.all([
+    aggAdherencia4dx(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggPracticasLideres(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggPcaPta(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
     aggCompromisos(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggQuiz(accessToken, nombreCoord, semanasFetch, soloSupervisor),
-    aggFeedback(accessToken, supervisoresEquipo, semanasFetch, soloSupervisor),
-    aggResolutividad(accessToken, nombreCoord, soloSupervisor),
-    aggPcaPta(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
-    aggAgendaLider(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggEstoyEnterado(accessToken, equipoParaSoporte, semanasFetch, soloSupervisor),
     aggCompromisosCopilot(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
+    aggResolutividad(accessToken, nombreCoord, soloSupervisor),
+    aggFeedback(accessToken, equipoParaSoporte, soloSupervisor),
     aggConfirmacionesCoordinador(accessToken, nombreCoord),
     obtenerAgendaLider(accessToken, nombreCoord, equipoParaSoporte),
   ])
@@ -288,8 +301,9 @@ export async function construirDatosInforme(
   const supervisores = soloSupervisor
     ? [soloSupervisor]
     : [...new Set([
-        ...compromisos.keys(), ...quiz.keys(), ...feedback.keys(), ...resolutividad.keys(),
-        ...pcaPta.keys(), ...agendaLider.keys(), ...compromisosCopilot.keys(),
+        ...adherencia4dx.keys(), ...practicasLideres.keys(), ...pcaPta.keys(),
+        ...compromisos.keys(), ...quiz.keys(), ...estoyEnterado.keys(), ...compromisosCopilot.keys(),
+        ...resolutividad.keys(), ...feedback.keys(),
       ])]
 
   const buscar = <T extends { semana: string }>(mapa: Map<string, T[]>, sup: string, sem: string): T | null =>
@@ -298,21 +312,24 @@ export async function construirDatosInforme(
   const porSupervisor = supervisores.map(sup => ({
     supervisor: sup,
     porSemana: semanas.map(sem => {
-      const datosSemana = {
+      const datosSemana: DatosSemana = {
+        adherencia4dx: buscar(adherencia4dx, sup, sem),
+        practicasLideres: buscar(practicasLideres, sup, sem),
+        pcaPta: buscar(pcaPta, sup, sem),
         compromisos: buscar(compromisos, sup, sem),
-        quiz:        buscar(quiz, sup, sem),
-        feedback:    buscar(feedback, sup, sem),
-        pcaPta:             buscar(pcaPta, sup, sem),
-        agendaLider:        buscar(agendaLider, sup, sem),
+        quiz: buscar(quiz, sup, sem),
+        estoyEnterado: buscar(estoyEnterado, sup, sem),
         compromisosCopilot: buscar(compromisosCopilot, sup, sem),
       }
-      const datosAnterior = {
-        compromisos: buscar(compromisos, sup, String(Number(sem) - 1)),
-        quiz:        buscar(quiz, sup, String(Number(sem) - 1)),
-        feedback:    buscar(feedback, sup, String(Number(sem) - 1)),
-        pcaPta:             buscar(pcaPta, sup, String(Number(sem) - 1)),
-        agendaLider:        buscar(agendaLider, sup, String(Number(sem) - 1)),
-        compromisosCopilot: buscar(compromisosCopilot, sup, String(Number(sem) - 1)),
+      const semAnterior = String(Number(sem) - 1)
+      const datosAnterior: DatosSemana = {
+        adherencia4dx: buscar(adherencia4dx, sup, semAnterior),
+        practicasLideres: buscar(practicasLideres, sup, semAnterior),
+        pcaPta: buscar(pcaPta, sup, semAnterior),
+        compromisos: buscar(compromisos, sup, semAnterior),
+        quiz: buscar(quiz, sup, semAnterior),
+        estoyEnterado: buscar(estoyEnterado, sup, semAnterior),
+        compromisosCopilot: buscar(compromisosCopilot, sup, semAnterior),
       }
       return {
         semana: sem,
@@ -321,6 +338,7 @@ export async function construirDatosInforme(
       }
     }),
     resolutividad: resolutividad.get(sup) ?? null,
+    feedback: feedback.get(sup) ?? null,
     agendaLiderArchivo: agendaLiderArchivo.get(sup) ?? null,
   }))
 
@@ -332,6 +350,227 @@ export async function construirDatosInforme(
     porSupervisor,
     confirmacionesCoordinador,
   }
+}
+
+/**
+ * Trae el histórico de "Adherencia 4DX" (hoja "Cumplimiento_Diario_MCI", igual
+ * que /api/modulos/adherencia-4dx) y agrupa por (supervisor, semana): % de
+ * registros diarios cumplidos (cumple_dia >= 1).
+ */
+export async function aggAdherencia4dx(
+  accessToken: string,
+  nombreCoord: string,
+  supervisoresEquipo: string[],
+  semanas: string[],
+): Promise<Map<string, Adherencia4dxSemana[]>> {
+  const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
+  const HOJA = "Cumplimiento_Diario_MCI"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:J`)
+  const resultado = new Map<string, Adherencia4dxSemana[]>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iSemana = idx("semana")
+  const iBP     = idx("bp")
+  const iJefe   = idx("jefe_inmediato")
+  const iCoord  = idx("coordinador")
+  const iCumple = idx("cumple_dia")
+
+  const coordNorm = normNombre(nombreCoord)
+  const semSet = new Set(semanas)
+
+  const buckets = new Map<string, { total: number; cumplieron: number; bps: Set<string> }>()
+  rows.slice(1).forEach(r => {
+    if (normNombre(r[iCoord]) !== coordNorm) return
+    const sup = matchSupervisor(r[iJefe], supervisoresEquipo)
+    if (!sup) return
+    const sem = normSemana(r[iSemana])
+    if (!semSet.has(sem)) return
+    const key = `${sup}|||${sem}`
+    if (!buckets.has(key)) buckets.set(key, { total: 0, cumplieron: 0, bps: new Set() })
+    const b = buckets.get(key)!
+    b.total++
+    b.bps.add(r[iBP] ?? "")
+    if ((parseFloat((r[iCumple] ?? "").replace(",", ".")) || 0) >= 1) b.cumplieron++
+  })
+
+  buckets.forEach((b, key) => {
+    const [sup, sem] = key.split("|||")
+    const fila: Adherencia4dxSemana = {
+      semana: sem,
+      pct: b.total > 0 ? Math.round((b.cumplieron / b.total) * 100) : 0,
+      totalAgentes: b.bps.size,
+      totalRegistros: b.total,
+    }
+    if (!resultado.has(sup)) resultado.set(sup, [])
+    resultado.get(sup)!.push(fila)
+  })
+
+  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  return resultado
+}
+
+/**
+ * Trae el histórico de "Prácticas Líderes" (hoja "Resumen_Lideres_Diario_Historico_8Sem",
+ * igual que getPracticasLideres) y agrupa por (lider, semana): % de días con
+ * agenda/práctica cumplida y CDR simulado promedio.
+ */
+export async function aggPracticasLideres(
+  accessToken: string,
+  nombreCoord: string,
+  supervisoresEquipo: string[],
+  semanas: string[],
+): Promise<Map<string, PracticasLiderSemana[]>> {
+  const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
+  const HOJA = "Resumen_Lideres_Diario_Historico_8Sem"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:L`)
+  const resultado = new Map<string, PracticasLiderSemana[]>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iLider  = idx("lider")
+  const iJefe   = idx("jefe_inmediato")
+  const iSemana = idx("semana")
+  const iCumple = idx("cumple")
+  const iCDR    = idx("cdr_sim")
+
+  // "Jefe_Inmediato" es el coordinador y "Lider" es el supervisor (igual que
+  // en getPracticasLideres, vista coordinador).
+  const coordNorm = normNombre(nombreCoord)
+  const semSet = new Set(semanas)
+
+  const buckets = new Map<string, { totalDias: number; cumplidos: number; cdrVals: number[] }>()
+  rows.slice(1).forEach(r => {
+    if (normNombre(r[iJefe]) !== coordNorm) return
+    const lider = matchSupervisor(r[iLider], supervisoresEquipo)
+    if (!lider) return
+    const sem = normSemana(r[iSemana])
+    if (!semSet.has(sem)) return
+    const key = `${lider}|||${sem}`
+    if (!buckets.has(key)) buckets.set(key, { totalDias: 0, cumplidos: 0, cdrVals: [] })
+    const b = buckets.get(key)!
+    b.totalDias++
+    if ((r[iCumple] ?? "") === "1") b.cumplidos++
+    const cdrRaw = r[iCDR] ?? ""
+    if (cdrRaw && cdrRaw !== "0") {
+      const n = parseFloat(cdrRaw.replace(",", "."))
+      if (!isNaN(n)) b.cdrVals.push(n <= 1 ? n * 100 : n)
+    }
+  })
+
+  buckets.forEach((b, key) => {
+    const [lider, sem] = key.split("|||")
+    const fila: PracticasLiderSemana = {
+      semana: sem,
+      pct: b.totalDias > 0 ? Math.round((b.cumplidos / b.totalDias) * 100) : 0,
+      cdr: b.cdrVals.length > 0 ? Math.round(b.cdrVals.reduce((s, v) => s + v, 0) / b.cdrVals.length) : null,
+      totalDias: b.totalDias,
+    }
+    if (!resultado.has(lider)) resultado.set(lider, [])
+    resultado.get(lider)!.push(fila)
+  })
+
+  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  return resultado
+}
+
+/**
+ * Trae el histórico de "Adherencia PCA/PTA" (hoja "Detalle Eventos", Panel Lea)
+ * y agrupa por (jefe inmediato, semana): % de cumplimiento ponderado por
+ * gestiones del día y total de monitoreos de la semana.
+ */
+export async function aggPcaPta(
+  accessToken: string,
+  nombreCoord: string,
+  supervisoresEquipo: string[],
+  semanas: string[],
+): Promise<Map<string, PcaPtaSemana[]>> {
+  const SHEET_ID = "1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw"
+  const HOJA = "Detalle Eventos"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:P`)
+  const resultado = new Map<string, PcaPtaSemana[]>()
+  if (rows.length < 2) return resultado
+
+  const headers = rows[0]
+  const idx = idxFactory(headers)
+  const iNombre = idx("nombre")
+  const iJefe   = idx("jefe inmediato")
+  const iOrigen = idx("origen")
+  const iDia    = idx("dia semana")
+  const iSemana = idx("semana")
+  const iTotal  = idx("total gestion dia")
+  const iCumple = idx("cumplimiento dia")
+
+  // En "Detalle Eventos", "Jefe Inmediato" es el coordinador y "Nombre" es el
+  // supervisor evaluado (igual que en /api/modulos/adherencia-pca).
+  const coordNorm = normNombre(nombreCoord)
+  const semSet = new Set(semanas)
+
+  // supervisor|||semana|||dia|||origen -> {total, cumple} (varias filas-evento por día/origen -> máximo)
+  const porDiaOrigen = new Map<string, { total: number; cumple: number }>()
+  rows.slice(1).forEach(r => {
+    if (normNombre(r[iJefe]) !== coordNorm) return
+    const sup = matchSupervisor(r[iNombre], supervisoresEquipo)
+    if (!sup) return
+    const sem = normSemana(r[iSemana])
+    if (!semSet.has(sem)) return
+    const dia = parseInt(r[iDia] ?? "0") || 0
+    if (!dia) return
+    const total = parseInt(r[iTotal] ?? "0") || 0
+    const cumple = parseFloat((r[iCumple] ?? "").replace(",", ".").replace("%", "")) || 0
+    const key = `${sup}|||${sem}|||${dia}|||${r[iOrigen] ?? ""}`
+    const prev = porDiaOrigen.get(key)
+    porDiaOrigen.set(key, {
+      total:  prev ? Math.max(prev.total, total) : total,
+      cumple: cumple || prev?.cumple || 0,
+    })
+  })
+
+  // Combinar PCA + PTA por día: sumar totales, promediar cumplimiento ponderado
+  const porDia = new Map<string, { total: number; sumaPonderada: number }>()
+  porDiaOrigen.forEach((val, key) => {
+    const [jefe, sem, dia] = key.split("|||")
+    const diaKey = `${jefe}|||${sem}|||${dia}`
+    const prev = porDia.get(diaKey) ?? { total: 0, sumaPonderada: 0 }
+    porDia.set(diaKey, {
+      total: prev.total + val.total,
+      sumaPonderada: prev.sumaPonderada + val.cumple * val.total,
+    })
+  })
+
+  // Agrupar por jefe + semana
+  const porSemana = new Map<string, { totalMonitoreos: number; sumaPct: number; diasConDatos: number }>()
+  porDia.forEach((val, key) => {
+    const [jefe, sem] = key.split("|||")
+    const semKey = `${jefe}|||${sem}`
+    const prev = porSemana.get(semKey) ?? { totalMonitoreos: 0, sumaPct: 0, diasConDatos: 0 }
+    if (val.total > 0) {
+      porSemana.set(semKey, {
+        totalMonitoreos: prev.totalMonitoreos + val.total,
+        sumaPct: prev.sumaPct + (val.sumaPonderada / val.total),
+        diasConDatos: prev.diasConDatos + 1,
+      })
+    } else {
+      porSemana.set(semKey, prev)
+    }
+  })
+
+  porSemana.forEach((val, key) => {
+    const [jefe, sem] = key.split("|||")
+    const fila: PcaPtaSemana = {
+      semana: sem,
+      pct: val.diasConDatos > 0 ? Math.round(val.sumaPct / val.diasConDatos) : 0,
+      totalMonitoreos: val.totalMonitoreos,
+      diasConDatos: val.diasConDatos,
+    }
+    if (!resultado.has(jefe)) resultado.set(jefe, [])
+    resultado.get(jefe)!.push(fila)
+  })
+
+  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  return resultado
 }
 
 /**
@@ -461,49 +700,59 @@ export async function aggQuiz(
 }
 
 /**
- * Trae el histórico de Feedback Interfábricas y agrupa por (supervisor, semana).
- * `supervisoresValidos`: nombres (lowercase, trim) del equipo del coordinador —
- * la hoja de feedback no tiene columna "coordinador", se filtra por jefe_inmediato.
+ * Trae el histórico de "Estoy Enterado" (hoja "Base_Dashboard", igual que
+ * /api/modulos/estoy-enterado) y agrupa por (jefe inmediato, semana): cuántos
+ * asesores respondieron "sí" tienen claridad sobre los temas de la semana.
  */
-export async function aggFeedback(
+export async function aggEstoyEnterado(
   accessToken: string,
-  supervisoresValidos: string[],
+  supervisoresEquipo: string[],
   semanas: string[],
   soloSupervisor?: string,
-): Promise<Map<string, FeedbackSemana[]>> {
-  const SHEET_ID = "1gd_ldwaaCCVVTV4iSh7oW9GHLyntWmmBQmfOo8Z1WtU"
-  const HOJA = "Data"
-  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:AA`)
-  const resultado = new Map<string, FeedbackSemana[]>()
+): Promise<Map<string, EstoyEnteradoSemana[]>> {
+  const SHEET_ID = "1sxqnABVcemnPaWivLHmW1SDChBSBQyBYGTAN3sb9q44"
+  const HOJA = "Base_Dashboard"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:I`)
+  const resultado = new Map<string, EstoyEnteradoSemana[]>()
   if (rows.length < 2) return resultado
 
   const headers = rows[0]
   const idx = idxFactory(headers)
-  const iEtapa = idx("etapa atual")
-  const iJefe  = idx("jefe inmediato")
-  const iSemana = idx("semana")
+  const iJefe     = idx("jefe inmediato")
+  const iSemana   = idx("semana")
+  const iClaridad = idx("claridad")
 
   const semSet = new Set(semanas)
 
-  const buckets = new Map<string, { nuevos: number; gestionados: number; rechazados: number }>()
+  const buckets = new Map<string, { total: number; si: number; no: number; sinResp: number }>()
   rows.slice(1).forEach(r => {
-    const jefe = matchSupervisor(r[iJefe], supervisoresValidos)
-    if (!jefe) return
-    if (soloSupervisor && normNombre(jefe) !== normNombre(soloSupervisor)) return
+    const sup = matchSupervisor(r[iJefe], supervisoresEquipo)
+    if (!sup) return
+    if (soloSupervisor && normNombre(sup) !== normNombre(soloSupervisor)) return
     const sem = normSemana(r[iSemana])
     if (!semSet.has(sem)) return
-    const key = `${jefe}|||${sem}`
-    if (!buckets.has(key)) buckets.set(key, { nuevos: 0, gestionados: 0, rechazados: 0 })
+    const key = `${sup}|||${sem}`
+    if (!buckets.has(key)) buckets.set(key, { total: 0, si: 0, no: 0, sinResp: 0 })
     const b = buckets.get(key)!
-    const estado = condensarEstadoFeedback(r[iEtapa] ?? "")
-    b[`${estado}s` as "nuevos" | "gestionados" | "rechazados"]++
+    b.total++
+    const c = (r[iClaridad] ?? "").toLowerCase().trim()
+    if (c === "si" || c === "sí") b.si++
+    else if (c === "no") b.no++
+    else if (c.includes("sin")) b.sinResp++
   })
 
   buckets.forEach((b, key) => {
-    const [jefe, sem] = key.split("|||")
-    const fila: FeedbackSemana = { semana: sem, ...b }
-    if (!resultado.has(jefe)) resultado.set(jefe, [])
-    resultado.get(jefe)!.push(fila)
+    const [sup, sem] = key.split("|||")
+    const fila: EstoyEnteradoSemana = {
+      semana: sem,
+      total: b.total,
+      si: b.si,
+      no: b.no,
+      sinRespuesta: b.sinResp,
+      pctClaro: b.total > 0 ? Math.round((b.si / b.total) * 100) : 0,
+    }
+    if (!resultado.has(sup)) resultado.set(sup, [])
+    resultado.get(sup)!.push(fila)
   })
 
   resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
@@ -558,163 +807,39 @@ export async function aggResolutividad(
 }
 
 /**
- * Trae el histórico de "Adherencia PCA/PTA" (hoja "Detalle Eventos", Panel Lea)
- * y agrupa por (jefe inmediato, semana): % de cumplimiento ponderado por
- * gestiones del día y total de monitoreos de la semana.
+ * Resumen acumulado (no es por semana — son pendientes vigentes, igual que
+ * /api/modulos/feedback) de Feedback Interfábricas por supervisor: cuántos
+ * feedbacks tiene su equipo sin gestionar, gestionados y rechazados.
  */
-export async function aggPcaPta(
+export async function aggFeedback(
   accessToken: string,
-  nombreCoord: string,
-  supervisoresEquipo: string[],
-  semanas: string[],
-): Promise<Map<string, PcaPtaSemana[]>> {
-  const SHEET_ID = "1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw"
-  const HOJA = "Detalle Eventos"
-  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:P`)
-  const resultado = new Map<string, PcaPtaSemana[]>()
+  supervisoresValidos: string[],
+  soloSupervisor?: string,
+): Promise<Map<string, FeedbackResumen>> {
+  const SHEET_ID = "1gd_ldwaaCCVVTV4iSh7oW9GHLyntWmmBQmfOo8Z1WtU"
+  const HOJA = "Data"
+  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:AA`)
+  const resultado = new Map<string, FeedbackResumen>()
   if (rows.length < 2) return resultado
 
   const headers = rows[0]
   const idx = idxFactory(headers)
-  const iNombre = idx("nombre")
-  const iJefe   = idx("jefe inmediato")
-  const iOrigen = idx("origen")
-  const iDia    = idx("dia semana")
-  const iSemana = idx("semana")
-  const iTotal  = idx("total gestion dia")
-  const iCumple = idx("cumplimiento dia")
+  const iEtapa = idx("etapa atual")
+  const iJefe  = idx("jefe inmediato")
 
-  // En "Detalle Eventos", "Jefe Inmediato" es el coordinador y "Nombre" es el
-  // supervisor evaluado (igual que en /api/modulos/adherencia-pca).
-  const coordNorm = normNombre(nombreCoord)
-  const semSet = new Set(semanas)
-
-  // supervisor|||semana|||dia|||origen -> {total, cumple} (varias filas-evento por día/origen -> máximo)
-  const porDiaOrigen = new Map<string, { total: number; cumple: number }>()
+  const buckets = new Map<string, { total: number; nuevos: number; gestionados: number; rechazados: number }>()
   rows.slice(1).forEach(r => {
-    if (normNombre(r[iJefe]) !== coordNorm) return
-    const sup = matchSupervisor(r[iNombre], supervisoresEquipo)
-    if (!sup) return
-    const sem = normSemana(r[iSemana])
-    if (!semSet.has(sem)) return
-    const dia = parseInt(r[iDia] ?? "0") || 0
-    if (!dia) return
-    const total = parseInt(r[iTotal] ?? "0") || 0
-    const cumple = parseFloat((r[iCumple] ?? "").replace(",", ".").replace("%", "")) || 0
-    const key = `${sup}|||${sem}|||${dia}|||${r[iOrigen] ?? ""}`
-    const prev = porDiaOrigen.get(key)
-    porDiaOrigen.set(key, {
-      total:  prev ? Math.max(prev.total, total) : total,
-      cumple: cumple || prev?.cumple || 0,
-    })
+    const jefe = matchSupervisor(r[iJefe], supervisoresValidos)
+    if (!jefe) return
+    if (soloSupervisor && normNombre(jefe) !== normNombre(soloSupervisor)) return
+    if (!buckets.has(jefe)) buckets.set(jefe, { total: 0, nuevos: 0, gestionados: 0, rechazados: 0 })
+    const b = buckets.get(jefe)!
+    b.total++
+    const estado = condensarEstadoFeedback(r[iEtapa] ?? "")
+    b[`${estado}s` as "nuevos" | "gestionados" | "rechazados"]++
   })
 
-  // Combinar PCA + PTA por día: sumar totales, promediar cumplimiento ponderado
-  const porDia = new Map<string, { total: number; sumaPonderada: number }>()
-  porDiaOrigen.forEach((val, key) => {
-    const [jefe, sem, dia] = key.split("|||")
-    const diaKey = `${jefe}|||${sem}|||${dia}`
-    const prev = porDia.get(diaKey) ?? { total: 0, sumaPonderada: 0 }
-    porDia.set(diaKey, {
-      total: prev.total + val.total,
-      sumaPonderada: prev.sumaPonderada + val.cumple * val.total,
-    })
-  })
-
-  // Agrupar por jefe + semana
-  const porSemana = new Map<string, { totalMonitoreos: number; sumaPct: number; diasConDatos: number }>()
-  porDia.forEach((val, key) => {
-    const [jefe, sem] = key.split("|||")
-    const semKey = `${jefe}|||${sem}`
-    const prev = porSemana.get(semKey) ?? { totalMonitoreos: 0, sumaPct: 0, diasConDatos: 0 }
-    if (val.total > 0) {
-      porSemana.set(semKey, {
-        totalMonitoreos: prev.totalMonitoreos + val.total,
-        sumaPct: prev.sumaPct + (val.sumaPonderada / val.total),
-        diasConDatos: prev.diasConDatos + 1,
-      })
-    } else {
-      porSemana.set(semKey, prev)
-    }
-  })
-
-  porSemana.forEach((val, key) => {
-    const [jefe, sem] = key.split("|||")
-    const fila: PcaPtaSemana = {
-      semana: sem,
-      pct: val.diasConDatos > 0 ? Math.round(val.sumaPct / val.diasConDatos) : 0,
-      totalMonitoreos: val.totalMonitoreos,
-      diasConDatos: val.diasConDatos,
-    }
-    if (!resultado.has(jefe)) resultado.set(jefe, [])
-    resultado.get(jefe)!.push(fila)
-  })
-
-  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
-  return resultado
-}
-
-/**
- * Trae el histórico de "Agenda del líder" (hoja "Resumen_Lideres_Diario_Historico_8Sem")
- * y agrupa por (lider, semana): % de días de agenda cumplidos y CDR simulado promedio.
- */
-export async function aggAgendaLider(
-  accessToken: string,
-  nombreCoord: string,
-  supervisoresEquipo: string[],
-  semanas: string[],
-): Promise<Map<string, AgendaLiderSemana[]>> {
-  const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
-  const HOJA = "Resumen_Lideres_Diario_Historico_8Sem"
-  const rows = await getSheetData(accessToken, SHEET_ID, `${HOJA}!A:L`)
-  const resultado = new Map<string, AgendaLiderSemana[]>()
-  if (rows.length < 2) return resultado
-
-  const headers = rows[0]
-  const idx = idxFactory(headers)
-  const iLider  = idx("lider")
-  const iJefe   = idx("jefe_inmediato")
-  const iSemana = idx("semana")
-  const iCumple = idx("cumple")
-  const iCDR    = idx("cdr_sim")
-
-  // "Jefe_Inmediato" es el coordinador y "Lider" es el supervisor (igual que
-  // en getPracticasLideres, vista coordinador).
-  const coordNorm = normNombre(nombreCoord)
-  const semSet = new Set(semanas)
-
-  const buckets = new Map<string, { totalDias: number; cumplidos: number; cdrVals: number[] }>()
-  rows.slice(1).forEach(r => {
-    if (normNombre(r[iJefe]) !== coordNorm) return
-    const lider = matchSupervisor(r[iLider], supervisoresEquipo)
-    if (!lider) return
-    const sem = normSemana(r[iSemana])
-    if (!semSet.has(sem)) return
-    const key = `${lider}|||${sem}`
-    if (!buckets.has(key)) buckets.set(key, { totalDias: 0, cumplidos: 0, cdrVals: [] })
-    const b = buckets.get(key)!
-    b.totalDias++
-    if ((r[iCumple] ?? "") === "1") b.cumplidos++
-    const cdrRaw = r[iCDR] ?? ""
-    if (cdrRaw && cdrRaw !== "0") {
-      const n = parseFloat(cdrRaw.replace(",", "."))
-      if (!isNaN(n)) b.cdrVals.push(n <= 1 ? n * 100 : n)
-    }
-  })
-
-  buckets.forEach((b, key) => {
-    const [lider, sem] = key.split("|||")
-    const fila: AgendaLiderSemana = {
-      semana: sem,
-      pct: b.totalDias > 0 ? Math.round((b.cumplidos / b.totalDias) * 100) : 0,
-      cdr: b.cdrVals.length > 0 ? Math.round(b.cdrVals.reduce((s, v) => s + v, 0) / b.cdrVals.length) : null,
-      totalDias: b.totalDias,
-    }
-    if (!resultado.has(lider)) resultado.set(lider, [])
-    resultado.get(lider)!.push(fila)
-  })
-
-  resultado.forEach(filas => filas.sort((a, b) => Number(a.semana) - Number(b.semana)))
+  buckets.forEach((b, jefe) => resultado.set(jefe, b))
   return resultado
 }
 
