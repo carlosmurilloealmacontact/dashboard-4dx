@@ -51,7 +51,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const nombreCoordNorm = nombreCoord.toLowerCase().trim()
+    const coordPersona = nombreCoord
+      ? perfil.equipo.find(p => nombresCoinciden(nombreCoord, p.nombre))
+      : undefined
+    const nombreCoordNorm = (coordPersona?.nombre ?? nombreCoord).toLowerCase().trim()
     const supervisores = nombreCoord
       ? perfil.equipo.filter(p =>
           (p.coordinador ?? "").toLowerCase().trim() === nombreCoordNorm
@@ -64,6 +67,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       nombreCoordBuscado: nombreCoord,
+      nombreCoordEnBase: coordPersona?.nombre ?? null,
       carpetasEnRaiz: carpetas.map(c => c.name),
       carpetaCoordEncontrada: carpetaCoordNombre,
       archivosEnCarpetaCoord: archivosCarpetaCoord.map(a => a.name),
