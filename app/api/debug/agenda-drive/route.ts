@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { obtenerPerfil, normalizarCargo } from "@/lib/jerarquia"
-import { getDriveClient, obtenerAgendaLider } from "@/lib/drive"
+import { getDriveClient, obtenerAgendaLider, nombresCoinciden } from "@/lib/drive"
 
 const CARPETA_RAIZ_AGENDA = "1LqXqtOOydr-qB4KTWWp0t8SCC_rivZjl"
 
@@ -33,26 +33,9 @@ export async function GET(req: NextRequest) {
     let archivosCarpetaCoord: { id?: string | null; name?: string | null; modifiedTime?: string | null }[] = []
     let carpetaCoordNombre: string | null = null
     if (nombreCoord) {
-      const tokensCoord = nombreCoord
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .replace(/[^a-z\s]/g, " ")
-        .split(/\s+/)
-        .filter(Boolean)
-
       const carpetaCoord = carpetas.find(c => {
         const nombreCarpeta = (c.name ?? "").replace(/^equipo\s+/i, "")
-        const tokensCarpeta = new Set(
-          nombreCarpeta
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[̀-ͯ]/g, "")
-            .replace(/[^a-z\s]/g, " ")
-            .split(/\s+/)
-            .filter(Boolean)
-        )
-        return tokensCoord.length > 0 && tokensCoord.every(t => tokensCarpeta.has(t))
+        return nombresCoinciden(nombreCoord, nombreCarpeta)
       })
 
       if (carpetaCoord?.id) {

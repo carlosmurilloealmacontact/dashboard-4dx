@@ -39,7 +39,7 @@ function normTokens(s: string): string[] {
 // permite que un nombre con más partes (ej. "Rojas Leguizamo Andres Felipe"
 // en la jerarquía) coincida con una versión abreviada en Drive (ej. "Equipo
 // Felipe Rojas"), y viceversa.
-function nombresCoinciden(nombreA: string, nombreB: string): boolean {
+export function nombresCoinciden(nombreA: string, nombreB: string): boolean {
   const tokensA = normTokens(nombreA)
   const tokensB = new Set(normTokens(nombreB))
   if (tokensA.length === 0 || tokensB.size === 0) return false
