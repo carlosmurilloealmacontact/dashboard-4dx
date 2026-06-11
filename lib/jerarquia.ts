@@ -87,6 +87,15 @@ function parsearFilas(rows: string[][]): Persona[] {
     }))
 }
 
+function normClave(s: string): string {
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+}
+
 export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
   // Carga todas las bases en paralelo y las combina
   const resultados = await Promise.allSettled(
@@ -94,14 +103,18 @@ export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
   )
   const todasLasPersonas = resultados.flatMap(r => r.status === "fulfilled" ? parsearFilas(r.value) : [])
 
-  // Deduplicar por cédula (mantener la primera aparición)
-  const vistas = new Set<string>()
-  return todasLasPersonas.filter(p => {
-    if (!p.cedula) return true // Si no hay cédula, incluir
-    if (vistas.has(p.cedula)) return false // Ya vimos esta cédula
-    vistas.add(p.cedula)
-    return true
-  })
+  // Deduplicar por cédula (o, si falta, por nombre+cargo+servicio). Si hay
+  // dos filas para la misma persona, se prefiere la que tiene correo
+  // corporativo (usuario gestor 4) cargado.
+  const vistas = new Map<string, Persona>()
+  for (const p of todasLasPersonas) {
+    const clave = p.cedula || `${normClave(p.nombre)}|${normClave(p.cargo)}|${normClave(p.servicio)}`
+    const existente = vistas.get(clave)
+    if (!existente || (!existente.emailCorporativo && p.emailCorporativo)) {
+      vistas.set(clave, p)
+    }
+  }
+  return [...vistas.values()]
 }
 
 export interface PerfilUsuario {
