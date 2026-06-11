@@ -100,8 +100,8 @@ Usa exactamente estos títulos de sección (con "## "), en este orden, sin agreg
 ## Formato estándar de cada sección por práctica
 Cada una de las secciones de práctica (Adherencia 4DX, Prácticas Líderes, Monitoreos de Calidad, Circuito de Resolutividad, Feedback Interfábricas, Compromisos, Quiz Semanal, Estoy Enterado, Pausas 4DX, Agenda del líder) debe seguir esta misma estructura de 2 partes:
 
-- **Cumplimiento general**: 1-2 frases que resuman cómo viene TODO el equipo en esa práctica esta semana (ej. "X de Y supervisores cumplen meta", o una lectura cualitativa si no aplica un conteo). Reconoce primero lo que va bien si aplica.
-- **Focos**: máximo 2-3 alertas, solo para los supervisores con mayor riesgo o desviación (no listes a todo el equipo). Para cada foco aplica dato → lectura → impacto → acción, dirigido al supervisor específico, SIN repetir la cifra exacta (ya está en la gráfica) salvo que sea imprescindible. Si nadie tiene foco relevante en esta práctica, omite esta parte y dilo brevemente en el "Cumplimiento general" (no inventes focos artificiales).
+- **Cumplimiento general**: 1-2 frases que resuman cómo viene TODO el equipo en esa práctica esta semana (ej. "X de Y supervisores cumplen meta", o una lectura cualitativa si no aplica un conteo). Reconoce primero lo que va bien si aplica. La gráfica ya muestra a cada supervisor individualmente — en esta frase NO nombres a quienes van bien, solo da el panorama general.
+- **Focos**: máximo 2 alertas — los 2 supervisores MÁS críticos en esta práctica (mayor riesgo o desviación), nunca más. No nombres a otros supervisores con desviaciones menores aunque tampoco cumplan meta; eso ya se ve en la gráfica. Para cada foco aplica dato → lectura → impacto → acción, dirigido al supervisor específico, SIN repetir la cifra exacta (ya está en la gráfica) salvo que sea imprescindible. Si nadie tiene foco relevante en esta práctica, omite esta parte y dilo brevemente en el "Cumplimiento general" (no inventes focos artificiales).
 
 Aplica los criterios de riesgo específicos de cada práctica (detallados abajo) para decidir quién entra en "Focos".
 
