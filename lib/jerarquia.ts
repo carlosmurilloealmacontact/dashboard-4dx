@@ -103,12 +103,14 @@ export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
   )
   const todasLasPersonas = resultados.flatMap(r => r.status === "fulfilled" ? parsearFilas(r.value) : [])
 
-  // Deduplicar por cédula (o, si falta, por nombre+cargo+servicio). Si hay
-  // dos filas para la misma persona, se prefiere la que tiene correo
-  // corporativo (usuario gestor 4) cargado.
+  // Deduplicar por nombre+cargo+servicio (algunas personas tienen dos filas
+  // —una con cédula y otra sin ella, o repetidas entre las dos bases— que no
+  // se detectan comparando solo por cédula). Si hay dos filas para la misma
+  // persona, se prefiere la que tiene correo corporativo (usuario gestor 4)
+  // cargado.
   const vistas = new Map<string, Persona>()
   for (const p of todasLasPersonas) {
-    const clave = p.cedula || `${normClave(p.nombre)}|${normClave(p.cargo)}|${normClave(p.servicio)}`
+    const clave = `${normClave(p.nombre)}|${normClave(p.cargo)}|${normClave(p.servicio)}`
     const existente = vistas.get(clave)
     if (!existente || (!existente.emailCorporativo && p.emailCorporativo)) {
       vistas.set(clave, p)
