@@ -278,38 +278,54 @@ independientes**:
 
 ## Problemas conocidos (activos)
 
-1. **Datos de jerarquía desactualizados para HERNANDEZ URREGO CRISTIAN ENRIQUE**
-   (y posiblemente otros coordinadores): la base de personas (`1veAlRJlVrJ2MRtoYNi3aJ_NX97sBFTgcww0V0jv6_Q0`
-   y/o `1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM` hoja "Socio") marca a
-   **LOMBARDO LIÑAN BETZABETH ALEJANDRA, CORREA VARGAS MARGARITA MARIA, URIBE BUILES
-   YESICA ALEXANDRA, VIRGUEZ SANCHEZ KAROL YINETH** con `cargo` = supervisor y
-   `coordinador` = HERNANDEZ URREGO, pero según el usuario **son asesores** y no
-   deberían contar como su equipo de supervisores.
-   - Esto hace que `perfil.supervisores` para este coordinador no coincida con el
-     equipo real que aparece en las hojas de Adherencia 4DX, Prácticas Líderes,
-     Monitoreos de Calidad (PCA/PTA) y Pausas 4DX (cuyo equipo real es LOPEZ SISO
-     KEILLURY MAHOLI, CASTRO RODRIGUEZ LUZ KARIME, CARDONA BARRAGAN CATALINA, y el
-     propio HERNANDEZ URREGO).
-   - Resultado: esas 4 secciones del Informe IA muestran "No hay datos disponibles
-     para esta semana" para este coordinador, aunque sí hay datos reales — porque
-     `aggAdherencia4dx`/`aggPracticasLideres`/`aggPcaPta`/`aggCompromisosCopilot`
-     exigen que el supervisor de la fila esté en `supervisoresEquipo`
-     (`matchSupervisor`), y nunca matchea.
+1. **Equipo de supervisores vacío para 3 coordinadores** (HERNANDEZ URREGO
+   CRISTIAN ENRIQUE, MARTINEZ PEREZ JHON ALEXANDER, MONSALVE HERRERA JOHN JAMES —
+   semana 24, parcial), confirmado vía `/api/debug/informe-supervisores` +
+   `/api/debug/persona-cargo`.
+   - **Causa raíz (misma para los 3)**: en ambas bases de jerarquía
+     (`1veAlRJlVrJ2MRtoYNi3aJ_NX97sBFTgcww0V0jv6_Q0` y
+     `1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM!Socio`), los supervisores
+     reales de estos 3 coordinadores tienen el campo `coordinador` apuntando a
+     **"URREGO CASTAÑO ANDRES FELIPE"** (la jefatura) en vez de al coordinador
+     correcto, mientras que `jefeInmediato` sí está bien. `obtenerPerfil()`
+     calcula `supervisores = activos.filter(p => p.coordinador === nombreCoord
+     && cargo === supervisor)`, así que nunca matchea → `perfil.supervisores`
+     vacío → Adherencia 4DX, Prácticas Líderes, Monitoreos de Calidad (PCA/PTA) y
+     Pausas 4DX salen "Sin datos" en el Informe IA (las agregaciones de estas 4
+     prácticas exigen `matchSupervisor` contra `supervisoresEquipo`).
    - **Compromisos, Quiz y Resolutividad sí muestran datos** porque esas
      agregaciones NO cruzan contra `perfil.supervisores`, agrupan directo por el
      nombre que viene en su propia hoja.
-   - **No es un bug de código** — requiere corregir el campo "Cargo" (y/o
-     "Coordinador") de esas 4 personas en la hoja base de jerarquía.
+   - ~~Hipótesis descartada~~: LOMBARDO LIÑAN, CORREA VARGAS, URIBE BUILES,
+     VIRGUEZ SANCHEZ (con `coordinador=HERNANDEZ URREGO` correcto) NO son la
+     causa — tienen `estado: "Retiro"`, ya excluidas de `activos`.
+   - **Filas a corregir** (cambiar columna `coordinador`, en AMX y Socio):
+     - **→ HERNANDEZ URREGO CRISTIAN ENRIQUE**: CARDONA BARRAGAN CATALINA (AMX
+       14038 / Socio 1907), LOPEZ SISO KEILLURY MAHOLI (AMX 14177 / Socio 2029),
+       CASTRO RODRIGUEZ LUZ KARIME (AMX 14192 / Socio 2043).
+     - **→ MARTINEZ PEREZ JHON ALEXANDER**: ORIXAS CASTRO JHEISSON (AMX 14139 /
+       Socio 1998), RODRIGUEZ RESTREPO KAREN DAYANNE (AMX 14176 / Socio 2028),
+       RAMIREZ RIOS LIZETH MELISSA (AMX 14201 / Socio 2052), SALAZAR SANMARTIN
+       WENDY JOSEFINA (AMX 14303 / Socio 2146).
+     - **→ MONSALVE HERRERA JOHN JAMES**: VELASQUEZ CARTAGENA ALEJANDRO (AMX
+       14007 / Socio 1878), MENA CUESTA LAURA DANIELA (AMX 14184 / Socio 2036),
+       GRAJALES MENA JESUS ENRIQUE (AMX 14190 / Socio 2042), BARRERA VALENCIA
+       MARIA ALEJANDRA (AMX 14212 / Socio 2063), OVALLES ORTEGANA YENNIFEER
+       ANDREINA (AMX 14316 / Socio 2158).
+   - **No es un bug de código** — corrección manual de la columna `coordinador`
+     en la hoja base de jerarquía.
+   - Pendiente: tras corregir, regenerar el Informe IA de los 3 coordinadores
+     semana 24 y confirmar que las 4 secciones muestran datos.
    - Endpoints de debug creados para esta investigación:
      `app/api/debug/pca-eventos`, `app/api/debug/pauta-eventos`,
-     `app/api/debug/informe-coord`, `app/api/debug/informe-supervisores`
-     (todos admin-only).
+     `app/api/debug/informe-coord`, `app/api/debug/informe-supervisores`,
+     `app/api/debug/persona-cargo` (todos admin-only).
 
-2. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
+3. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
    — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
    filtro de semana). No bloqueante, pendiente desde sesión anterior.
 
-3. **Endpoints de debug acumulados** (`app/api/debug/*`): son admin-only y de
+4. **Endpoints de debug acumulados** (`app/api/debug/*`): son admin-only y de
    solo lectura, pero conviene revisar periódicamente si siguen siendo necesarios o
    se pueden retirar una vez resueltas las investigaciones que los originaron.
 
