@@ -107,11 +107,11 @@ export default function AgendaLider() {
     <div className="space-y-2">
       {equipo.map((m, i) => (
         <div key={i} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
-          <span className="text-xs text-gray-700 truncate max-w-[140px]">{m.supervisor}</span>
+          <span className="text-xs text-gray-700 mr-2">{m.supervisor}</span>
           {m.ultimaModificacion === null ? (
-            <span className="text-xs text-yellow-600">Sin archivo</span>
+            <span className="text-xs text-yellow-600 flex-shrink-0">Sin archivo</span>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs text-gray-500">{formatearFecha(m.ultimaModificacion)}</span>
               <span className="text-xs text-gray-400">({m.diasDesdeModificacion}d)</span>
               {m.alerta && (
