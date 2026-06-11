@@ -1,6 +1,6 @@
 # CONTEXT.md — Dashboard 4DX
 
-Última actualización: 2026-06-09
+Última actualización: 2026-06-11
 
 ---
 
@@ -11,6 +11,10 @@ semanales por rol (asesor → supervisor → coordinador → coach → jefatura 
 Los datos se leen en tiempo real desde Google Sheets mediante la API de Google.
 Auth vía NextAuth + Google OAuth2 (tokens persistidos en DB para refresh).
 
+Además del dashboard de cards, los coordinadores/jefaturas tienen un
+**Informe de cumplimiento generado por IA** (Vertex AI) con gráficas por
+práctica, focos críticos y plan de acción, descargable como PDF.
+
 ---
 
 ## Stack
@@ -20,7 +24,9 @@ Auth vía NextAuth + Google OAuth2 (tokens persistidos en DB para refresh).
 | Framework | Next.js 16.2.7 (Turbopack, App Router) |
 | Lenguaje | TypeScript |
 | Auth | NextAuth v4 — JWT strategy + OAuth2 refresh |
-| Datos | Google Sheets API (googleapis) |
+| Datos | Google Sheets API (googleapis), con caché en memoria (`lib/sheets.ts`) |
+| IA | Vertex AI (`lib/vertex.ts`) para el informe narrativo de coordinadores |
+| Gráficas | recharts (`components/InformeIA.tsx`) |
 | DB | SQLite vía better-sqlite3 (`lib/db.ts`) — almacena tokens |
 | Estilos | Tailwind CSS |
 | Deploy | Vercel |
@@ -43,9 +49,12 @@ app/
     auth/[...nextauth]/     ← NextAuth + refresh token
     auth/logout/            ← Borra token de BD
     jerarquia/              ← /test  /coordinadores
+    informes/
+      route.ts              ← datos crudos del informe (DatosInforme)
+      generar/route.ts       ← genera el informe narrativo con Vertex AI
     modulos/
       adherencia-4dx/
-      adherencia-pca/
+      adherencia-pca/        ← combina "Detalle Eventos" (PCA/PTA) + "Alertas" (Pauta)
       confirmaciones-rol/
       practicas-lideres/    ← + /test
       quiz/
@@ -54,16 +63,23 @@ app/
       feedback/
       estoy-enterado/
       seguimiento-coach/
-    debug/
+    debug/                   ← endpoints admin-only para diagnosticar discrepancias
       coach-data/
       practicas-lideres/
       metas-resolutividad/
+      agenda-drive/
+      pca-eventos/           ← inspecciona "Detalle Eventos" por nombre/semana
+      pauta-eventos/         ← inspecciona "Alertas" (Pauta) por líder resuelto/semana
+      informe-coord/         ← cruza nombre de coordinador entre las hojas del informe IA
+      informe-supervisores/  ← cruza supervisores/semanas reales vs. jerarquía
+      persona-cargo/         ← muestra cargo/coordinador/servicio crudos de personas por nombre, en ambas bases
 
 components/
   ModuloCard.tsx            ← Wrapper que carga el componente del módulo
   AdminView.tsx             ← Vista admin con filtros rol/servicio/persona
   CoachTeamView.tsx         ← Vista coach: selección coordinador+servicio → cards
   SemanaGlobalSelector.tsx  ← Dropdown único de semana (prop light para bg blanco)
+  InformeIA.tsx             ← UI del informe IA: form, gráficas por sección, copiar/PDF
   modulos/
     Adherencia4DX.tsx
     AdherenciaPCA.tsx
@@ -83,11 +99,15 @@ context/
 
 lib/
   authOptions.ts             ← JWT callback con refresh de access token
-  jerarquia.ts               ← Tipos PerfilUsuario, Persona, RolNormalizado
+  jerarquia.ts               ← Tipos PerfilUsuario, Persona, RolNormalizado; cargarPersonas, obtenerPerfil
   roles.ts                   ← MODULOS_POR_ROL (qué módulos ve cada rol)
   semana.ts                  ← resolverSemana(param, semanas[])
   practicasLideres.ts        ← getPracticasLideres(token, perfil, semanaParam?)
-  sheets.ts                  ← getSheetData helper
+  informes.ts                ← construirDatosInforme(): agrega TODAS las prácticas por supervisor/semana
+  informes-prompt.ts         ← construirPromptInforme(): arma el prompt para Vertex AI
+  vertex.ts                  ← generarTextoVertex(prompt): llamada a Vertex AI
+  drive.ts                   ← obtenerAgendaLider(): estado del archivo de agenda en Drive
+  sheets.ts                  ← getSheetData(): lectura de Sheets + caché en memoria + retries
   db.ts                      ← SQLite para tokens
 ```
 
@@ -95,7 +115,7 @@ lib/
 
 ## Filtro Global de Semana (`SemanaGlobalContext`)
 
-### Arquitectura (Opción A — ya implementada)
+### Arquitectura (Opción A — implementada)
 
 - **Un solo selector** por página reemplaza los dropdowns individuales de cada card.
 - Cada módulo hace `reportWeeks(moduleId, semanas[])` tras su fetch → el contexto
@@ -112,6 +132,8 @@ lib/
 - `normalizarSemana(s)` en `SemanaGlobalContext.tsx`: strips non-digits → `"W24"` → `"24"`.
 - `resolverSemana(param, semanas[])` en `lib/semana.ts`: normaliza `param` y busca
   match en el array; fallback a `semanas.at(-1)`.
+- `normSemana(s)` se reimplementa de forma local (idéntica) en `lib/informes.ts` y en
+  varios endpoints de `app/api/debug/` para cruzar semanas entre hojas distintas.
 
 ### Estado de implementación
 
@@ -120,37 +142,87 @@ lib/
 | `context/SemanaGlobalContext.tsx` | ✅ Completo |
 | `components/SemanaGlobalSelector.tsx` | ✅ Completo |
 | `lib/semana.ts` | ✅ Completo |
-| `components/modulos/Adherencia4DX.tsx` | ✅ usa useSemanaGlobal, reportWeeks, ?semana= |
-| `components/modulos/AdherenciaPCA.tsx` | ✅ |
-| `components/modulos/ConfirmacionesRol.tsx` | ✅ |
-| `components/modulos/PracticasLideres.tsx` | ✅ |
-| `components/modulos/QuizSemanal.tsx` | ✅ |
-| `app/api/modulos/adherencia-4dx/route.ts` | ✅ semanaParam + resolverSemana |
-| `app/api/modulos/adherencia-pca/route.ts` | ✅ |
-| `app/api/modulos/confirmaciones-rol/route.ts` | ✅ |
-| `app/api/modulos/practicas-lideres/route.ts` | ✅ |
-| `app/api/modulos/quiz/route.ts` | ✅ |
-| `app/page.tsx` | ✅ SemanaGlobalProvider + SemanaGlobalSelector |
-| `components/AdminView.tsx` | ✅ SemanaGlobalProvider wrapping todo el return |
-| `app/demo/real/page.tsx` | ✅ |
+| Módulos del dashboard (Adherencia 4DX, PCA, Confirmaciones, Prácticas Líderes, Quiz, etc.) | ✅ usan useSemanaGlobal, reportWeeks, ?semana= |
+| `app/page.tsx` / `components/AdminView.tsx` / `app/demo/real/page.tsx` | ✅ SemanaGlobalProvider |
 | **`app/demo/page.tsx`** | ⚠️ imports OK pero grid NO está envuelto en SemanaGlobalProvider |
 | **`app/preview/page.tsx`** | ❌ sin imports ni Provider |
 | **`components/CoachTeamView.tsx`** | ❌ sin SemanaGlobalProvider en el grid de cards |
 
+(Estos 3 pendientes son de una sesión anterior y no se han retomado — ver "Próximos pasos".)
+
 ---
 
-## Bugs corregidos en esta sesión
+## Informe de cumplimiento (IA) — `InformeIA.tsx` / `lib/informes.ts` / `lib/informes-prompt.ts`
+
+- **Flujo**: `components/InformeIA.tsx` (form: alcance, semana(s), tipo parcial/cierre)
+  → `GET /api/informes/generar` → `construirDatosInforme()` agrega todas las
+  prácticas por supervisor/semana (`DatosInforme`) → `construirPromptInforme()`
+  arma el prompt → `generarTextoVertex()` devuelve el texto → se devuelve
+  `{ texto, datos }` al cliente.
+- **Render**: `InformeIA.tsx` divide el texto por encabezados `## Título` (mismo
+  orden que las cards del dashboard) y para cada sección dibuja una gráfica
+  recharts construida a partir de `datos` (no del texto), usando `nombreCorto()`
+  para las etiquetas de eje.
+- **Estilo del prompt**: tono cordial-ejecutivo, fórmula dato → lectura → impacto →
+  acción. Por sección: 1-2 frases de "cumplimiento general" (sin nombrar a quien va
+  bien, porque la gráfica ya lo muestra) + **máximo 2 focos** (los supervisores más
+  críticos de esa práctica).
+- **Exportar**: botones "Copiar" (texto plano al portapapeles) y "Descargar PDF"
+  (`window.print()` + CSS `@media print` que oculta todo excepto
+  `#informe-imprimible`, dejando texto + gráficas SVG).
+
+### "Monitoreos de Calidad" — combinación de dos fuentes
+
+Tanto `app/api/modulos/adherencia-pca/route.ts` (dashboard) como
+`aggPcaPta()` en `lib/informes.ts` (informe IA) combinan **dos hojas
+independientes**:
+
+1. **PCA/PTA** — hoja "Detalle Eventos" (`SHEET_ID_PCA =
+   1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw`): filas evento + fila-resumen por
+   día (columna "Total Gestión Dia", se toma el MAX por día/origen).
+2. **Pauta de Calidad** — hoja "Alertas" (`SHEET_ID_PAUTA =
+   1MVyZW1N45iQgDiii6cnCFBCwFl4zk6B5s4ScqkwNF-U`): una fila = un monitoreo
+   individual, **solo cuentan filas con `Evaluador == "LL.OO"`** (QMOS/SUPERVISOR no
+   cuentan). El líder real se resuelve vía `BP → Persona.jefeInmediato`
+   (`cargarPersonas`), porque la columna "Supervisor" de Alertas en realidad es el
+   jefe inmediato del asesor evaluado.
+
+`combinarDias()` suma ambos totales por día y promedia el cumplimiento ponderado.
+`META_DIARIA = 5`.
+
+---
+
+## `lib/sheets.ts` — caché y resiliencia (2026-06-11)
+
+- `getSheetData(accessToken, spreadsheetId, range)` mantiene una **caché compartida
+  en memoria** (`Map`, TTL 30s, clave `spreadsheetId::range`, ignora el token):
+  todas las peticiones concurrentes/recientes de **todos los usuarios** a la misma
+  hoja+rango reutilizan el mismo dato → reduce drásticamente el consumo de cuota de
+  Sheets API en picos de tráfico, sin sacrificar frescura (TTL corto).
+- Las peticiones en curso se deduplican (`pendientes` Map) para evitar fan-out de
+  llamadas idénticas simultáneas.
+- Reintenta automáticamente (backoff 1s/2s/4s) ante **429/403 (cuota) y
+  500/502/503/504 (errores transitorios de Google)** — antes solo reintentaba
+  429/403.
+- Si todos los reintentos fallan pero hay un dato cacheado (aunque vencido), se
+  sirve ese dato en vez de propagar un error 500 al usuario.
+
+---
+
+## Bugs corregidos (histórico acumulado)
 
 | Bug | Causa | Fix |
 |-----|-------|-----|
 | Quiz "No Presentó" contaba como presentó | `s.includes("presentó")` hace match en "No Presentó" | Verificar `s.includes("no presento")` primero |
 | PCA solo mostraba lunes | Columna "Fecha" vacía en hoja; agrupaba por fecha vacía | Agrupar por `${semana}-${diaCol}` usando "Dia Semana" |
 | Confirmaciones "esta semana = 0" | Fechas en hoja como "2026-06-01 12:02" (ISO), `parseSheetDate` solo entendía `dd/mm/yyyy` | Regex ISO primero en `parseSheetDate` |
-| Producción mostraba semanas viejas | Sin Cache-Control → Vercel edge cache | `export const dynamic = "force-dynamic"` + `revalidate = 0` + `Cache-Control: no-store` en 8 rutas |
+| Producción mostraba semanas viejas | Sin Cache-Control → Vercel edge cache | `export const dynamic = "force-dynamic"` + `revalidate = 0` + `Cache-Control: no-store` en rutas de módulos |
 | Adherencia 4DX 0% para coordinador | `perfil.supervisores` vacío al venir de debug; filtraba por array vacío | Filtrar por columna "Coordinador" en la hoja directamente |
 | Resolutividad "sin datos" flicker | Error de quota de Sheets sobreescribía datos buenos | Flag `activo` + sólo `setData(d)` cuando `d.total` es número |
 | TS error `perfil.emailCorporativo` | Propiedad es `perfil.persona.emailCorporativo` | Corregido path |
-| Producción sin cambios visibles | Vercel cacheaba respuestas de API routes | Cache-Control: no-store en todas las rutas de módulos |
+| Producción sin cambios visibles | Vercel cacheaba respuestas de API routes | `Cache-Control: no-store` en todas las rutas de módulos |
+| Errores 500 intermitentes en módulos | `getSheetData` solo reintentaba 429/403, no 5xx transitorios | Ampliar reintentos a 5xx + caché compartida con fallback a dato vencido (ver sección `lib/sheets.ts`) |
+| Personas duplicadas en jerarquía | Filas repetidas (con/sin cédula) entre las dos bases de personas | Dedupe en `cargarPersonas` por `nombre+cargo+servicio`, prefiriendo la fila con `emailCorporativo` |
 
 ---
 
@@ -170,11 +242,23 @@ lib/
    jefatura, columna B = meta%). Fallback 23% si no está en el mapa.
 
 5. **Fechas PCA**: "Fecha" en "Detalle Eventos" está vacía. El día real viene de "Dia
-   Semana" (1=Lun … 5=Vie). "Total Gestión Dia" es acumulado → se toma MAX por
-   `(semana, dia)`.
+   Semana" (1=Lun … 5=Vie, coincide con `Date.getDay()`). "Total Gestión Dia" es
+   acumulado → se toma MAX por `(semana, dia, origen)`.
 
 6. **CoachTeamView filtros bidireccionales**: elegir coordinador → filtra servicios a
    los suyos; elegir servicio → filtra coordinadores a los que lo tienen.
+
+7. **Caché compartida de Sheets** (ver sección `lib/sheets.ts`): se prioriza una
+   caché global de 30s sobre bajar el `Cache-Control` por usuario, porque reduce
+   cuota para todos sin perder frescura.
+
+8. **Informe IA — alcance de "Focos"**: máximo 2 supervisores más críticos por
+   práctica (antes 2-3, sin tope real); la gráfica ya muestra a todo el equipo, así
+   que el texto no debe repetir nombres de quienes van bien.
+
+9. **PDF del informe vía `window.print()`**: se eligió sobre `html2canvas`/`jsPDF`
+   para no agregar dependencias y mantener las gráficas SVG nítidas; el costo es un
+   clic extra del usuario para "Guardar como PDF" en el diálogo del navegador.
 
 ---
 
@@ -188,24 +272,82 @@ lib/
 | Prácticas Líderes | `PracticasLideres.tsx` | `api/modulos/practicas-lideres` |
 | Quiz Semanal | `QuizSemanal.tsx` | `api/modulos/quiz` |
 | Resolutividad | `Resolutividad.tsx` | `api/modulos/resolutividad` |
+| Informe IA (coordinador) | `InformeIA.tsx` | `api/informes/generar` |
+
+---
+
+## Problemas conocidos (activos)
+
+1. **Datos de jerarquía desactualizados para HERNANDEZ URREGO CRISTIAN ENRIQUE**
+   (y posiblemente otros coordinadores): la base de personas (`1veAlRJlVrJ2MRtoYNi3aJ_NX97sBFTgcww0V0jv6_Q0`
+   y/o `1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM` hoja "Socio") marca a
+   **LOMBARDO LIÑAN BETZABETH ALEJANDRA, CORREA VARGAS MARGARITA MARIA, URIBE BUILES
+   YESICA ALEXANDRA, VIRGUEZ SANCHEZ KAROL YINETH** con `cargo` = supervisor y
+   `coordinador` = HERNANDEZ URREGO, pero según el usuario **son asesores** y no
+   deberían contar como su equipo de supervisores.
+   - Esto hace que `perfil.supervisores` para este coordinador no coincida con el
+     equipo real que aparece en las hojas de Adherencia 4DX, Prácticas Líderes,
+     Monitoreos de Calidad (PCA/PTA) y Pausas 4DX (cuyo equipo real es LOPEZ SISO
+     KEILLURY MAHOLI, CASTRO RODRIGUEZ LUZ KARIME, CARDONA BARRAGAN CATALINA, y el
+     propio HERNANDEZ URREGO).
+   - Resultado: esas 4 secciones del Informe IA muestran "No hay datos disponibles
+     para esta semana" para este coordinador, aunque sí hay datos reales — porque
+     `aggAdherencia4dx`/`aggPracticasLideres`/`aggPcaPta`/`aggCompromisosCopilot`
+     exigen que el supervisor de la fila esté en `supervisoresEquipo`
+     (`matchSupervisor`), y nunca matchea.
+   - **Compromisos, Quiz y Resolutividad sí muestran datos** porque esas
+     agregaciones NO cruzan contra `perfil.supervisores`, agrupan directo por el
+     nombre que viene en su propia hoja.
+   - **No es un bug de código** — requiere corregir el campo "Cargo" (y/o
+     "Coordinador") de esas 4 personas en la hoja base de jerarquía.
+   - Endpoints de debug creados para esta investigación:
+     `app/api/debug/pca-eventos`, `app/api/debug/pauta-eventos`,
+     `app/api/debug/informe-coord`, `app/api/debug/informe-supervisores`
+     (todos admin-only).
+
+2. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
+   — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
+   filtro de semana). No bloqueante, pendiente desde sesión anterior.
+
+3. **Endpoints de debug acumulados** (`app/api/debug/*`): son admin-only y de
+   solo lectura, pero conviene revisar periódicamente si siguen siendo necesarios o
+   se pueden retirar una vez resueltas las investigaciones que los originaron.
 
 ---
 
 ## Próximos pasos pendientes
 
-1. **`app/demo/page.tsx`** — envolver el grid de `ModuloCard` con
+1. **Corregir la hoja de jerarquía** para LOMBARDO LIÑAN BETZABETH ALEJANDRA, CORREA
+   VARGAS MARGARITA MARIA, URIBE BUILES YESICA ALEXANDRA y VIRGUEZ SANCHEZ KAROL
+   YINETH: cambiar su `cargo` a "Asesor" (o el que corresponda) y/o corregir su
+   `coordinador`, para que `perfil.supervisores` de HERNANDEZ URREGO refleje su
+   equipo real.
+   - ✅ Creado `app/api/debug/persona-cargo` (admin-only): devuelve `cargo`,
+     `coordinador`, `servicio`, `jefeInmediato`, `estado` y la fila exacta de esas
+     4 personas en ambas bases (AMX y LATAM-Socio). Por defecto usa esos 4
+     nombres; acepta `?nombres=a,b,c` para otros casos.
+   - **Pendiente**: llamar a este endpoint logueado como admin
+     (`/api/debug/persona-cargo`), confirmar en qué fila/base está el dato
+     incorrecto, y corregir manualmente la hoja de Sheets.
+
+2. Tras corregir la jerarquía, regenerar el Informe IA para HERNANDEZ URREGO
+   CRISTIAN ENRIQUE / semana 24 y confirmar que Adherencia 4DX, Prácticas Líderes,
+   Monitoreos de Calidad y Pausas 4DX ya muestran datos.
+
+3. **`app/demo/page.tsx`** — envolver el grid de `ModuloCard` con
    `<SemanaGlobalProvider>` y añadir `<SemanaGlobalSelector light />` encima.
 
-2. **`app/preview/page.tsx`** — importar `SemanaGlobalProvider` + `SemanaGlobalSelector`,
+4. **`app/preview/page.tsx`** — importar `SemanaGlobalProvider` + `SemanaGlobalSelector`,
    envolver grid + selector (igual que `demo/real/page.tsx`).
 
-3. **`components/CoachTeamView.tsx`** — importar `SemanaGlobalProvider` +
+5. **`components/CoachTeamView.tsx`** — importar `SemanaGlobalProvider` +
    `SemanaGlobalSelector`, envolver el grid de MODULOS_EQUIPO con el Provider y
    añadir `<SemanaGlobalSelector />` (dark style) en la fila de filtros.
 
-4. **`npx tsc --noEmit`** — verificar que no quedan errores de TypeScript.
+6. **`npx tsc --noEmit`** — verificar que no quedan errores de TypeScript antes de
+   cada push (convención del proyecto).
 
-5. **Commit + push** a master (requiere confirmación del usuario).
+7. **Commit + push** a master (siempre requiere confirmación explícita del usuario).
 
 ---
 
@@ -214,7 +356,8 @@ lib/
 - Hoja Sheets → `dd/mm/yyyy` (LATAM) → `parseSheetDate` produce `Date`
 - Hoja Confirmaciones → `2026-06-01 12:02` (ISO con guiones) → mismo helper, regex ISO
 - Semanas ISO → `resolverSemana` normaliza a número puro (strip non-digits)
-- Comparaciones de semana: siempre normalizar con `normalizarSemana` antes de comparar
+- Comparaciones de semana: siempre normalizar con `normalizarSemana`/`normSemana`
+  antes de comparar
 
 ---
 
@@ -228,6 +371,9 @@ NEXTAUTH_URL
 SPREADSHEET_ID          ← ID de la hoja maestra
 ```
 
+(Adicionalmente, el informe IA requiere credenciales de Vertex AI configuradas
+para `lib/vertex.ts` — ver ese archivo para el detalle exacto de variables.)
+
 ---
 
 ## Notas de despliegue
@@ -235,5 +381,11 @@ SPREADSHEET_ID          ← ID de la hoja maestra
 - **Vercel**: todas las rutas de módulos tienen `export const dynamic = "force-dynamic"`
   + `revalidate = 0` + `Cache-Control: no-store` para evitar edge cache.
 - **PCA route**: usa `private, max-age=120, stale-while-revalidate=60` porque la hoja
-  tiene 17k filas — se admite cache breve del lado del cliente pero no edge cache público.
-- Build TS: correr `npx tsc --noEmit` antes de cada push para detectar errores de tipo.
+  tiene ~19k filas — se admite cache breve del lado del cliente, además de la caché
+  compartida en memoria de `lib/sheets.ts`.
+- Build TS: correr `npx tsc --noEmit` (y `npx eslint <archivos>`) antes de cada push
+  para detectar errores de tipo/lint.
+- Los pushes a `master` se despliegan automáticamente en Vercel (1-2 min). Si un
+  endpoint nuevo da 404 tras el push, revisar la pestaña "Deployments" — puede
+  necesitar un commit adicional (incluso vacío) para disparar el build si el primero
+  no se detectó.
