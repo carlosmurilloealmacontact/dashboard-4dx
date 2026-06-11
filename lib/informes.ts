@@ -1,4 +1,5 @@
 import { getSheetData } from "@/lib/sheets"
+import { obtenerAgendaLider, type AgendaLiderArchivo } from "@/lib/drive"
 
 /**
  * Normaliza un número de semana quitando ceros a la izquierda y cualquier
@@ -250,6 +251,7 @@ export interface DatosInforme {
       tendencia: Tendencia
     }[]
     resolutividad: ResolutividadResumen | null
+    agendaLiderArchivo: AgendaLiderArchivo | null
   }[]
   confirmacionesCoordinador: ConfirmacionesCoordinador
 }
@@ -271,7 +273,7 @@ export async function construirDatosInforme(
 
   const equipoParaSoporte = soloSupervisor ? [soloSupervisor] : supervisoresEquipo
 
-  const [compromisos, quiz, feedback, resolutividad, pcaPta, agendaLider, compromisosCopilot, confirmacionesCoordinador] = await Promise.all([
+  const [compromisos, quiz, feedback, resolutividad, pcaPta, agendaLider, compromisosCopilot, confirmacionesCoordinador, agendaLiderArchivo] = await Promise.all([
     aggCompromisos(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggQuiz(accessToken, nombreCoord, semanasFetch, soloSupervisor),
     aggFeedback(accessToken, supervisoresEquipo, semanasFetch, soloSupervisor),
@@ -280,6 +282,7 @@ export async function construirDatosInforme(
     aggAgendaLider(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
     aggCompromisosCopilot(accessToken, nombreCoord, equipoParaSoporte, semanasFetch),
     aggConfirmacionesCoordinador(accessToken, nombreCoord),
+    obtenerAgendaLider(accessToken, nombreCoord, equipoParaSoporte),
   ])
 
   const supervisores = soloSupervisor
@@ -318,6 +321,7 @@ export async function construirDatosInforme(
       }
     }),
     resolutividad: resolutividad.get(sup) ?? null,
+    agendaLiderArchivo: agendaLiderArchivo.get(sup) ?? null,
   }))
 
   return {

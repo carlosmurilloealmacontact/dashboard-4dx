@@ -16,6 +16,7 @@ const COMPONENTES: Partial<Record<string, React.LazyExoticComponent<() => React.
   feedback:             lazy(() => import("./modulos/Feedback")),
   estoy_enterado:       lazy(() => import("./modulos/EstoyEnterado")),
   pausas_4dx:           lazy(() => import("./modulos/Pausas4DX")),
+  agenda_lider:         lazy(() => import("./modulos/AgendaLider")),
 }
 
 const COLOR_METRIC: Record<string, string> = {

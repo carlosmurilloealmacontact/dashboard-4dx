@@ -18,6 +18,7 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
     "feedback",
     "resolutividad",
     "pausas_4dx",
+    "agenda_lider",
   ],
   coach: [
     "practicas_coach",
@@ -35,6 +36,7 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
     "resolutividad",
     "adherencia_pca",
     "pausas_4dx",
+    "agenda_lider",
   ],
   jefatura: [
     "practicas_coach",
@@ -42,6 +44,7 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
     "adherencia_pca",
     "resolutividad",
     "pausas_4dx",
+    "agenda_lider",
   ],
   gerente: [
     "adherencia",
@@ -55,6 +58,7 @@ export const MODULOS_POR_ROL: Record<RolNormalizado, string[]> = {
     "resolutividad",
     "adherencia_pca",
     "pausas_4dx",
+    "agenda_lider",
   ],
   admin: [
     "confirmaciones_rol",
