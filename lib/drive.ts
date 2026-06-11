@@ -33,13 +33,20 @@ function normTokens(s: string): string[] {
     .filter(Boolean)
 }
 
-// Coincide si todas las palabras de `nombre` aparecen entre las palabras de
-// `nombreArchivo`, sin importar el orden (los nombres en jerarquía y en Drive
-// pueden venir en distinto orden de nombres/apellidos).
-function nombreCoincideArchivo(nombre: string, nombreArchivo: string): boolean {
-  const tokensNombre = normTokens(nombre)
-  const tokensArchivo = new Set(normTokens(nombreArchivo))
-  return tokensNombre.length > 0 && tokensNombre.every(t => tokensArchivo.has(t))
+// Coincide si el conjunto de palabras más corto está completamente contenido
+// en el más largo (sin importar el orden). Se exige al menos 2 palabras en
+// común para evitar falsos positivos con un solo apellido compartido. Esto
+// permite que un nombre con más partes (ej. "Rojas Leguizamo Andres Felipe"
+// en la jerarquía) coincida con una versión abreviada en Drive (ej. "Equipo
+// Felipe Rojas"), y viceversa.
+function nombresCoinciden(nombreA: string, nombreB: string): boolean {
+  const tokensA = normTokens(nombreA)
+  const tokensB = new Set(normTokens(nombreB))
+  if (tokensA.length === 0 || tokensB.size === 0) return false
+  const [menor, mayor] = tokensA.length <= tokensB.size
+    ? [tokensA, tokensB]
+    : [[...tokensB], new Set(tokensA)]
+  return menor.length >= 2 && menor.every(t => mayor.has(t))
 }
 
 /**
@@ -68,11 +75,9 @@ export async function obtenerAgendaLider(
     })
     const carpetas = carpetasRes.data.files ?? []
 
-    const tokensCoord = normTokens(nombreCoord)
     const carpetaCoord = carpetas.find(c => {
       const nombreCarpeta = (c.name ?? "").replace(/^equipo\s+/i, "")
-      const tokensCarpeta = new Set(normTokens(nombreCarpeta))
-      return tokensCoord.length > 0 && tokensCoord.every(t => tokensCarpeta.has(t))
+      return nombresCoinciden(nombreCoord, nombreCarpeta)
     })
     if (!carpetaCoord?.id) return resultado
 
@@ -87,7 +92,7 @@ export async function obtenerAgendaLider(
 
     const hoy = new Date()
     supervisoresEquipo.forEach(sup => {
-      const archivo = archivos.find(a => nombreCoincideArchivo(sup, a.name ?? ""))
+      const archivo = archivos.find(a => nombresCoinciden(sup, a.name ?? ""))
       if (!archivo?.modifiedTime) return
       const fecha = new Date(archivo.modifiedTime)
       const dias = Math.floor((hoy.getTime() - fecha.getTime()) / (1000 * 60 * 60 * 24))
