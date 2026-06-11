@@ -33,7 +33,8 @@ function normTokens(s: string): string[] {
     .filter(Boolean)
 }
 
-// Distancia de edición (Levenshtein) entre dos strings.
+// Distancia de edición Damerau-Levenshtein (incluye transposición de
+// caracteres adyacentes como 1 sola edición, ej. "john" -> "jhon").
 function distanciaEdicion(a: string, b: string): number {
   const m = a.length
   const n = b.length
@@ -42,9 +43,15 @@ function distanciaEdicion(a: string, b: string): number {
   for (let j = 0; j <= n; j++) dp[0][j] = j
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1])
+      const costo = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + costo,
+      )
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1)
+      }
     }
   }
   return dp[m][n]

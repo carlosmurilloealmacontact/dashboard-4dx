@@ -336,9 +336,24 @@ independientes**:
    - **✅ Corregido en código** (2026-06-11): `nombresCoinciden()` ahora tolera
      variantes de ortografía (distancia de edición ≤1 en palabras de 4+
      letras), cubriendo casos como "jhon"/"john".
+   - **Fix v2** (2026-06-11): el primer intento usaba Levenshtein estándar,
+     donde "john"→"jhon" es distancia **2** (dos sustituciones), no 1 — seguía
+     sin matchear. Se cambió a **Damerau-Levenshtein** (cuenta una
+     transposición de letras adyacentes como 1 edición), con la que
+     "john"↔"jhon" da distancia 1. Verificado con script de prueba.
    - Pendiente: confirmar en producción que "Agenda del líder" de Martínez
      Pérez ahora muestra los 4 archivos (Ramirez Rios, Salazar Sanmartin,
      Orixas Castro, Rodriguez Restrepo).
+
+2c. **ALZATE ARROYAVE DANIEL FELIPE no aparecía en el listado de coordinadores**
+   — su `cargo` es "JEFE DE OPERACION" (coincide con el filtro
+   `cargo.includes("jefe")`), pero la lista hardcodeada `coordinadoresActivos`
+   en `app/api/jerarquia/coordinadores/route.ts` (y su duplicado
+   `COORDINADORES_PERMITIDOS`, sin uso, en `components/AdminView.tsx`) no lo
+   incluía. **✅ Agregado a ambas listas** (2026-06-11).
+   - Nota: estas listas de "coordinadores activos" son hardcodeadas y deben
+     actualizarse manualmente cada vez que se activa/desactiva un coordinador o
+     jefatura.
 
 3. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
    — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
