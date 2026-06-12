@@ -43,15 +43,14 @@ export default function PreviewPage() {
       .finally(() => setCargando(false))
   }
 
-  // Coordinador con cargo "Coordinador Coach": además de su vista de coordinador,
-  // tiene su propio equipo de coaches y conserva los filtros de la vista de coach.
+  // Coordinador con cargo "Coordinador Coach": ve los mismos módulos que un
+  // coach (su equipo de coaches agrupado) y conserva los filtros de coordinador/servicio.
   const esCoordinadorCoach = perfil?.rol === "coordinador"
     && (perfil.persona.cargo ?? "").toLowerCase().includes("coach")
 
   const idsVisibles = perfil
-    ? new Set(MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL] ?? [])
+    ? new Set(esCoordinadorCoach ? MODULOS_POR_ROL["coach"] : (MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL] ?? []))
     : new Set<string>()
-  if (esCoordinadorCoach) idsVisibles.add("practicas_coach")
 
   const modulosVisibles = perfil
     ? TODOS_MODULOS.filter(m => idsVisibles.has(m.id))

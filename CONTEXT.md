@@ -267,11 +267,17 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
 - `app/page.tsx`: `esCoordinadorCoach = perfil.rol === "coordinador" &&
   perfil.persona.cargo.toLowerCase().includes("coach")`.
 - Si es coordinador-coach:
-  - Se agrega `"practicas_coach"` a `modulosVisibles` (además de los módulos
-    normales de coordinador) → muestra su propio equipo de coaches.
+  - `modulosVisibles` usa `MODULOS_POR_ROL["coach"]` (Prácticas Coach,
+    Monitoreos de Calidad, Confirmaciones de Rol) en vez de la lista de
+    coordinador — es la misma vista que un coach normal, pero "Prácticas
+    Coach" agrupa el cumplimiento de su equipo de coaches (ver `modo:
+    "coordinador"` abajo).
   - Se renderiza `<CoachTeamView perfilCoach={perfil} />` (antes solo para
     `rol === "coach"`) → conserva los filtros de coordinador/servicio para ver
-    otros equipos.
+    otros equipos (sección "CDR").
+- (2026-06-12, ajuste) Confirmado funcionando: "Prácticas Coach" mostró 80%
+  con el desglose por coach correctamente para KATHERYNE QUIÑONES
+  (`Coordinador Coach`, base LATAM-Socio, fila 26).
 - `app/api/modulos/seguimiento-coach/route.ts`: nuevo `modo: "coordinador"`
   cuando `perfil.rol === "coordinador"`. Toma `perfil.equipo` filtrado por
   `normalizarCargo(cargo) === "coach"` (sus coaches directos), busca cada uno

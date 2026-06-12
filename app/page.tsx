@@ -70,16 +70,15 @@ export default function DashboardPage() {
 
   if (!session) return null
 
-  // Coordinador con cargo "Coordinador Coach": además de su vista de coordinador,
-  // tiene su propio equipo de coaches y conserva los filtros de la vista de coach.
+  // Coordinador con cargo "Coordinador Coach": ve los mismos módulos que un
+  // coach (su equipo de coaches agrupado) y conserva los filtros de coordinador/servicio.
   const esCoordinadorCoach = perfil?.rol === "coordinador"
     && (perfil.persona.cargo ?? "").toLowerCase().includes("coach")
 
   // Módulos visibles según el rol
   const idsVisibles = perfil
-    ? new Set(MODULOS_POR_ROL[perfil.rol] ?? [])
+    ? new Set(esCoordinadorCoach ? MODULOS_POR_ROL["coach"] : (MODULOS_POR_ROL[perfil.rol] ?? []))
     : new Set(TODOS_MODULOS.map(m => m.id))
-  if (esCoordinadorCoach) idsVisibles.add("practicas_coach")
 
   const modulosVisibles = perfil
     ? TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
