@@ -167,6 +167,31 @@ lib/
   acción. Por sección: 1-2 frases de "cumplimiento general" (sin nombrar a quien va
   bien, porque la gráfica ya lo muestra) + **máximo 2 focos** (los supervisores más
   críticos de esa práctica).
+- **Primera persona y nombres propios (2026-06-11)**: el informe se redacta como si
+  el propio coordinador le hablara a su equipo ("nosotros", "nuestro equipo"), no en
+  tercera persona. A cada supervisor se le nombra por su **primer nombre** (no
+  apellidos), salvo ambigüedad entre dos personas con el mismo primer nombre, en cuyo
+  caso se usa "Nombre Apellido" solo para esa persona. Aplica también al coordinador.
+- **Comparaciones parcial vs. cierre (2026-06-11)**:
+  - **Parcial**: para las prácticas de cumplimiento diario acumulado (Adherencia
+    4DX, Prácticas Líderes, Monitoreos de Calidad/Panel Lea, Pausas 4DX), el prompt
+    YA NO compara "pct" contra la semana anterior (`tendencia` se ignora para estas
+    prácticas en informes parciales). En su lugar se calcula `avanceEsperadoPct`
+    (según el día hábil de la semana en que se genera el informe, asumiendo meta
+    100% al cierre de 5 días hábiles) y se instruye al LLM a comparar cada
+    supervisor contra ese % esperado a la fecha, indicándolo explícitamente (ej.
+    "Juan lleva 60%, lo esperado a hoy es ~60%..."). Compromisos/Quiz/Estoy
+    Enterado/Resolutividad/Feedback mantienen su lectura cualitativa habitual (no
+    son acumulados diarios).
+  - **Cierre**: se mantiene la comparación contra `tendencia.anterior` (semana
+    inmediatamente anterior), pero ahora el prompt exige indicar explícitamente el
+    valor de la semana anterior junto al actual (ej. "Pasamos de 78% la semana
+    pasada a 92% esta semana").
+  - En ambos casos se añadió una instrucción general en el formato por sección
+    ("Valor de referencia") reforzando que siempre se indique el valor contra el
+    que se compara, no solo el delta.
+  - Cambios en `lib/informes-prompt.ts` (`contextoTipo`, sección "Tono y estilo de
+    redacción", sección "Reglas adicionales" y "Formato estándar de cada sección").
 - **Exportar**: botones "Copiar" (texto plano al portapapeles) y "Descargar PDF"
   (`window.print()` + CSS `@media print` que oculta todo excepto
   `#informe-imprimible`, dejando texto + gráficas SVG).

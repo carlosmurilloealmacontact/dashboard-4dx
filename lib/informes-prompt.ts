@@ -13,15 +13,36 @@ export function construirPromptInforme(
   const { alcance, semanas, porSupervisor } = datos
   const ultimaSemana = semanas[semanas.length - 1]
 
+  // Para informes parciales: a cuántos días hábiles (de 5) vamos hoy, para
+  // comparar contra el avance esperado a la fecha en vez de vs. semana anterior.
+  const hoy = new Date()
+  const diaSemanaNum = hoy.getDay() // 0=domingo ... 6=sábado
+  const diasHabilesTranscurridos = diaSemanaNum === 0 ? 5 : Math.min(diaSemanaNum, 5)
+  const avanceEsperadoPct = Math.round((diasHabilesTranscurridos / 5) * 100)
+  const nombreDiaHoy = hoy.toLocaleDateString("es-CO", { weekday: "long" })
+
   const contextoTipo = tipoInforme === "parcial"
-    ? `Este es un informe PARCIAL de la semana ${ultimaSemana} (semana en curso, aún no ha cerrado). ` +
+    ? `Este es un informe PARCIAL de la semana ${ultimaSemana} (semana en curso, aún no ha cerrado). Hoy es ${nombreDiaHoy}, ` +
+      `día ${diasHabilesTranscurridos} de 5 hábiles de la semana. ` +
       `Es normal que "Compromisos" todavía tenga ítems "abiertos" sin pasar a "cerrado con mejora": no lo trates ` +
       `como una caída si la tendencia muestra menos cerrados con mejora que la semana pasada, ya que esa semana ya había cerrado. ` +
       `En cambio, sí son señales relevantes: % sin ingreso alto o creciente, baja presentación/aprobación del quiz, ` +
-      `y pendientes acumulados — esto el coordinador SÍ puede accionar antes de que cierre la semana.`
+      `y pendientes acumulados — esto el coordinador SÍ puede accionar antes de que cierre la semana.\n\n` +
+      `**Importante sobre comparaciones**: para las prácticas de cumplimiento diario acumulado (Adherencia 4DX, ` +
+      `Prácticas Líderes, Monitoreos de Calidad/Panel Lea, Pausas 4DX), NO compares "pct" contra la semana anterior ` +
+      `(ignora el campo "tendencia" de estas prácticas en este informe parcial). En su lugar, compara contra el ` +
+      `**avance esperado a la fecha**: si la meta es 100% al cierre de la semana (5 días hábiles), a hoy ` +
+      `${nombreDiaHoy} lo esperado es aproximadamente **${avanceEsperadoPct}%** (${diasHabilesTranscurridos}/5 días). ` +
+      `Menciona ese ${avanceEsperadoPct}% como referencia explícita al comentar el desfase o sobrecumplimiento de cada ` +
+      `supervisor (ej. "Juan lleva 60%, lo esperado a hoy es ~${avanceEsperadoPct}%, así que viene por debajo del ritmo de la semana"). ` +
+      `Para Compromisos, Quiz, Estoy Enterado, Resolutividad y Feedback mantén la lectura cualitativa habitual de esta ` +
+      `semana (no son acumulados diarios, no aplican a esta comparación de ritmo).`
     : `Este es un informe de CIERRE de la semana ${ultimaSemana} (semana ya finalizada). ` +
       `Aquí sí interesa el resultado final: % de compromisos cerrados con mejora vs. cerrados sin mejora vs. sin ingreso, ` +
-      `y la comparación contra la semana anterior para ver evolución real.`
+      `y la comparación contra la semana anterior para ver evolución real. **Importante**: cuando uses el campo ` +
+      `"tendencia" de una práctica, menciona explícitamente el valor de la semana anterior ("anterior") como ` +
+      `referencia junto con el actual, para que se vea claro el desfase o el sobrecumplimiento ` +
+      `(ej. "Pasamos de 78% la semana pasada a 92% esta semana").`
 
   const alcanceTxt = alcance.tipo === "coordinador"
     ? `el equipo completo del coordinador ${alcance.nombre} (todos sus supervisores)`
@@ -63,6 +84,10 @@ ${confirmacionesJson}
 
 Escribe como en las comunicaciones internas de seguimiento 4DX de esta operación: tono **cordial-ejecutivo**, cercano pero con autoridad operativa, colaborativo y orientado a cerrar la semana en meta. No es un correo (no lleva saludo ni despedida), pero sí debe sonar como el análisis que un coordinador comparte con su equipo: directo, claro, sin sonar a auditoría punitiva.
 
+**Primera persona**: redacta como si el propio coordinador estuviera escribiendo el informe para su equipo — usa "nosotros"/"nuestro equipo"/"nos" y verbos en primera persona del plural ("vamos bien en...", "tenemos que reforzar...", "quiero destacar que..."). No te refieras al coordinador en tercera persona ("el coordinador debería...") ni a "su equipo" como si fueras un externo.
+
+**Nombres propios**: refiérete a cada supervisor por su **primer nombre** (no por apellidos), para que se sienta cercano y personal — como hablaría el coordinador de su gente en una conversación de equipo. Usa el apellido solo si hay dos personas con el mismo primer nombre en el equipo y se necesita distinguirlas.
+
 Para cada hallazgo relevante aplica esta fórmula argumentativa:
 **dato observado → lectura operativa → impacto → acción solicitada.**
 Ejemplo: "Camila y Andrés tienen 0% sin ingreso esta semana (dato), es decir todos sus asesores registraron compromiso (lectura), lo que sostiene el cumplimiento del equipo (impacto). Mantengamos ese seguimiento diario (acción)."
@@ -102,6 +127,7 @@ Cada una de las secciones de práctica (Adherencia 4DX, Prácticas Líderes, Mon
 
 - **Cumplimiento general**: 1-2 frases que resuman cómo viene TODO el equipo en esa práctica esta semana (ej. "X de Y supervisores cumplen meta", o una lectura cualitativa si no aplica un conteo). Reconoce primero lo que va bien si aplica. La gráfica ya muestra a cada supervisor individualmente — en esta frase NO nombres a quienes van bien, solo da el panorama general.
 - **Focos**: máximo 2 alertas — los 2 supervisores MÁS críticos en esta práctica (mayor riesgo o desviación), nunca más. No nombres a otros supervisores con desviaciones menores aunque tampoco cumplan meta; eso ya se ve en la gráfica. Para cada foco aplica dato → lectura → impacto → acción, dirigido al supervisor específico, SIN repetir la cifra exacta (ya está en la gráfica) salvo que sea imprescindible. Si nadie tiene foco relevante en esta práctica, omite esta parte y dilo brevemente en el "Cumplimiento general" (no inventes focos artificiales).
+- **Valor de referencia**: cuando menciones un desfase o sobrecumplimiento (vs. el avance esperado a la fecha en informes parciales, o vs. la semana anterior en informes de cierre), indica también el valor de referencia usado, no solo el delta — para que quede claro contra qué se está comparando.
 
 Aplica los criterios de riesgo específicos de cada práctica (detallados abajo) para decidir quién entra en "Focos".
 
@@ -144,7 +170,7 @@ Formato estándar, basado en "agendaLiderArchivo". Criterio de foco: "alerta" = 
 4-6 acciones priorizadas para esta semana, ordenadas por criticidad: primero ausencia total de registros/incumplimiento (sin ingreso, sin monitoreos, sin confirmaciones de rol propias, agenda sin actualizar), luego indicadores bajo meta (adherencia 4DX, prácticas líderes, PCA/PTA, compromisos, quiz, estoy enterado, Pausas 4DX), luego pendientes acumulados (feedback, resolutividad/Quiker), y por último mantenimiento de prácticas que ya van bien. Cada acción debe seguir el patrón "por favor/recordemos + verbo de gestión (asegurar, revisar, asignar, cerrar, gestionar, programar, agendar) + objeto + para qué", mencionando supervisores y prácticas específicas. No es necesario incluir una acción por cada sección: prioriza lo más crítico del conjunto.
 
 ## Reglas adicionales
-- Los nombres en los datos vienen en formato "Apellidos Nombres" (ej. "Ramos Miranda Ana Shairith" = Ana Shairith Ramos Miranda). En el informe, refiérete a cada persona usando "Nombre Apellido" (ej. "Ana Ramos"), nunca empieces por los apellidos. Usa tu criterio para identificar qué palabras son nombres de pila y cuáles apellidos. Aplica esto tanto a los supervisores como al coordinador.
+- Los nombres en los datos vienen en formato "Apellidos Nombres" (ej. "Ramos Miranda Ana Shairith" = Ana Shairith Ramos Miranda). En el informe, refiérete a cada persona por su **primer nombre de pila** (ej. "Ana"), salvo que haya ambigüedad con otra persona del equipo con el mismo primer nombre — en ese caso usa "Nombre Apellido" (ej. "Ana Ramos") solo para esa persona. Nunca empieces por los apellidos. Usa tu criterio para identificar qué palabras son nombres de pila y cuáles apellidos. Aplica esto tanto a los supervisores como al coordinador.
 - Si en una práctica TODOS los supervisores van bien, dilo brevemente y no inventes "focos" artificiales.
 - Si faltan datos (null) para un supervisor en alguna práctica, no lo incluyas en esa sección (o formúlalo como novedad si es relevante para el plan de acción).
 - Si una sección completa no tiene datos para ningún supervisor (todos null), dilo en una frase breve como novedad general a validar y no la desarrolles más.
