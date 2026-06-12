@@ -6,6 +6,7 @@ import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
 
 interface FeedbackItem {
+  id: string
   etapaRaw: string
   estado: "nuevo" | "gestionado" | "rechazado"
   quien: string
@@ -155,10 +156,11 @@ export default function Feedback() {
                               <p className="text-xs text-gray-300 break-words">
                                 {f.asesor}
                               </p>
-                              <div className="flex gap-1 mt-0.5 flex-wrap">
+                              <div className="flex gap-1 mt-0.5 flex-wrap items-center">
                                 <span className={`text-xs px-1.5 py-0.5 rounded text-white ${cfg.color}`}>
                                   {cfg.label}
                                 </span>
+                                {f.id && <span className="text-xs text-gray-500">#{f.id}</span>}
                                 {f.causa && (
                                   <span className="text-xs text-gray-500 truncate max-w-[120px]">{f.causa}</span>
                                 )}
@@ -209,10 +211,11 @@ export default function Feedback() {
                     <p className="text-xs text-gray-300 break-words">
                       {f.asesor}
                     </p>
-                    <div className="flex gap-1 mt-0.5 flex-wrap">
+                    <div className="flex gap-1 mt-0.5 flex-wrap items-center">
                       <span className={`text-xs px-1.5 py-0.5 rounded text-white ${cfg.color}`}>
                         {cfg.label}
                       </span>
+                      {f.id && <span className="text-xs text-gray-500">#{f.id}</span>}
                       {f.causa && (
                         <span className="text-xs text-gray-500 truncate max-w-[120px]">{f.causa}</span>
                       )}

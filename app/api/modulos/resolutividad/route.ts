@@ -51,11 +51,12 @@ export async function GET(req: NextRequest) {
   const headers = rows[0]
   const idx = (n: string) => headers.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase())
 
-  const iEtapa    = idx("etapa atual")
-  const iNombreA  = idx("nombre asesor")
-  const iLider    = idx("lider socio")
-  const iCoord    = idx("coordinador")
-  const iJefatura = idx("jefatura")
+  const iEtapa     = idx("etapa atual")
+  const iNombreA   = idx("nombre asesor")
+  const iLider     = idx("lider socio")
+  const iCoord     = idx("coordinador")
+  const iJefatura  = idx("jefatura")
+  const iIdProyecto = idx("id do projeto")
 
   // Mapa Jefatura → meta de implementación (%). La hoja Metas tiene "Jefatura | Meta" (decimal "0,27")
   const metaMap: Record<string, number> = {}
@@ -92,7 +93,7 @@ export async function GET(req: NextRequest) {
     }
     return lider === nombrePersona
   }).map(({ r, fila }) => ({
-    id:        fila,
+    id:        iIdProyecto >= 0 ? (r[iIdProyecto] || String(fila)) : String(fila),
     etapa:     normalizarEtapa(r[iEtapa] ?? ""),
     etapaRaw:  r[iEtapa] ?? "",
     asesor:    r[iNombreA]  ?? "",
@@ -158,7 +159,7 @@ export async function GET(req: NextRequest) {
     total: number
     pctImpl: number
     pctBacklog: number
-    ideas: { id: number; etapa: string; asesor: string; problema: string; propuesta: string }[]
+    ideas: { id: string; etapa: string; asesor: string; problema: string; propuesta: string }[]
   }[] | undefined
   if (esCoord) {
     const supervisores = [...new Set(ideas.map(i => {
@@ -172,7 +173,7 @@ export async function GET(req: NextRequest) {
         .filter(({ r }) => (r[iLider] ?? "").toLowerCase().trim() === sup.toLowerCase().trim() &&
                      (r[iCoord] ?? "").toLowerCase().trim() === nombrePersona)
         .map(({ r, fila }) => ({
-          id:        fila,
+          id:        iIdProyecto >= 0 ? (r[iIdProyecto] || String(fila)) : String(fila),
           etapa:     normalizarEtapa(r[iEtapa] ?? ""),
           asesor:    r[iNombreA]  ?? "",
           problema:  iProblema >= 0 ? r[iProblema] : "",

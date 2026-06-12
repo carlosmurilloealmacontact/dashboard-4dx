@@ -41,17 +41,18 @@ export async function GET(req: NextRequest) {
     (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase()
   )
 
-  const iEtapa    = idx("etapa atual")
-  const iNombreQ  = idx("nombre completo")
-  const iNombreA  = idx("nombre")
-  const iJefe     = idx("jefe inmediato")
-  const iMotivo   = idx("motivo do feedback")
-  const iCausa    = idx("causa raiz do feedback")
-  const iFeedback = headers.findIndex(h =>
+  const iEtapa     = idx("etapa atual")
+  const iNombreQ   = idx("nombre completo")
+  const iNombreA   = idx("nombre")
+  const iJefe      = idx("jefe inmediato")
+  const iMotivo    = idx("motivo do feedback")
+  const iCausa     = idx("causa raiz do feedback")
+  const iFeedback  = headers.findIndex(h =>
     (h ?? "").toLowerCase().includes("feedback você gostaria") &&
     !(h ?? "").toLowerCase().includes(".1")
   )
-  const iSemana   = idx("semana")
+  const iSemana    = idx("semana")
+  const iIdProyecto = idx("id do projeto")
 
   const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
   const esCoord = ["coordinador", "jefatura", "gerente"].includes(perfil.rol)
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest) {
       return jefe === nombrePersona
     })
     .map(r => ({
+      id:         iIdProyecto >= 0 ? (r[iIdProyecto] ?? "") : "",
       etapaRaw:   r[iEtapa]    ?? "",
       estado:     condensarEstado(r[iEtapa] ?? ""),
       quien:      r[iNombreQ]  ?? "",
@@ -103,6 +105,7 @@ export async function GET(req: NextRequest) {
       const itemsSup = rows.slice(1)
         .filter(r => (r[iJefe] ?? "").toLowerCase().trim() === sup)
         .map(r => ({
+          id:         iIdProyecto >= 0 ? (r[iIdProyecto] ?? "") : "",
           etapaRaw:   r[iEtapa]    ?? "",
           estado:     condensarEstado(r[iEtapa] ?? ""),
           quien:      r[iNombreQ]  ?? "",

@@ -631,3 +631,22 @@ supervisor". En `app/api/modulos/resolutividad/route.ts`, `id` = número de fila
 real en la hoja "Datos" (índice del registro + 2, contando el header), calculado
 antes de filtrar para que cada idea conserve su fila original. Así el ID permite
 ubicar el registro exacto en la hoja de Sheets.
+
+## "Id do Projeto" en Circuito de Resolutividad y Feedback (2026-06-12)
+
+El usuario indicó que el identificador correcto es la columna **"Id do Projeto"**
+de las hojas (no la fila calculada), y que el módulo Feedback ("feedback
+interfábricas") también la tiene:
+
+- **`app/api/modulos/resolutividad/route.ts`**: se agregó
+  `iIdProyecto = idx("id do projeto")`. El campo `id` de cada idea (tanto en
+  `ideas`/`ultimas5` como en `porSupervisor[].ideas`) ahora es
+  `r[iIdProyecto] || String(fila)` — usa el "Id do Projeto" de la hoja si la
+  columna existe y tiene valor, y cae al número de fila como respaldo. `id`
+  pasó de `number` a `string` en `Resolutividad.tsx`.
+- **`app/api/modulos/feedback/route.ts`**: se agregó la misma
+  `iIdProyecto = idx("id do projeto")` y un campo `id: r[iIdProyecto] ?? ""`
+  en cada feedback (`feedbacks` y `porSupervisor[].items`). En
+  `Feedback.tsx`, se añadió `id: string` a `FeedbackItem` y un badge `#{f.id}`
+  (solo si `f.id` no está vacío) junto a la etiqueta de estado, tanto en la
+  lista principal como en el detalle "Por supervisor".

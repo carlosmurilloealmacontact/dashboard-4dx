@@ -23,7 +23,7 @@ interface JefaturaRow {
 }
 
 interface Idea {
-  id: number
+  id: string
   etapa: string
   asesor: string
   problema: string
