@@ -331,6 +331,7 @@ export async function GET(req: NextRequest) {
         totalMonitoreos,
         diasConMeta,
         porTipo,
+        diasSemana: dias.map(({ dia, total, cumpleMeta }) => ({ dia, total, cumpleMeta })),
       }
     }).sort((a, b) => a.promCumple - b.promCumple)
 

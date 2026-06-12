@@ -19,6 +19,7 @@ interface CoachRow {
   cumplidos: number
   pct: number
   cdr: number | null
+  dias?: Registro[]
 }
 
 interface Data {
@@ -70,6 +71,25 @@ function colorPct(pct: number): string {
   if (pct >= 80) return "text-green-400"
   if (pct >= 60) return "text-yellow-400"
   return "text-red-400"
+}
+
+const ETIQUETAS_DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie"]
+
+function GridDias({ registros, alto = "h-6" }: { registros: Registro[]; alto?: string }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((numDia, i) => {
+        const r = registros.find(reg => parseFecha(reg.fecha)?.getDay() === numDia)
+        const color = !r ? "bg-gray-700" : r.cumple === "1" ? "bg-green-500" : "bg-red-500"
+        return (
+          <div key={numDia} className="flex-1 flex flex-col items-center gap-1">
+            <div className={`w-full ${alto} rounded ${color}`} />
+            <span className="text-xs text-gray-600">{ETIQUETAS_DIAS[i]}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function SeguimientoCoach() {
@@ -148,9 +168,10 @@ export default function SeguimientoCoach() {
                   <span className={`text-xs font-bold ${colorPct(c.pct)}`}>{c.pct}%</span>
                 </div>
               </div>
-              <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+              <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-2">
                 <div className={`h-1.5 rounded-full ${c.pct >= 80 ? "bg-green-500" : c.pct >= 60 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${c.pct}%` }} />
               </div>
+              {c.dias && c.dias.length > 0 && <GridDias registros={c.dias} alto="h-4" />}
               <p className="text-xs text-gray-600 mt-1">{c.cumplidos} de {c.totalDias} días</p>
             </div>
           ))}
@@ -210,19 +231,7 @@ export default function SeguimientoCoach() {
       {/* Barras Lun-Vie */}
       <div>
         <p className="text-xs text-gray-500 mb-2">Lun — Vie</p>
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((numDia, i) => {
-            const etiquetas = ["Lun", "Mar", "Mié", "Jue", "Vie"]
-            const r = registrosFiltrados.find(reg => parseFecha(reg.fecha)?.getDay() === numDia)
-            const color = !r ? "bg-gray-700" : r.cumple === "1" ? "bg-green-500" : "bg-red-500"
-            return (
-              <div key={numDia} className="flex-1 flex flex-col items-center gap-1">
-                <div className={`w-full h-6 rounded ${color}`} />
-                <span className="text-xs text-gray-600">{etiquetas[i]}</span>
-              </div>
-            )
-          })}
-        </div>
+        <GridDias registros={registrosFiltrados} />
       </div>
 
       {/* Foco más usado */}

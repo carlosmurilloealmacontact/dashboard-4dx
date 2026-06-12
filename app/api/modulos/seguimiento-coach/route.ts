@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         const n = parseFloat(cdrRaw)
         return isNaN(n) ? null : (n <= 1 ? Math.round(n * 100) : Math.round(n))
       })() : null
-      return { coach, totalDias: deEstaSemana.length, cumplidos: conCumple.length, pct, cdr }
+      return { coach, totalDias: deEstaSemana.length, cumplidos: conCumple.length, pct, cdr, dias: deEstaSemana }
     }).sort((a, b) => a.pct - b.pct)
 
     const totalDias = porCoach.reduce((s, c) => s + c.totalDias, 0)

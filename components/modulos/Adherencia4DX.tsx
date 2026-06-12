@@ -51,6 +51,32 @@ function colorText(n: number): "green" | "yellow" | "red" {
 
 const DIAS = [{ num: 1, label: "Lun" }, { num: 2, label: "Mar" }, { num: 3, label: "Mié" }, { num: 4, label: "Jue" }, { num: 5, label: "Vie" }]
 
+function fechaDiaSemana(fecha: string): number | null {
+  const [y, m, d] = (fecha ?? "").split("-")
+  if (!y || !m || !d) return null
+  return new Date(Number(y), Number(m) - 1, Number(d)).getDay()
+}
+
+// Promedio de cumplimiento por día (Lun-Vie) para un conjunto de registros
+function GridDiasEquipo({ registros, semana }: { registros: Registro[]; semana: string }) {
+  return (
+    <div className="flex gap-1">
+      {DIAS.map(d => {
+        const delDia = registros.filter(r => String(r.semana) === semana && fechaDiaSemana(r.fecha) === d.num)
+        const pct = delDia.length > 0
+          ? Math.round((delDia.reduce((s, r) => s + parseCumple(r.cumple), 0) / delDia.length) * 100)
+          : null
+        return (
+          <div key={d.num} className="flex-1 flex flex-col items-center gap-1">
+            <div className={`w-full h-4 rounded ${pct === null ? "bg-gray-700" : colorPct(pct)}`} />
+            <span className="text-xs text-gray-600">{d.label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Adherencia4DX() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -161,10 +187,14 @@ export default function Adherencia4DX() {
                 <span className="text-xs text-gray-300 break-words mr-2">{sv.supervisor}</span>
                 <span className={`text-xs font-bold ${sv.pct >= 80 ? "text-green-400" : sv.pct >= 60 ? "text-yellow-400" : "text-red-400"}`}>{sv.pct}%</span>
               </div>
-              <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-1">
+              <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-2">
                 <div className={`h-1.5 rounded-full ${colorPct(sv.pct)}`} style={{ width: `${sv.pct}%` }} />
               </div>
-              <div className="flex gap-3 text-xs text-gray-600">
+              <GridDiasEquipo
+                registros={data.registros.filter(r => (r.jefe ?? "").toLowerCase() === sv.supervisor.toLowerCase())}
+                semana={semanaActiva}
+              />
+              <div className="flex gap-3 text-xs text-gray-600 mt-1">
                 <span>{sv.totalAgentes} agentes</span>
                 {sv.conAlerta > 0 && <span className="text-red-400">⚠ {sv.conAlerta} alertas</span>}
               </div>

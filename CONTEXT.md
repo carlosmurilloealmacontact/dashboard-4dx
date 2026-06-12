@@ -590,3 +590,34 @@ perder información. Archivos afectados: `ConfirmacionesRol.tsx`,
 `CoachTeamView.tsx` (incluye el dropdown de coordinadores) y `AdminView.tsx`
 (selector "Ver como"). No se tocaron `titulo`/`descripcion` de `ModuloCard.tsx`
 ni campos no-nombre (ej. `ritual`, `causa`, `etapa`, `label`).
+
+## Grillas diarias Lun-Vie en tarjetas agregadas de coordinador (2026-06-12)
+
+A petición del usuario, las tarjetas "Por X" en vista coordinador ahora muestran
+una grilla compacta Lun-Vie con el cumplimiento diario del equipo/persona, no
+solo el % general. Aplicado a los 4 módulos con métricas diarias:
+
+- **`SeguimientoCoach.tsx`** (Prácticas Coach, "Por coach"): se agregó
+  `dias: deEstaSemana` a cada `CoachRow` en
+  `app/api/modulos/seguimiento-coach/route.ts` (registros de la semana actual
+  del coach). El componente extrajo la grilla existente a un componente
+  compartido `GridDias` (verde = `cumple==="1"`, rojo = no cumplió, gris = sin
+  dato) y la reutiliza tanto en la vista individual como en cada tarjeta de
+  coach del coordinador.
+- **`Adherencia4DX.tsx`** ("Por supervisor"): nuevo componente
+  `GridDiasEquipo` que, para cada supervisor, promedia `cumple` de
+  `data.registros` (ya incluye `jefe`) por día de la semana activa y colorea
+  con `colorPct` (verde ≥80%, amarillo ≥50%, rojo >0%, gris = sin datos). No
+  requirió cambios de API.
+- **`Pausas4DX.tsx`** ("Por supervisor"): nuevo componente `GridDiasEquipo`
+  (parametrizado por `tipo`: "Diálogo"/"CDR") que calcula el % de
+  `participo` por día a partir de `registros` filtrados por `jefe`, coloreado
+  con `barColor`. Se muestran dos grillas (Diálogo y CDR) por supervisor. No
+  requirió cambios de API.
+- **`AdherenciaPCA.tsx`** ("Por supervisor", Monitoreos de Calidad): se agregó
+  `diasSemana: { dia, total, cumpleMeta }[]` a cada `SupervisorRow` en
+  `app/api/modulos/adherencia-pca/route.ts` (resultado de `combinarDias` ya
+  filtrado a `semanaActual`). Nuevo componente `GridDiasEquipo` colorea cada
+  día según el conteo de monitoreos vs. `META` (5/día): verde ≥5, amarillo
+  ≥3, rojo <3, gris = sin monitoreos — mismo criterio que la barra "Monitoreos
+  diarios" de la vista supervisor individual.

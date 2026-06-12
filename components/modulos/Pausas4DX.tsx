@@ -55,6 +55,27 @@ function diaSemana(fechaStr: string): number {
   return new Date(y, m - 1, d).getDay()
 }
 
+// Grilla compacta Lun-Vie con el % de participación diaria de un equipo, para un tipo (Diálogo/CDR)
+function GridDiasEquipo({ registros, tipo }: { registros: Registro[]; tipo: string }) {
+  const filas = registros.filter(r => r.tipo === tipo)
+  return (
+    <div className="flex gap-1">
+      {DIAS.map(d => {
+        const delDia = filas.filter(r => diaSemana(r.fecha) === d.num)
+        const pct = delDia.length > 0
+          ? Math.round((delDia.filter(r => r.participo).length / delDia.length) * 100)
+          : null
+        return (
+          <div key={d.num} className="flex-1 flex flex-col items-center gap-1">
+            <div className={`w-full h-4 rounded ${pct === null ? "bg-gray-700" : barColor(pct)}`} />
+            <span className="text-xs text-gray-600">{d.label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function colorPct(n: number) {
   if (n >= 80) return "text-green-400"
   if (n >= 60) return "text-yellow-400"
@@ -248,6 +269,21 @@ export default function Pausas4DX() {
                 </div>
                 <span className={`text-xs font-bold w-10 text-right ${colorPct(sv.pctCDR)}`}>{sv.pctCDR}%</span>
               </div>
+              {(() => {
+                const regSup = registros.filter(r => r.jefe.toLowerCase() === sv.supervisor.toLowerCase())
+                return (
+                  <div className="mt-2 space-y-1.5">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Diálogo — Lun/Vie</p>
+                      <GridDiasEquipo registros={regSup} tipo="Diálogo" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">CDR — Lun/Vie</p>
+                      <GridDiasEquipo registros={regSup} tipo="CDR" />
+                    </div>
+                  </div>
+                )
+              })()}
             </button>
           ))}
         </div>

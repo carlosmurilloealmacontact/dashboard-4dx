@@ -20,6 +20,12 @@ interface Dia {
   porTipo?: { pcapta: { total: number; cumple: number }; pauta: { total: number; cumple: number } }
 }
 
+interface DiaSemana {
+  dia: number
+  total: number
+  cumpleMeta: boolean
+}
+
 interface SupervisorRow {
   supervisor: string
   dias: number
@@ -27,6 +33,7 @@ interface SupervisorRow {
   totalMonitoreos: number
   diasConMeta: number
   porTipo?: PorTipo
+  diasSemana?: DiaSemana[]
 }
 
 interface Data {
@@ -51,6 +58,28 @@ function barColor(n: number) {
   if (n >= 80) return "bg-green-500"
   if (n >= 60) return "bg-yellow-500"
   return "bg-red-500"
+}
+
+// Grilla compacta Lun-Vie con el conteo de monitoreos diarios de un equipo vs. la meta
+function GridDiasEquipo({ diasSemana }: { diasSemana?: DiaSemana[] }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map(numDia => {
+        const dia = diasSemana?.find(d => d.dia === numDia)
+        const count = dia?.total ?? null
+        const color = count === null ? "bg-gray-700"
+          : count >= META ? "bg-green-500"
+          : count >= Math.ceil(META / 2) ? "bg-yellow-500"
+          : "bg-red-500"
+        return (
+          <div key={numDia} className="flex-1 flex flex-col items-center gap-1">
+            <div className={`w-full h-4 rounded ${color}`} />
+            <span className="text-xs text-gray-600">{DIAS_LABEL[numDia]}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 function DesglosePorTipo({ porTipo }: { porTipo?: PorTipo }) {
@@ -133,10 +162,11 @@ export default function AdherenciaPCA() {
                 </span>
                 <span className={`text-xs font-bold ${colorPct(sv.promCumple)}`}>{sv.promCumple}%</span>
               </div>
-              <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-1">
+              <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-2">
                 <div className={`h-1.5 rounded-full ${barColor(sv.promCumple)}`} style={{ width: `${sv.promCumple}%` }} />
               </div>
-              <div className="flex gap-3 text-xs text-gray-600">
+              <GridDiasEquipo diasSemana={sv.diasSemana} />
+              <div className="flex gap-3 text-xs text-gray-600 mt-1">
                 <span>{sv.totalMonitoreos} monitoreos</span>
                 <span>{sv.diasConMeta}/{sv.dias} días con meta</span>
               </div>
