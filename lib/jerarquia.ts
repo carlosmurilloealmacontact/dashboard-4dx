@@ -9,7 +9,8 @@ const BASES: { id: string; rango: string }[] = [
 // Superusuarios/Administradores con acceso a todo
 const ADMIN_EMAILS = [
   "carlosmurilloe.almacontact@outsourcing-account.com",
-  "mariarestrepoh.almacontact@outsourcing-account.com"
+  "mariarestrepoh.almacontact@outsourcing-account.com",
+  "fabian.galeano@latam.com"
 ]
 
 export interface Persona {
