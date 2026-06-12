@@ -12,8 +12,8 @@ import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 
 const TODOS_MODULOS = [
-  { id: "adherencia", titulo: "Adherencia 4DX", icono: "📋", descripcion: "Ingresos diarios del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
+  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
   { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
   { id: "adherencia_pca", titulo: "Adherencia PCA/PTA", icono: "🔍", descripcion: "Logueo y revisiones diarias" },
   { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },

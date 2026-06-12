@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, LabelList,
 } from "recharts"
 import type { DatosInforme } from "@/lib/informes"
 
@@ -93,7 +93,15 @@ function GraficaBarras({ data, series, stacked, domain, unit }: {
           <Tooltip formatter={(v: number | string | readonly (number | string)[] | undefined) => unit ? `${v}${unit}` : (v ?? "")} />
           {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
           {series.map(s => (
-            <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} stackId={stacked ? "a" : undefined} radius={stacked ? undefined : [0, 4, 4, 0]} />
+            <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} stackId={stacked ? "a" : undefined} radius={stacked ? undefined : [0, 4, 4, 0]}>
+              <LabelList
+                dataKey={s.key}
+                position={stacked ? "inside" : "right"}
+                fontSize={10}
+                fill={stacked ? "#fff" : "#374151"}
+                formatter={(v: string | number | boolean | null | undefined) => unit ? `${v}${unit}` : `${v ?? ""}`}
+              />
+            </Bar>
           ))}
         </BarChart>
       </ResponsiveContainer>
@@ -235,6 +243,7 @@ function graficaSeccion(titulo: string, datos: DatosInforme) {
               <ReferenceLine x={7} stroke={COLORES.rojo} strokeDasharray="4 4" />
               <Bar dataKey="dias" name="Días sin actualizar" radius={[0, 4, 4, 0]}>
                 {data.map((d, i) => <Cell key={i} fill={d.dias > 7 ? COLORES.rojo : COLORES.verde} />)}
+                <LabelList dataKey="dias" position="right" fontSize={10} fill="#374151" formatter={(v: string | number | boolean | null | undefined) => `${v ?? ""} d`} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

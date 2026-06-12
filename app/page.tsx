@@ -13,8 +13,9 @@ import { usePerfil } from "@/hooks/usePerfil"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 
 const MODULOS = [
-  { id: "adherencia", titulo: "Adherencia 4DX", icono: "📋", descripcion: "Ingresos diarios del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
+  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
   { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
   { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
   { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
@@ -23,13 +24,13 @@ const MODULOS = [
   { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
   { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
   { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
   { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
 ]
 
 const TODOS_MODULOS = [
-  { id: "adherencia", titulo: "Adherencia 4DX", icono: "📋", descripcion: "Ingresos diarios del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
+  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
   { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
   { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
   { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
@@ -38,7 +39,6 @@ const TODOS_MODULOS = [
   { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
   { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
   { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
   { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
 ]
 

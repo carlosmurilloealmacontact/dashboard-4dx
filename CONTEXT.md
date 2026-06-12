@@ -650,3 +650,33 @@ interfábricas") también la tiene:
   `Feedback.tsx`, se añadió `id: string` a `FeedbackItem` y un badge `#{f.id}`
   (solo si `f.id` no está vacío) junto a la etiqueta de estado, tanto en la
   lista principal como en el detalle "Por supervisor".
+
+## Renombrar/reordenar módulos y etiquetas de datos en Informe IA (2026-06-12)
+
+A pedido del usuario:
+
+- **Renombrar "Adherencia 4DX" → "Medidas de Dirección"**, con descripción
+  actualizada de "Ingresos diarios del equipo" a "Ingresos diarios,
+  resolutividad y productividad del equipo". El `id` interno (`"adherencia"`)
+  no cambió, por lo que las rutas API y `Adherencia4DX.tsx` no requirieron
+  cambios.
+- **Renombrar "Prácticas Líderes" → "Prácticas Líderes 4DX"** (se agrega la
+  sigla). El `id` (`"practicas_lideres"`) no cambió.
+- **Reordenar "Pausas 4DX"** para que aparezca inmediatamente después de
+  "Prácticas Líderes 4DX" en la lista de módulos del dashboard (antes estaba
+  más abajo, junto a "Estoy Enterado"/"Agenda del líder").
+
+Estos 3 cambios se aplicaron a los arrays `MODULOS`/`TODOS_MODULOS`/
+`MODULOS_EQUIPO` en los 6 archivos que definen el catálogo de módulos:
+`app/page.tsx`, `app/preview/page.tsx`, `app/demo/page.tsx`,
+`app/demo/real/page.tsx`, `components/AdminView.tsx` y
+`components/CoachTeamView.tsx`. No se tocaron `components/InformeIA.tsx` ni
+`lib/informes-prompt.ts`, que tienen su propio sistema de títulos de sección
+para el informe IA (`case "Adherencia 4DX":`, `case "Prácticas Líderes":`,
+`case "Pausas 4DX":`) — son listas separadas, distintas de las tarjetas del
+dashboard, y el usuario no pidió cambiarlas.
+
+- **Etiquetas de datos en gráficas del Informe IA**: se agregó
+  `<LabelList>` (de `recharts`) a cada `<Bar>` en `GraficaBarras` (con
+  formato `valor` o `valor%` según `unit`, posición "right" o "inside" si es
+  apilada) y al `<Bar>` de la sección "Agenda del líder" (formato `N d`).

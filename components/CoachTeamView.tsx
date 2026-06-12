@@ -17,15 +17,15 @@ interface Coordinador {
 }
 
 const MODULOS_EQUIPO = [
-  { id: "adherencia",        titulo: "Adherencia 4DX",            icono: "📋", descripcion: "Ingresos diarios del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes",         icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "adherencia",        titulo: "Medidas de Dirección",      icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
+  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX",     icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
+  { id: "pausas_4dx",        titulo: "Pausas 4DX",                icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
   { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol",    icono: "✅", descripcion: "Acompañamientos del equipo" },
   { id: "compromisos",       titulo: "Compromisos",               icono: "🤝", descripcion: "Estado de compromisos por asesor" },
   { id: "quiz",              titulo: "Quiz Semanal",              icono: "📝", descripcion: "Presentación y aprobación" },
   { id: "estoy_enterado",    titulo: "Estoy Enterado",            icono: "📢", descripcion: "Seguimiento de briefings" },
   { id: "feedback",          titulo: "Feedback Interfábricas",    icono: "💬", descripcion: "Feedback entre compañeros" },
   { id: "resolutividad",     titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
-  { id: "pausas_4dx",        titulo: "Pausas 4DX",                icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
 ]
 
 interface Props {
