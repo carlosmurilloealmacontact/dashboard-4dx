@@ -231,8 +231,30 @@ independientes**:
    (`cargarPersonas`), porque la columna "Supervisor" de Alertas en realidad es el
    jefe inmediato del asesor evaluado.
 
-`combinarDias()` suma ambos totales por día y promedia el cumplimiento ponderado.
-`META_DIARIA = 5`.
+`combinarDias()` suma ambos totales por día y promedia el cumplimiento ponderado
+(campo `cumple`, calidad — ya no se usa para el `%` mostrado, ver abajo).
+`META_DIARIA = 5` (combinado, solo usado para `diasConMeta`/`días con meta`,
+sin cambios).
+
+### % de cumplimiento = volumen vs. meta semanal (2026-06-12)
+
+En `app/api/modulos/adherencia-pca/route.ts`, el `%` mostrado (global y por
+tipo PCA/PTA / Pauta) **ya NO es la nota de calidad** ("Cumplimiento Día" /
+"NotaFinal" de las hojas) — ahora representa **cumplimiento de la meta de
+volumen semanal de monitoreos**:
+- `META_SEMANAL_PCAPTA = 25` (5/día × 5 días hábiles)
+- `META_SEMANAL_PAUTA = 20` (4/día × 5 días hábiles)
+- `pcapta.pct = min(100, round(totalPCA / 25 * 100))`, `pauta.pct = min(100,
+  round(totalPauta / 20 * 100))` — `porTipoResumen()`, desglose informativo por
+  tipo.
+- `%` global (`promCumple` en vista coordinador, `kpi.pct` en vista
+  supervisor) = `min(100, round((totalPCA + totalPauta) / 25 * 100))` —
+  `META_SEMANAL_GLOBAL = 25` (= `META_DIARIA * 5`), **la misma meta combinada
+  para todos los supervisores** sin importar el desglose por tipo (ej. Méndez
+  Daza con 12 PCA/PTA + 4 Pauta = 16 → 16/25 = 64%).
+- El campo `cumple` (calidad, de `combinarDias()`) queda calculado pero sin
+  usar para el `%` — solo `cumpleMeta`/`diasConMeta` (meta diaria combinada de
+  5) se sigue usando igual que antes.
 
 ---
 

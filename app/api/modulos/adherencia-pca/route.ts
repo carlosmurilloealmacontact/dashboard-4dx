@@ -13,6 +13,16 @@ const HOJA_PAUTA     = "Alertas"
 
 const META_DIARIA = 5
 
+// Metas semanales de volumen de monitoreos (5 días hábiles):
+// PCA/PTA: 5/día -> 25/semana. Pauta de Calidad: 4/día -> 20/semana.
+const META_SEMANAL_PCAPTA = 25
+const META_SEMANAL_PAUTA = 20
+
+// % de cumplimiento de la meta de volumen, capado en 100%.
+function pctMeta(total: number, meta: number): number {
+  return Math.min(100, Math.round((total / meta) * 100))
+}
+
 function parseCumplePct(v: string): number {
   return parseFloat((v ?? "").replace(",", ".").replace("%", "")) || 0
 }
@@ -152,20 +162,20 @@ function combinarDias(
   return dias
 }
 
+// El "%" de cada tipo refleja el cumplimiento de la META DE VOLUMEN semanal
+// (monitoreos hechos / monitoreos esperados), no la nota de calidad de la hoja.
 function porTipoResumen(dias: DiaCombinado[]) {
-  const conPCA = dias.filter(d => d.pcapta.total > 0)
-  const conPauta = dias.filter(d => d.pauta.total > 0)
+  const totalPCA = dias.reduce((s, d) => s + d.pcapta.total, 0)
+  const totalPauta = dias.reduce((s, d) => s + d.pauta.total, 0)
   return {
-    pcapta: {
-      pct: promedio(conPCA.map(d => d.pcapta.cumple)),
-      total: dias.reduce((s, d) => s + d.pcapta.total, 0),
-    },
-    pauta: {
-      pct: promedio(conPauta.map(d => d.pauta.cumple)),
-      total: dias.reduce((s, d) => s + d.pauta.total, 0),
-    },
+    pcapta: { pct: pctMeta(totalPCA, META_SEMANAL_PCAPTA), total: totalPCA },
+    pauta: { pct: pctMeta(totalPauta, META_SEMANAL_PAUTA), total: totalPauta },
   }
 }
+
+// Meta global combinada (PCA/PTA + Pauta): 5/día x 5 días = 25/semana, igual
+// para todos los supervisores sin importar el desglose por tipo.
+const META_SEMANAL_GLOBAL = META_DIARIA * 5
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -309,9 +319,9 @@ export async function GET(req: NextRequest) {
         .map(({ dia, semana, nota }) => ({ dia, semana, nota }))
 
       const dias = combinarDias(filasPCA, filasPauta)
-      const conDatos = dias.filter(d => d.total > 0)
-      const promCumple = promedio(conDatos.map(d => d.cumple))
+      const porTipo = porTipoResumen(dias)
       const totalMonitoreos = dias.reduce((s, d) => s + d.total, 0)
+      const promCumple = pctMeta(totalMonitoreos, META_SEMANAL_GLOBAL)
       const diasConMeta = dias.filter(d => d.cumpleMeta).length
 
       return {
@@ -320,7 +330,7 @@ export async function GET(req: NextRequest) {
         promCumple,
         totalMonitoreos,
         diasConMeta,
-        porTipo: porTipoResumen(dias),
+        porTipo,
       }
     }).sort((a, b) => a.promCumple - b.promCumple)
 
@@ -357,9 +367,9 @@ export async function GET(req: NextRequest) {
   }))
 
   const diasSemanaActual = todosLosDias.filter(d => d.semana === semanaActual)
-  const conDatos = diasSemanaActual.filter(d => d.total > 0)
-  const pctPromedio = promedio(conDatos.map(d => d.cumple))
+  const porTipoSemana = porTipoResumen(diasSemanaActual)
   const totalMonitoreosSemana = diasSemanaActual.reduce((s, d) => s + d.total, 0)
+  const pctPromedio = pctMeta(totalMonitoreosSemana, META_SEMANAL_GLOBAL)
   const diasConMeta = diasSemanaActual.filter(d => d.cumpleMeta).length
 
   const response = NextResponse.json({
@@ -371,7 +381,7 @@ export async function GET(req: NextRequest) {
       totalMonitoreos: totalMonitoreosSemana,
       diasConMeta,
       meta: META_DIARIA,
-      porTipo: porTipoResumen(diasSemanaActual),
+      porTipo: porTipoSemana,
     },
     dias,
   })
