@@ -287,12 +287,14 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
   total, estaSemana, confirmaciones }] }`. `ConfirmacionesRol.tsx` agrega
   vista `modo === "coordinador"` (KPI esta semana/total equipo + lista "Por
   coach" con confirmaciones de la semana seleccionada).
-- **Pendiente de verificar**: el usuario reportó que la sección "Seguimiento
-  de Equipo" (`CoachTeamView`, con CDR y filtros de coordinador/servicio) no
-  se vio/cargó para Katheryne. Posible causa: estilos oscuros
-  (`text-white`/`bg-gray-900`) de `CoachTeamView` sobre el fondo blanco de
-  `app/page.tsx` la harían invisible — habría que confirmar si el mismo
-  problema ocurre para coaches normales o es específico de este caso.
+- (2026-06-12, tercer ajuste) `components/CoachTeamView.tsx`: el título
+  "Seguimiento de Equipo" era `text-white` (invisible sobre el fondo blanco de
+  `app/page.tsx`/`preview`/`demo`, donde se usa siempre) — cambiado a
+  `text-gray-900`. También se redujo el espacio antes de la sección (`mt-10`
+  → `mt-4`, separador `border-gray-800 mb-8` → `border-gray-200 mb-4`) para
+  que quede inmediatamente debajo de los módulos (ej. Confirmaciones de Rol)
+  en vez de con un salto grande. Afecta a todos los usos de `CoachTeamView`
+  (coach normal y coordinador-coach), no solo a Katheryne.
 - `app/api/modulos/seguimiento-coach/route.ts`: nuevo `modo: "coordinador"`
   cuando `perfil.rol === "coordinador"`. Toma `perfil.equipo` filtrado por
   `normalizarCargo(cargo) === "coach"` (sus coaches directos), busca cada uno

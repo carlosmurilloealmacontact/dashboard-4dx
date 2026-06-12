@@ -78,12 +78,12 @@ export default function CoachTeamView({ perfilCoach }: Props) {
   const servicioFiltrado = filtroServicio
 
   return (
-    <div className="mt-10">
+    <div className="mt-4">
       {/* Separador */}
-      <div className="border-t border-gray-800 mb-8" />
+      <div className="border-t border-gray-200 mb-4" />
 
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-1">Seguimiento de Equipo</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Seguimiento de Equipo</h3>
         {errorFiltros && (
           <p className="text-red-400 text-xs mb-2">Error al cargar coordinadores: {errorFiltros}</p>
         )}
