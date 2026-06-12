@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
-import { obtenerPerfil } from "@/lib/jerarquia"
+import { obtenerPerfil, normalizarCargo } from "@/lib/jerarquia"
 
 const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
 const HOJA = "Confirmaciones de Rol"
@@ -115,6 +115,57 @@ export async function GET(req: NextRequest) {
 
   const nombrePersona = (perfil.persona.nombre ?? "").toLowerCase().trim()
   const esSupervisor = perfil.rol === "supervisor"
+
+  // Vista coordinador (ej. Katheryne Quiñones): confirmaciones realizadas por cada coach de su equipo
+  if (perfil.rol === "coordinador") {
+    const coaches = perfil.equipo.filter(p => normalizarCargo(p.cargo) === "coach")
+
+    const confirmacionesEquipo = rows.slice(1)
+      .map(r => ({
+        nombreCoach: (r[iNombreCoach] ?? "").toLowerCase().trim(),
+        fecha:  r[iFecha] ?? "",
+        ritual: iRitual >= 0 ? r[iRitual] : "",
+        liderAcomp: r[iLiderAcomp] ?? "",
+      }))
+      .map(c => ({ ...c, semana: getISOWeek(c.fecha) }))
+
+    const semanaActual = getISOWeek(new Date().toISOString())
+
+    const porCoach = coaches.map(coach => {
+      const nombreCoach = (coach.nombre ?? "").toLowerCase().trim()
+      const confs = confirmacionesEquipo.filter(c => c.nombreCoach === nombreCoach)
+      const estaSemana = confs.filter(c => c.semana === semanaActual)
+      return {
+        coach: coach.nombre,
+        total: confs.length,
+        estaSemana: estaSemana.length,
+        confirmaciones: confs.map(c => ({ fecha: c.fecha, semana: c.semana, liderAcomp: c.liderAcomp, ritual: c.ritual })),
+      }
+    })
+
+    const semanas = [...new Set(confirmacionesEquipo.map(c => c.semana).filter(Boolean))]
+      .sort((a, b) => Number(a) - Number(b))
+
+    const total = porCoach.reduce((s, c) => s + c.total, 0)
+    const estaSemana = porCoach.reduce((s, c) => s + c.estaSemana, 0)
+
+    const response = NextResponse.json({
+      modo: "coordinador",
+      total,
+      esSupervisor: false,
+      semanaActual,
+      semanas,
+      deEstaSemana: estaSemana,
+      alertaSupervisor: null,
+      alertaCoach: null,
+      promedios: {},
+      dimMasAfectada: null,
+      porCoach,
+      ultimas5: [],
+    })
+    response.headers.set('Cache-Control', 'no-store')
+    return response
+  }
 
   console.log("DEBUG confirmaciones-rol:")
   console.log("  nombrePersona:", nombrePersona)

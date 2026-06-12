@@ -20,7 +20,15 @@ interface ConfLigera {
   fecha: string; semana: string; liderAcomp: string; ritual: string
 }
 
+interface CoachRow {
+  coach: string
+  total: number
+  estaSemana: number
+  confirmaciones: ConfLigera[]
+}
+
 interface Data {
+  modo?: "coordinador"
   total: number
   esSupervisor: boolean
   semanaActual: string
@@ -32,6 +40,7 @@ interface Data {
   dimMasAfectada: { key: string; label: string; valor: number } | null
   confirmaciones?: ConfLigera[]
   ultimas5: Confirmacion[]
+  porCoach?: CoachRow[]
 }
 
 const DIMS_LABELS: Record<string, string> = {
@@ -78,6 +87,12 @@ export default function ConfirmacionesRol() {
           alerta: d.dimMasAfectada && d.dimMasAfectada.valor < 80 ? 1 : 0,
           color: d.total > 0 ? "green" : "white",
         })
+      } else if (d.modo === "coordinador") {
+        setMetric({
+          valor: `${d.deEstaSemana} realizadas`,
+          alerta: d.deEstaSemana === 0 && d.total > 0 ? 1 : 0,
+          color: d.deEstaSemana > 0 ? "green" : d.total > 0 ? "yellow" : "white",
+        })
       }
     }).finally(() => setCargando(false))
   }, [url, setMetric, reportWeeks])
@@ -85,7 +100,7 @@ export default function ConfirmacionesRol() {
   // Para coach/coordinador, el indicador debe reflejar la semana seleccionada
   // (la misma que se muestra en el cuerpo del módulo), no siempre la semana actual.
   useEffect(() => {
-    if (!data || data.esSupervisor || typeof data.total !== "number") return
+    if (!data || data.esSupervisor || data.modo === "coordinador" || typeof data.total !== "number") return
     const semanaSel = semanaGlobal ?? normalizarSemana(data.semanaActual)
     const esActual = semanaSel === normalizarSemana(data.semanaActual)
     const conteo = (data.confirmaciones ?? []).filter(c => normalizarSemana(c.semana) === semanaSel).length
@@ -97,6 +112,68 @@ export default function ConfirmacionesRol() {
   }, [data, semanaGlobal, setMetric])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+
+  // ── VISTA COORDINADOR — confirmaciones REALIZADAS por su equipo de coaches ──
+  if (data?.modo === "coordinador") {
+    const porCoach = data.porCoach ?? []
+    const semanaSelNorm = semanaGlobal ?? normalizarSemana(data.semanaActual)
+    const esSemanaActual = semanaSelNorm === normalizarSemana(data.semanaActual)
+    if (porCoach.length === 0) return <p className="text-xs text-gray-500 py-2">Sin coaches en tu equipo.</p>
+
+    return (
+      <div className="space-y-4">
+        {/* KPI */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <p className="text-xs text-gray-600">{esSemanaActual ? "Esta semana" : `Semana ${semanaSelNorm}`}</p>
+            <p className={`text-2xl font-bold ${data.deEstaSemana > 0 ? "text-green-600" : "text-red-600"}`}>
+              {data.deEstaSemana}
+            </p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <p className="text-xs text-gray-600">Total equipo</p>
+            <p className="text-2xl font-bold text-gray-900">{data.total}</p>
+          </div>
+        </div>
+
+        {/* Por coach */}
+        <div className="space-y-2">
+          <p className="text-xs text-gray-600 mb-1">
+            {esSemanaActual ? "Por coach — esta semana" : `Por coach — semana ${semanaSelNorm}`}
+          </p>
+          {porCoach.map((c, i) => {
+            const confsSemana = c.confirmaciones.filter(conf => normalizarSemana(conf.semana) === semanaSelNorm)
+            return (
+              <div key={i} className="bg-white border border-gray-200 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-gray-700 truncate max-w-[160px]">
+                    {c.coach.split(" ").slice(0, 3).join(" ")}
+                  </span>
+                  <span className={`text-xs font-bold ${confsSemana.length > 0 ? "text-green-600" : "text-red-600"}`}>
+                    {confsSemana.length} esta semana
+                  </span>
+                </div>
+                {confsSemana.length > 0 ? (
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {confsSemana.map((conf, j) => (
+                      <div key={j} className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded px-2 py-1">
+                        <span className="text-xs text-gray-600 truncate max-w-[140px]">{conf.liderAcomp.split(" ").slice(0, 3).join(" ")}</span>
+                        {conf.ritual && <span className="text-xs text-gray-400 truncate max-w-[80px]">{conf.ritual}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">Sin confirmaciones esta semana</p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">{c.total} en total</p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   if (!data || data.total === 0 || !data.ultimas5) return <p className="text-xs text-gray-500 py-2">Sin confirmaciones registradas.</p>
 
   // ── VISTA SUPERVISOR — confirmaciones RECIBIDAS ──────────────────

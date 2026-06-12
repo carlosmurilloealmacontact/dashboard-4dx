@@ -278,6 +278,21 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
 - (2026-06-12, ajuste) Confirmado funcionando: "Prácticas Coach" mostró 80%
   con el desglose por coach correctamente para KATHERYNE QUIÑONES
   (`Coordinador Coach`, base LATAM-Socio, fila 26).
+- (2026-06-12, segundo ajuste) `app/api/modulos/confirmaciones-rol/route.ts`:
+  mismo patrón — nuevo `modo: "coordinador"` cuando `perfil.rol ===
+  "coordinador"`. Toma `perfil.equipo` filtrado por `normalizarCargo(cargo)
+  === "coach"`, filtra filas de "Confirmaciones de Rol" donde la columna del
+  nombre del coach (`iNombreCoach`) coincide con cada coach, y devuelve
+  `{ modo, total, semanaActual, semanas, deEstaSemana, porCoach: [{ coach,
+  total, estaSemana, confirmaciones }] }`. `ConfirmacionesRol.tsx` agrega
+  vista `modo === "coordinador"` (KPI esta semana/total equipo + lista "Por
+  coach" con confirmaciones de la semana seleccionada).
+- **Pendiente de verificar**: el usuario reportó que la sección "Seguimiento
+  de Equipo" (`CoachTeamView`, con CDR y filtros de coordinador/servicio) no
+  se vio/cargó para Katheryne. Posible causa: estilos oscuros
+  (`text-white`/`bg-gray-900`) de `CoachTeamView` sobre el fondo blanco de
+  `app/page.tsx` la harían invisible — habría que confirmar si el mismo
+  problema ocurre para coaches normales o es específico de este caso.
 - `app/api/modulos/seguimiento-coach/route.ts`: nuevo `modo: "coordinador"`
   cuando `perfil.rol === "coordinador"`. Toma `perfil.equipo` filtrado por
   `normalizarCargo(cargo) === "coach"` (sus coaches directos), busca cada uno
