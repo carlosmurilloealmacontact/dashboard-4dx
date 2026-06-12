@@ -680,3 +680,53 @@ dashboard, y el usuario no pidió cambiarlas.
   `<LabelList>` (de `recharts`) a cada `<Bar>` en `GraficaBarras` (con
   formato `valor` o `valor%` según `unit`, posición "right" o "inside" si es
   apilada) y al `<Bar>` de la sección "Agenda del líder" (formato `N d`).
+
+## Envío del Informe IA por correo, solo desde la vista admin (2026-06-12)
+
+El usuario pidió poder enviar el Informe IA por correo, con las gráficas
+embebidas en el cuerpo (no como adjunto), y que esta opción solo exista en
+la vista admin (los demás roles no la necesitan).
+
+- **`lib/informe-render.ts`** (nuevo): se extrajo de
+  `components/InformeIA.tsx` toda la lógica pura (sin React/Recharts) que
+  ahora comparten el dashboard y el correo: `nombreCorto`, `dividirSecciones`,
+  `ORDEN_SECCIONES`, `COLORES`, las funciones `data*` que construyen las
+  filas de cada gráfica a partir de `DatosInforme`, y un nuevo mapa
+  `SECCIONES_GRAFICA` que describe, por título de sección, qué función de
+  datos, series, `domain`/`unit`/`stacked` usa cada gráfica de barras. También
+  exporta el tipo `ResultadoInforme`.
+- **`components/InformeIA.tsx`**: ahora importa todo eso desde
+  `lib/informe-render`; `graficaSeccion` usa `SECCIONES_GRAFICA` para el caso
+  genérico (antes era un switch con un `<GraficaBarras>` por sección
+  duplicando la config). Sin cambios visuales.
+- **`lib/informe-email.ts`** (nuevo): construye el HTML del correo
+  (`construirCorreoInforme(resultado)`). Las gráficas de barras se
+  representan como **tablas HTML** (`<table>`/`<td bgcolor>`) — compatibles
+  con Gmail/Outlook sin imágenes ni JS — replicando la config de
+  `SECCIONES_GRAFICA`: barras agrupadas (una fila por serie) o apiladas
+  (segmentos de color con leyenda), igual que en el dashboard. El texto del
+  informe (markdown simple `**negrita**`/`- viñetas`) se convierte a HTML.
+- **`app/api/informes/enviar/route.ts`** (nuevo): `POST`, valida sesión y
+  que `perfil.rol === "admin"` (mismo patrón que `app/api/debug/*`), recibe
+  `{ destino, resultado }`, valida el formato del correo destino y envía el
+  HTML vía **Resend** (`resend.emails.send`). Requiere las variables de
+  entorno `RESEND_API_KEY` y `RESEND_FROM_EMAIL` (sin configurar, responde
+  500 con un mensaje explicativo en vez de fallar silenciosamente).
+- **`components/InformeIA.tsx`**: nuevo prop `permitirEnvioCorreo?: boolean`.
+  Cuando es `true` y hay un informe generado, se muestra un campo de correo
+  + botón "Enviar por correo" que llama a `/api/informes/enviar`.
+- **`components/AdminView.tsx`**: pasa `permitirEnvioCorreo` a `<InformeIA>`
+  (es el único lugar donde se usa). El resto de vistas (dashboard normal,
+  `app/page.tsx`) no lo pasan, por lo que no aparece esa opción.
+- Se instaló la dependencia `resend`.
+
+### Pendiente de configuración (no hecho por el agente)
+Para que el envío funcione hace falta, en producción (Vercel) y en
+`.env.local` para desarrollo:
+1. Crear cuenta en resend.com y obtener una API key.
+2. Verificar un dominio propio en Resend (registros DNS) para poder enviar
+   desde una dirección propia (ej. `informes@tudominio.com`). Sin dominio
+   verificado, Resend solo permite enviar a la dirección de prueba del
+   propio dueño de la cuenta desde `onboarding@resend.dev`.
+3. Configurar `RESEND_API_KEY` y `RESEND_FROM_EMAIL` como variables de
+   entorno.

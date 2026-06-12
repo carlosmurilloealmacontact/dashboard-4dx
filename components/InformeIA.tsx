@@ -5,26 +5,15 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, LabelList,
 } from "recharts"
 import type { DatosInforme } from "@/lib/informes"
+import {
+  ORDEN_SECCIONES, SECCIONES_GRAFICA, COLORES, dividirSecciones, dataAgendaLider,
+  type ResultadoInforme, type SerieBarra,
+} from "@/lib/informe-render"
 
 interface Props {
   supervisores: { nombre: string }[]
   email?: string
-}
-
-interface ResultadoInforme {
-  alcance: { tipo: "coordinador" | "supervisor"; nombre: string }
-  semanas: string[]
-  tipoInforme: "parcial" | "cierre"
-  texto: string
-  datos: DatosInforme
-}
-
-// "Apellidos Apellidos Nombres Nombres" -> usa las últimas 1-2 palabras como
-// etiqueta corta para los ejes de las gráficas.
-function nombreCorto(nombre: string): string {
-  const partes = (nombre ?? "").trim().split(/\s+/)
-  if (partes.length <= 2) return partes.join(" ")
-  return partes.slice(-2).join(" ")
+  permitirEnvioCorreo?: boolean
 }
 
 // Convierte el subset de Markdown que devuelve la IA (**, -) a JSX simple.
@@ -47,32 +36,6 @@ function renderLineas(lineas: string[], keyPrefix: string) {
     return <p key={`${keyPrefix}-${i}`} className="text-sm text-gray-700">{renderInline(linea)}</p>
   })
 }
-
-// Divide el texto de la IA en secciones por encabezados "## Título".
-function dividirSecciones(texto: string): Map<string, string[]> {
-  const secciones = new Map<string, string[]>()
-  let actual: string[] | null = null
-  texto.split("\n").forEach(linea => {
-    if (linea.startsWith("## ")) {
-      actual = []
-      secciones.set(linea.slice(3).trim(), actual)
-    } else if (actual) {
-      actual.push(linea)
-    }
-  })
-  return secciones
-}
-
-const COLORES = {
-  azul: "#3b82f6",
-  verde: "#16a34a",
-  rojo: "#dc2626",
-  ambar: "#f59e0b",
-  gris: "#9ca3af",
-  morado: "#8b5cf6",
-}
-
-interface SerieBarra { key: string; name: string; color: string }
 
 function GraficaBarras({ data, series, stacked, domain, unit }: {
   data: Record<string, string | number | null>[]
@@ -109,125 +72,10 @@ function GraficaBarras({ data, series, stacked, domain, unit }: {
   )
 }
 
-// ── Constructores de datos por gráfica, a partir de DatosInforme ──────────
-
-function ultimaSemana<T>(porSemana: { semana: string }[], semanas: string[], campo: (p: { semana: string }) => T): { semana: string; valor: T } | null {
-  const sem = semanas[semanas.length - 1]
-  const fila = porSemana.find(p => p.semana === sem)
-  if (!fila) return null
-  return { semana: sem, valor: campo(fila) }
-}
-
-function dataAdherencia4dx(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).adherencia4dx)?.valor
-      return f ? { supervisor: nombreCorto(s.supervisor), pct: f.pct } : null
-    })
-    .filter((d): d is { supervisor: string; pct: number } => d !== null)
-}
-
-function dataPracticasLideres(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).practicasLideres)?.valor
-      return f ? { supervisor: nombreCorto(s.supervisor), pct: f.pct, cdr: f.cdr ?? 0 } : null
-    })
-    .filter((d): d is { supervisor: string; pct: number; cdr: number } => d !== null)
-}
-
-function dataMonitoreosCalidad(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).pcaPta)?.valor
-      return f ? { supervisor: nombreCorto(s.supervisor), pct: f.pct, dias: f.diasConDatos } : null
-    })
-    .filter((d): d is { supervisor: string; pct: number; dias: number } => d !== null)
-}
-
-function dataResolutividad(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => s.resolutividad ? { supervisor: nombreCorto(s.supervisor), pctImpl: s.resolutividad.pctImpl, pctBacklog: s.resolutividad.pctBacklog } : null)
-    .filter((d): d is { supervisor: string; pctImpl: number; pctBacklog: number } => d !== null)
-}
-
-function dataFeedback(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => s.feedback && s.feedback.total > 0
-      ? { supervisor: nombreCorto(s.supervisor), nuevos: s.feedback.nuevos, gestionados: s.feedback.gestionados, rechazados: s.feedback.rechazados }
-      : null)
-    .filter((d): d is { supervisor: string; nuevos: number; gestionados: number; rechazados: number } => d !== null)
-}
-
-function dataCompromisos(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).compromisos)?.valor
-      return f ? { supervisor: nombreCorto(s.supervisor), sinIngreso: f.sinIngreso, abiertos: f.abiertos, cerradoMejora: f.cerradoMejora, cerradoSin: f.cerradoSin } : null
-    })
-    .filter((d): d is { supervisor: string; sinIngreso: number; abiertos: number; cerradoMejora: number; cerradoSin: number } => d !== null)
-}
-
-function dataQuiz(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).quiz)?.valor
-      if (!f || f.total === 0) return null
-      return {
-        supervisor: nombreCorto(s.supervisor),
-        pctPresento: Math.round((f.presento / f.total) * 100),
-        pctAprueba: f.presento > 0 ? Math.round((f.aprueba / f.presento) * 100) : 0,
-      }
-    })
-    .filter((d): d is { supervisor: string; pctPresento: number; pctAprueba: number } => d !== null)
-}
-
-function dataEstoyEnterado(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).estoyEnterado)?.valor
-      return f && f.total > 0 ? { supervisor: nombreCorto(s.supervisor), pctClaro: f.pctClaro } : null
-    })
-    .filter((d): d is { supervisor: string; pctClaro: number } => d !== null)
-}
-
-function dataPausas4dx(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => {
-      const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).compromisosCopilot)?.valor
-      return f ? { supervisor: nombreCorto(s.supervisor), pctDialogo: f.pctDialogo, pctCDR: f.pctCDR } : null
-    })
-    .filter((d): d is { supervisor: string; pctDialogo: number; pctCDR: number } => d !== null)
-}
-
-function dataAgendaLider(datos: DatosInforme) {
-  return datos.porSupervisor
-    .map(s => s.agendaLiderArchivo ? { supervisor: nombreCorto(s.supervisor), dias: s.agendaLiderArchivo.diasDesdeModificacion } : null)
-    .filter((d): d is { supervisor: string; dias: number } => d !== null)
-}
-
 // ── Gráfica por sección ────────────────────────────────────────────────────
 
 function graficaSeccion(titulo: string, datos: DatosInforme) {
   switch (titulo) {
-    case "Adherencia 4DX":
-      return <GraficaBarras data={dataAdherencia4dx(datos)} series={[{ key: "pct", name: "% cumplimiento", color: COLORES.azul }]} domain={[0, 100]} unit="%" />
-    case "Prácticas Líderes":
-      return <GraficaBarras data={dataPracticasLideres(datos)} series={[{ key: "pct", name: "% cumplimiento", color: COLORES.azul }, { key: "cdr", name: "CDR", color: COLORES.morado }]} domain={[0, 100]} unit="%" />
-    case "Monitoreos de Calidad":
-      return <GraficaBarras data={dataMonitoreosCalidad(datos)} series={[{ key: "pct", name: "% cumplimiento", color: COLORES.azul }, { key: "dias", name: "Días con datos (de 5)", color: COLORES.ambar }]} />
-    case "Circuito de Resolutividad":
-      return <GraficaBarras data={dataResolutividad(datos)} series={[{ key: "pctImpl", name: "% implementadas", color: COLORES.verde }, { key: "pctBacklog", name: "% backlog", color: COLORES.ambar }]} domain={[0, 100]} unit="%" />
-    case "Feedback Interfábricas":
-      return <GraficaBarras data={dataFeedback(datos)} series={[{ key: "nuevos", name: "Sin gestionar", color: COLORES.rojo }, { key: "gestionados", name: "Gestionados", color: COLORES.verde }, { key: "rechazados", name: "Rechazados", color: COLORES.gris }]} stacked />
-    case "Compromisos":
-      return <GraficaBarras data={dataCompromisos(datos)} series={[{ key: "sinIngreso", name: "Sin ingreso", color: COLORES.rojo }, { key: "abiertos", name: "Abiertos", color: COLORES.ambar }, { key: "cerradoMejora", name: "Cerrado con mejora", color: COLORES.verde }, { key: "cerradoSin", name: "Cerrado sin mejora", color: COLORES.gris }]} stacked />
-    case "Quiz Semanal":
-      return <GraficaBarras data={dataQuiz(datos)} series={[{ key: "pctPresento", name: "% presentó", color: COLORES.azul }, { key: "pctAprueba", name: "% aprobó", color: COLORES.verde }]} domain={[0, 100]} unit="%" />
-    case "Estoy Enterado":
-      return <GraficaBarras data={dataEstoyEnterado(datos)} series={[{ key: "pctClaro", name: "% con claridad", color: COLORES.azul }]} domain={[0, 100]} unit="%" />
-    case "Pausas 4DX":
-      return <GraficaBarras data={dataPausas4dx(datos)} series={[{ key: "pctDialogo", name: "% Diálogo", color: COLORES.azul }, { key: "pctCDR", name: "% CDR", color: COLORES.morado }]} domain={[0, 100]} unit="%" />
     case "Agenda del líder": {
       const data = dataAgendaLider(datos)
       if (data.length === 0) return null
@@ -250,8 +98,11 @@ function graficaSeccion(titulo: string, datos: DatosInforme) {
         </div>
       )
     }
-    default:
-      return null
+    default: {
+      const cfg = SECCIONES_GRAFICA[titulo]
+      if (!cfg) return null
+      return <GraficaBarras data={cfg.dataFn(datos)} series={cfg.series} stacked={cfg.stacked} domain={cfg.domain} unit={cfg.unit} />
+    }
   }
 }
 
@@ -275,22 +126,6 @@ function GraficaConfirmacionesRol({ datos }: { datos: DatosInforme }) {
   )
 }
 
-const ORDEN_SECCIONES = [
-  "Resumen ejecutivo",
-  "Adherencia 4DX",
-  "Prácticas Líderes",
-  "Monitoreos de Calidad",
-  "Circuito de Resolutividad",
-  "Feedback Interfábricas",
-  "Compromisos",
-  "Confirmaciones de Rol",
-  "Quiz Semanal",
-  "Estoy Enterado",
-  "Pausas 4DX",
-  "Agenda del líder",
-  "Plan de acción",
-]
-
 function InformeRenderizado({ resultado }: { resultado: ResultadoInforme }) {
   const secciones = dividirSecciones(resultado.texto)
   return (
@@ -313,7 +148,7 @@ function InformeRenderizado({ resultado }: { resultado: ResultadoInforme }) {
   )
 }
 
-export default function InformeIA({ supervisores, email }: Props) {
+export default function InformeIA({ supervisores, email, permitirEnvioCorreo }: Props) {
   const [supervisor, setSupervisor] = useState("")
   const [tipoInforme, setTipoInforme] = useState<"parcial" | "cierre">("parcial")
   const [semanas, setSemanas] = useState("")
@@ -321,6 +156,9 @@ export default function InformeIA({ supervisores, email }: Props) {
   const [error, setError] = useState("")
   const [resultado, setResultado] = useState<ResultadoInforme | null>(null)
   const [copiado, setCopiado] = useState(false)
+  const [correoDestino, setCorreoDestino] = useState("")
+  const [enviandoCorreo, setEnviandoCorreo] = useState(false)
+  const [estadoEnvio, setEstadoEnvio] = useState("")
 
   async function generar() {
     const semanasLimpias = semanas.trim()
@@ -355,6 +193,34 @@ export default function InformeIA({ supervisores, email }: Props) {
     await navigator.clipboard.writeText(resultado.texto)
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2000)
+  }
+
+  async function enviarCorreo() {
+    if (!resultado) return
+    const destino = correoDestino.trim()
+    if (!destino) {
+      setEstadoEnvio("Indica un correo destino")
+      return
+    }
+    setEnviandoCorreo(true)
+    setEstadoEnvio("")
+    try {
+      const res = await fetch("/api/informes/enviar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destino, resultado }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setEstadoEnvio(data?.error || "Error enviando el correo")
+        return
+      }
+      setEstadoEnvio("✓ Correo enviado")
+    } catch {
+      setEstadoEnvio("Error de red")
+    } finally {
+      setEnviandoCorreo(false)
+    }
   }
 
   return (
@@ -433,6 +299,29 @@ export default function InformeIA({ supervisores, email }: Props) {
           <div id="informe-imprimible">
             <InformeRenderizado resultado={resultado} />
           </div>
+        </div>
+      )}
+
+      {resultado && permitirEnvioCorreo && (
+        <div className="mt-3 bg-white border border-gray-200 rounded-lg p-3">
+          <p className="text-xs text-gray-600 mb-2">Enviar este informe por correo (con gráficas incluidas en el cuerpo)</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="email"
+              placeholder="correo@ejemplo.com"
+              className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white text-gray-900 flex-1 min-w-[200px]"
+              value={correoDestino}
+              onChange={e => setCorreoDestino(e.target.value)}
+            />
+            <button
+              onClick={enviarCorreo}
+              disabled={enviandoCorreo}
+              className="text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-4 py-1.5 rounded-md transition"
+            >
+              {enviandoCorreo ? "Enviando..." : "Enviar por correo"}
+            </button>
+          </div>
+          {estadoEnvio && <p className="text-xs text-gray-600 mt-2">{estadoEnvio}</p>}
         </div>
       )}
 

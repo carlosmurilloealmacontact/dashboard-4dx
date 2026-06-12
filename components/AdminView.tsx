@@ -338,7 +338,7 @@ export default function AdminView({ perfilAdmin }: Props) {
 
             {/* Informe de cumplimiento generado con IA, para coordinadores y jefaturas */}
             {["coordinador", "jefatura", "gerente"].includes(rolPersona) && (
-              <InformeIA supervisores={supervisoresDePersona} email={teamEmail} />
+              <InformeIA supervisores={supervisoresDePersona} email={teamEmail} permitirEnvioCorreo />
             )}
           </div>
         </PerfilProvider>
