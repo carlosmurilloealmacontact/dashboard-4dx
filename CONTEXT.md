@@ -192,6 +192,25 @@ lib/
     que se compara, no solo el delta.
   - Cambios en `lib/informes-prompt.ts` (`contextoTipo`, sección "Tono y estilo de
     redacción", sección "Reglas adicionales" y "Formato estándar de cada sección").
+
+- **Ajustes adicionales (2026-06-11, segunda ronda)**:
+  - **Tono — dirigido al coordinador**: se revirtió el "nosotros" (coordinador
+    hablándole a su equipo) por redacción en **segunda persona dirigida al
+    coordinador** ("tu equipo", "tus supervisores", "te recomiendo"), ya que el
+    informe es el insumo que recibe el coordinador para accionar con sus
+    supervisores, no el mensaje que el coordinador le da a su equipo.
+  - **CDR (Prácticas Líderes) y % Implementación (Circuito de Resolutividad)**: ya
+    no se menciona un porcentaje de meta fijo en el prompt (antes 100%/≥23%), porque
+    la meta real varía por servicio. El prompt ahora instruye a referirse a "la meta
+    de CDR/implementación de su servicio" como referencia cualitativa.
+  - **Compromisos**: el foco principal pasa a ser "sinIngreso" (lo único accionable
+    durante la semana); "abiertos" deja de tratarse como señal de alerta en parcial
+    o cierre. En cierre, se añade comparación "cerradoMejora" vs. "cerradoSin" (con
+    tendencia) frente a la semana anterior.
+  - **Estoy Enterado**: se eliminó por completo del informe (estructura, formato
+    estándar, sección dedicada, tendencias y plan de acción) — el prompt ahora
+    indica explícitamente no usarlo ni mencionarlo, aunque el dato siga llegando en
+    el JSON.
 - **Exportar**: botones "Copiar" (texto plano al portapapeles) y "Descargar PDF"
   (`window.print()` + CSS `@media print` que oculta todo excepto
   `#informe-imprimible`, dejando texto + gráficas SVG).
