@@ -42,7 +42,7 @@ const TODOS_MODULOS = [
   { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
 ]
 
-const ROLES_DISPONIBLES = ["supervisor", "coordinador", "jefatura", "coach"]
+const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
 
 const COORDINADORES_PERMITIDOS = [
   "ROJAS LEGUIZAMO ANDRES FELIPE",
@@ -50,8 +50,7 @@ const COORDINADORES_PERMITIDOS = [
   "MARTINEZ PEREZ JHON ALEXANDER",
   "MONSALVE HERRERA JOHN JAMES",
   "LOBO VERA LADY VANESSA",
-  "CARBONO PEDROZA YINEIDIS YESENIA",
-  "ALZATE ARROYAVE DANIEL FELIPE"
+  "CARBONO PEDROZA YINEIDIS YESENIA"
 ]
 
 const LIDERES = [

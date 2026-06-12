@@ -18,8 +18,7 @@ export async function GET() {
       "MARTINEZ PEREZ JHON ALEXANDER",
       "MONSALVE HERRERA JOHN JAMES",
       "LOBO VERA LADY VANESSA",
-      "CARBONO PEDROZA YINEIDIS YESENIA",
-      "ALZATE ARROYAVE DANIEL FELIPE"
+      "CARBONO PEDROZA YINEIDIS YESENIA"
     ]
 
     // Obtener solo los coordinadores activos

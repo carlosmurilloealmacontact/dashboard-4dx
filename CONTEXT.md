@@ -389,22 +389,15 @@ independientes**:
      Pérez ahora muestra los 4 archivos (Ramirez Rios, Salazar Sanmartin,
      Orixas Castro, Rodriguez Restrepo).
 
-2c. **ALZATE ARROYAVE DANIEL FELIPE no aparecía en el listado de coordinadores**
-   — su `cargo` es "JEFE DE OPERACION" (coincide con el filtro
-   `cargo.includes("jefe")`), pero la lista hardcodeada `coordinadoresActivos`
-   en `app/api/jerarquia/coordinadores/route.ts` (y su duplicado
-   `COORDINADORES_PERMITIDOS`, sin uso, en `components/AdminView.tsx`) no lo
-   incluía. **✅ Agregado a ambas listas** (2026-06-11).
-   - Nota: estas listas de "coordinadores activos" son hardcodeadas y deben
-     actualizarse manualmente cada vez que se activa/desactiva un coordinador o
-     jefatura.
-   - **Causa real de que tampoco apareciera en la Vista de Admin (2026-06-11)**:
-     `cargo` "JEFE DE OPERACION" normaliza a `"jefatura"` (no `"coordinador"`),
-     y el selector de rol de `AdminView.tsx` (`ROLES_DISPONIBLES`) solo ofrecía
-     `["supervisor", "coordinador", "coach"]` — `"jefatura"` ni siquiera era una
-     opción seleccionable, aunque `lib/roles.ts` y la sección de Informe IA de la
-     propia vista ya tratan `"jefatura"` como rol válido. **✅ Fix**: se agregó
-     `"jefatura"` a `ROLES_DISPONIBLES` (`components/AdminView.tsx`).
+2c. **ALZATE ARROYAVE DANIEL FELIPE no aparece en el listado de coordinadores**
+   — su `cargo` es "JEFE DE OPERACION" (normaliza a `"jefatura"`, no
+   `"coordinador"`). Se intentó agregarlo a las listas hardcodeadas
+   `coordinadoresActivos` (`app/api/jerarquia/coordinadores/route.ts`) y
+   `COORDINADORES_PERMITIDOS` (`components/AdminView.tsx`), y a
+   `ROLES_DISPONIBLES` para que "Jefatura" fuera un rol seleccionable en la
+   Vista de Admin — pero el resultado no fue el esperado, así que se revirtió
+   todo (2026-06-12). **Pendiente**: definir el enfoque correcto para que
+   Daniel Alzate (jefatura) sea gestionable desde la Vista de Admin.
 
 3. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
    — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
