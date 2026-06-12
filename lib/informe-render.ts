@@ -155,12 +155,12 @@ export interface SeccionGrafica {
 // "Agenda del líder" y "Confirmaciones de Rol" tienen renderizado especial
 // (ver components/InformeIA.tsx y lib/informe-email.ts).
 export const SECCIONES_GRAFICA: Record<string, SeccionGrafica> = {
-  "Adherencia 4DX": {
+  "Medidas de Dirección": {
     dataFn: dataAdherencia4dx,
     series: [{ key: "pct", name: "% cumplimiento", color: COLORES.azul }],
     domain: [0, 100], unit: "%",
   },
-  "Prácticas Líderes": {
+  "Prácticas Líderes 4DX": {
     dataFn: dataPracticasLideres,
     series: [{ key: "pct", name: "% cumplimiento", color: COLORES.azul }, { key: "cdr", name: "CDR", color: COLORES.morado }],
     domain: [0, 100], unit: "%",
@@ -203,8 +203,8 @@ export const SECCIONES_GRAFICA: Record<string, SeccionGrafica> = {
 
 export const ORDEN_SECCIONES = [
   "Resumen ejecutivo",
-  "Adherencia 4DX",
-  "Prácticas Líderes",
+  "Medidas de Dirección",
+  "Prácticas Líderes 4DX",
   "Monitoreos de Calidad",
   "Circuito de Resolutividad",
   "Feedback Interfábricas",

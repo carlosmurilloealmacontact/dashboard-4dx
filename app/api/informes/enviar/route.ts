@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     const err = e as { code?: number; message?: string }
     if (err?.code === 403) {
-      return NextResponse.json({ error: "Falta permiso para enviar correos con tu cuenta de Google. Cierra sesión y vuelve a iniciar sesión para autorizarlo." }, { status: 403 })
+      return NextResponse.json({ error: `Falta permiso para enviar correos con tu cuenta de Google. Cierra sesión y vuelve a iniciar sesión para autorizarlo. (${err.message ?? "sin detalle"})` }, { status: 403 })
     }
     return NextResponse.json({ error: err?.message ?? String(e) }, { status: 500 })
   }

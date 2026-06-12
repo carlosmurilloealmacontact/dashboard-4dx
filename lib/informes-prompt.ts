@@ -28,8 +28,8 @@ export function construirPromptInforme(
       `como una caída si la tendencia muestra menos cerrados con mejora que la semana pasada, ya que esa semana ya había cerrado. ` +
       `En cambio, sí son señales relevantes: % sin ingreso alto o creciente, baja presentación/aprobación del quiz, ` +
       `y pendientes acumulados — esto el coordinador SÍ puede accionar antes de que cierre la semana.\n\n` +
-      `**Importante sobre comparaciones**: para las prácticas de cumplimiento diario acumulado (Adherencia 4DX, ` +
-      `Prácticas Líderes, Monitoreos de Calidad/Panel Lea, Pausas 4DX), NO compares "pct" contra la semana anterior ` +
+      `**Importante sobre comparaciones**: para las prácticas de cumplimiento diario acumulado (Medidas de Dirección, ` +
+      `Prácticas Líderes 4DX, Monitoreos de Calidad/Panel Lea, Pausas 4DX), NO compares "pct" contra la semana anterior ` +
       `(ignora el campo "tendencia" de estas prácticas en este informe parcial). En su lugar, compara contra el ` +
       `**avance esperado a la fecha**: si la meta es 100% al cierre de la semana (5 días hábiles), a hoy ` +
       `${nombreDiaHoy} lo esperado es aproximadamente **${avanceEsperadoPct}%** (${diasHabilesTranscurridos}/5 días). ` +
@@ -53,8 +53,8 @@ export function construirPromptInforme(
 
   return `Eres un analista que apoya a un coordinador de call center a interpretar los resultados semanales de su equipo en estas prácticas de gestión, en el MISMO ORDEN en que aparecen como tarjetas en su dashboard:
 
-1. **Adherencia 4DX** (adherencia4dx): cumplimiento diario de ingresos del equipo de asesores. "pct" = % de registros diarios cumplidos esa semana (meta: 100%), "totalAgentes" = cantidad de asesores con registro, "totalRegistros" = cantidad de registros diarios evaluados.
-2. **Prácticas Líderes** (practicasLideres): cumplimiento de la práctica diaria del líder (rituales/CDR). "pct" = % de días de la semana con la práctica cumplida (meta: 100%), "cdr" = % de simulación/CDR del líder cuando aplica (la meta de CDR varía según el servicio de cada supervisor, no asumas un único valor fijo), "totalDias" = días con registro esa semana.
+1. **Medidas de Dirección** (adherencia4dx): cumplimiento diario de ingresos del equipo de asesores. "pct" = % de registros diarios cumplidos esa semana (meta: 100%), "totalAgentes" = cantidad de asesores con registro, "totalRegistros" = cantidad de registros diarios evaluados.
+2. **Prácticas Líderes 4DX** (practicasLideres): cumplimiento de la práctica diaria del líder (rituales/CDR). "pct" = % de días de la semana con la práctica cumplida (meta: 100%), "cdr" = % de simulación/CDR del líder cuando aplica (la meta de CDR varía según el servicio de cada supervisor, no asumas un único valor fijo), "totalDias" = días con registro esa semana.
 3. **Monitoreos de Calidad — Panel Lea** (pcaPta): monitoreos diarios de calidad (PCA/PTA + Pauta de Calidad). "pct" = % de cumplimiento de la semana, "totalMonitoreos" = cantidad de monitoreos hechos, "diasConDatos" = cuántos de los 5 días hábiles tienen registro (meta: 5/5 días, con monitoreos suficientes cada día).
 4. **Circuito de Resolutividad** (resolutividad, dato acumulado a nivel de supervisor, no por semana): ideas de mejora del equipo registradas en Quiker. "pctImpl" = % de ideas seleccionadas para implementar (la meta de implementación varía según el servicio de cada supervisor, no asumas un único valor fijo), "pctBacklog" = % de ideas ya aplicadas/backlog (meta ≤10%), "total" = cantidad de ideas registradas.
 5. **Feedback Interfábricas** (feedback, dato acumulado a nivel de supervisor — son los pendientes vigentes, no por semana): "nuevos" = feedbacks recibidos sin gestionar todavía (meta: 0 acumulados sin gestión), "gestionados" = ya se atendieron, "rechazados" = se declinaron, "total" = cantidad total registrada para ese supervisor.
@@ -107,8 +107,8 @@ Reglas de tono:
 Usa exactamente estos títulos de sección (con "## "), en este orden, sin agregar ni quitar secciones:
 
 ## Resumen ejecutivo
-## Adherencia 4DX
-## Prácticas Líderes
+## Medidas de Dirección
+## Prácticas Líderes 4DX
 ## Monitoreos de Calidad
 ## Circuito de Resolutividad
 ## Feedback Interfábricas
@@ -123,7 +123,7 @@ Usa exactamente estos títulos de sección (con "## "), en este orden, sin agreg
 2-3 frases con el panorama general del equipo en esta(s) semana(s): arranca reconociendo lo que va bien (si aplica) y cierra con el foco principal de la semana.
 
 ## Formato estándar de cada sección por práctica
-Cada una de las secciones de práctica (Adherencia 4DX, Prácticas Líderes, Monitoreos de Calidad, Circuito de Resolutividad, Feedback Interfábricas, Compromisos, Quiz Semanal, Pausas 4DX, Agenda del líder) debe seguir esta misma estructura de 2 partes:
+Cada una de las secciones de práctica (Medidas de Dirección, Prácticas Líderes 4DX, Monitoreos de Calidad, Circuito de Resolutividad, Feedback Interfábricas, Compromisos, Quiz Semanal, Pausas 4DX, Agenda del líder) debe seguir esta misma estructura de 2 partes:
 
 - **Cumplimiento general**: 1-2 frases que resuman cómo viene TODO el equipo en esa práctica esta semana (ej. "X de Y supervisores cumplen meta", o una lectura cualitativa si no aplica un conteo). Reconoce primero lo que va bien si aplica. La gráfica ya muestra a cada supervisor individualmente — en esta frase NO nombres a quienes van bien, solo da el panorama general.
 - **Focos**: máximo 2 alertas — los 2 supervisores MÁS críticos en esta práctica (mayor riesgo o desviación), nunca más. No nombres a otros supervisores con desviaciones menores aunque tampoco cumplan meta; eso ya se ve en la gráfica. Para cada foco aplica dato → lectura → impacto → acción, dirigido al supervisor específico, SIN repetir la cifra exacta (ya está en la gráfica) salvo que sea imprescindible. Si nadie tiene foco relevante en esta práctica, omite esta parte y dilo brevemente en el "Cumplimiento general" (no inventes focos artificiales).
@@ -131,10 +131,10 @@ Cada una de las secciones de práctica (Adherencia 4DX, Prácticas Líderes, Mon
 
 Aplica los criterios de riesgo específicos de cada práctica (detallados abajo) para decidir quién entra en "Focos".
 
-## Adherencia 4DX
+## Medidas de Dirección
 Formato estándar, basado en "pct" y su tendencia. Criterio de foco: "pct" bajo o tendencia "empeora".
 
-## Prácticas Líderes
+## Prácticas Líderes 4DX
 Formato estándar, basado en "pct" de cumplimiento y, si está disponible, "cdr". Criterio de foco: "pct" bajo o tendencia "empeora". Si "practicasLideres" es null para un supervisor, formúlalo como novedad a validar. Para "cdr", no menciones un porcentaje de meta fijo (la meta de CDR varía por servicio) — refiérete a la meta de CDR "de su servicio" como referencia cualitativa.
 
 ## Monitoreos de Calidad
