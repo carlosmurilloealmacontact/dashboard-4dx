@@ -70,9 +70,19 @@ export default function DashboardPage() {
 
   if (!session) return null
 
+  // Coordinador con cargo "Coordinador Coach": además de su vista de coordinador,
+  // tiene su propio equipo de coaches y conserva los filtros de la vista de coach.
+  const esCoordinadorCoach = perfil?.rol === "coordinador"
+    && (perfil.persona.cargo ?? "").toLowerCase().includes("coach")
+
   // Módulos visibles según el rol
+  const idsVisibles = perfil
+    ? new Set(MODULOS_POR_ROL[perfil.rol] ?? [])
+    : new Set(TODOS_MODULOS.map(m => m.id))
+  if (esCoordinadorCoach) idsVisibles.add("practicas_coach")
+
   const modulosVisibles = perfil
-    ? TODOS_MODULOS.filter(m => MODULOS_POR_ROL[perfil.rol]?.includes(m.id))
+    ? TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
     : TODOS_MODULOS
 
   const nombreCorto = perfil?.persona.nombre.split(" ")[0] ?? session.user?.name?.split(" ")[0] ?? "Usuario"
@@ -155,8 +165,8 @@ export default function DashboardPage() {
               <p className="text-gray-600 text-sm">No hay módulos configurados para tu rol.</p>
             )}
 
-            {/* Vista de seguimiento para coaches */}
-            {perfil?.rol?.toLowerCase() === "coach" ? (
+            {/* Vista de seguimiento para coaches (y coordinadores con rol híbrido de coach) */}
+            {perfil && (perfil.rol === "coach" || esCoordinadorCoach) ? (
               <CoachTeamView perfilCoach={perfil} />
             ) : null}
 

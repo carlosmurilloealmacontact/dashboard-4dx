@@ -258,6 +258,34 @@ volumen semanal de monitoreos**:
 
 ---
 
+## Rol híbrido "Coordinador Coach" (2026-06-12)
+
+Para personas cuyo `cargo` normaliza a `"coordinador"` pero el texto del
+cargo **también incluye "coach"** (ej. KATHERYNE QUIÑONES, cargo "Coordinador
+Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
+
+- `app/page.tsx`: `esCoordinadorCoach = perfil.rol === "coordinador" &&
+  perfil.persona.cargo.toLowerCase().includes("coach")`.
+- Si es coordinador-coach:
+  - Se agrega `"practicas_coach"` a `modulosVisibles` (además de los módulos
+    normales de coordinador) → muestra su propio equipo de coaches.
+  - Se renderiza `<CoachTeamView perfilCoach={perfil} />` (antes solo para
+    `rol === "coach"`) → conserva los filtros de coordinador/servicio para ver
+    otros equipos.
+- `app/api/modulos/seguimiento-coach/route.ts`: nuevo `modo: "coordinador"`
+  cuando `perfil.rol === "coordinador"`. Toma `perfil.equipo` filtrado por
+  `normalizarCargo(cargo) === "coach"` (sus coaches directos), busca cada uno
+  en `Seguimiento_LiderCoach_8Sem` (columna "Lider Coach") y devuelve
+  `{ modo, semanas, semanaActual, kpi: { pct, cdr }, porCoach: [{ coach,
+  totalDias, cumplidos, pct, cdr }] }` — mismo patrón que `porSupervisor` en
+  `lib/practicasLideres.ts`.
+- `components/modulos/SeguimientoCoach.tsx`: agrega vista `modo ===
+  "coordinador"` (selector de semana, KPI global Diálogo equipo/CDR promedio,
+  lista "Por coach" con barra de progreso) — la vista individual existente
+  ahora es `modo: "individual"`.
+
+---
+
 ## `lib/sheets.ts` — caché y resiliencia (2026-06-11)
 
 - `getSheetData(accessToken, spreadsheetId, range)` mantiene una **caché compartida

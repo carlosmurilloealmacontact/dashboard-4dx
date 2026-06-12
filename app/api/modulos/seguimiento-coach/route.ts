@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
-import { obtenerPerfil } from "@/lib/jerarquia"
+import { obtenerPerfil, normalizarCargo } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso"
 const HOJA = "Seguimiento_LiderCoach_8Sem"
@@ -41,10 +42,59 @@ export async function GET(req: NextRequest) {
 
   const nombreLider = (perfil.persona.nombre ?? "").toLowerCase().trim()
 
-  console.log("DEBUG seguimiento-coach:")
-  console.log("  nombreLider buscando:", nombreLider)
-  console.log("  iLider index:", iLider)
-  console.log("  primeros 5 nombres en hoja:", rows.slice(1, 6).map(r => (r[iLider] ?? "").toLowerCase().trim()))
+  // Vista coordinador (ej. Katheryne Quiñones): agrupar por cada coach de su equipo
+  if (perfil.rol === "coordinador") {
+    const semanaParam = req.nextUrl.searchParams.get("semana")
+    const coaches = perfil.equipo.filter(p => normalizarCargo(p.cargo) === "coach")
+
+    const registrosPorCoach = coaches.map(coach => {
+      const nombreCoach = (coach.nombre ?? "").toLowerCase().trim()
+      const registros = rows.slice(1)
+        .filter(r => iLider >= 0 && (r[iLider] ?? "").toLowerCase().trim() === nombreCoach)
+        .map(r => ({
+          fecha:  r[iFecha]  ?? "",
+          semana: r[iSemana] ?? "",
+          cumple: r[iCumple] ?? "",
+          cdr:    r[iCDR]    ?? "",
+          foco:   r[iFoco]   ?? "",
+        }))
+      return { coach: coach.nombre, registros }
+    })
+
+    const semanas = [...new Set(
+      registrosPorCoach.flatMap(c => c.registros.map(r => r.semana)).filter(Boolean)
+    )].sort((a, b) => Number(a) - Number(b))
+    const semanaActual = resolverSemana(semanaParam, semanas)
+
+    const porCoach = registrosPorCoach.map(({ coach, registros }) => {
+      const deEstaSemana = registros.filter(r => r.semana === semanaActual)
+      const conCumple = deEstaSemana.filter(r => r.cumple === "1")
+      const conCDR = deEstaSemana.filter(r => r.cdr && r.cdr !== "0")
+      const pct = deEstaSemana.length > 0 ? Math.round((conCumple.length / deEstaSemana.length) * 100) : 0
+      const cdrRaw = conCDR.at(-1)?.cdr ?? null
+      const cdr = cdrRaw ? (() => {
+        const n = parseFloat(cdrRaw)
+        return isNaN(n) ? null : (n <= 1 ? Math.round(n * 100) : Math.round(n))
+      })() : null
+      return { coach, totalDias: deEstaSemana.length, cumplidos: conCumple.length, pct, cdr }
+    }).sort((a, b) => a.pct - b.pct)
+
+    const totalDias = porCoach.reduce((s, c) => s + c.totalDias, 0)
+    const totalCumplidos = porCoach.reduce((s, c) => s + c.cumplidos, 0)
+    const pctGlobal = totalDias > 0 ? Math.round((totalCumplidos / totalDias) * 100) : 0
+    const cdrVals = porCoach.map(c => c.cdr).filter((v): v is number => v !== null)
+    const cdrGlobal = cdrVals.length > 0 ? Math.round(cdrVals.reduce((a, b) => a + b) / cdrVals.length) : null
+
+    const response = NextResponse.json({
+      modo: "coordinador",
+      semanas,
+      semanaActual,
+      kpi: { pct: pctGlobal, cdr: cdrGlobal },
+      porCoach,
+    })
+    response.headers.set('Cache-Control', 'no-store')
+    return response
+  }
 
   const registros = rows.slice(1)
     .filter(r => iLider >= 0 && (r[iLider] ?? "").toLowerCase().trim() === nombreLider)
@@ -61,6 +111,7 @@ export async function GET(req: NextRequest) {
   const semanas   = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
 
   const response = NextResponse.json({
+    modo: "individual",
     registros: registros.slice(-60),
     semanas,
     resumen: {

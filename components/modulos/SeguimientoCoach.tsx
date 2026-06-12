@@ -13,15 +13,27 @@ interface Registro {
   foco: string
 }
 
+interface CoachRow {
+  coach: string
+  totalDias: number
+  cumplidos: number
+  pct: number
+  cdr: number | null
+}
+
 interface Data {
-  registros: Registro[]
+  modo?: "individual" | "coordinador"
+  registros?: Registro[]
   semanas: string[]
-  resumen: {
+  semanaActual?: string
+  resumen?: {
     totalDias: number
     diasCumplidos: number
     pctCumplimiento: number
     ultimoCDR: string | null
   }
+  kpi?: { pct: number; cdr: number | null }
+  porCoach?: CoachRow[]
 }
 
 function parseFecha(f: string): Date | null {
@@ -54,6 +66,12 @@ function colorCDR(valor: string | null): string {
   return "text-red-400"
 }
 
+function colorPct(pct: number): string {
+  if (pct >= 80) return "text-green-400"
+  if (pct >= 60) return "text-yellow-400"
+  return "text-red-400"
+}
+
 export default function SeguimientoCoach() {
   const [data, setData] = useState<Data | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -64,8 +82,13 @@ export default function SeguimientoCoach() {
   useEffect(() => {
     fetch(url).then(r => r.json()).then(d => {
       setData(d)
-      if (d.semanas?.length) setSemanaSeleccionada(String(d.semanas.at(-1)))
-      if (d.resumen && d.resumen.totalDias > 0) {
+      if (d.semanas?.length) setSemanaSeleccionada(String(d.semanaActual ?? d.semanas.at(-1)))
+      if (d.modo === "coordinador" && d.kpi) {
+        setMetric({
+          valor: `${d.kpi.pct}%`,
+          color: d.kpi.pct >= 80 ? "green" : d.kpi.pct >= 60 ? "yellow" : "red",
+        })
+      } else if (d.resumen && d.resumen.totalDias > 0) {
         const pct = d.resumen.pctCumplimiento
         setMetric({
           valor: `${pct}%`,
@@ -76,11 +99,71 @@ export default function SeguimientoCoach() {
   }, [url, setMetric])
 
   if (cargando) return <p className="text-xs text-gray-500 py-2">Cargando...</p>
+
+  // ── VISTA COORDINADOR (equipo de coaches) ─────────────────────
+  if (data?.modo === "coordinador") {
+    const porCoach = data.porCoach ?? []
+    const semanaActiva = semanaSeleccionada || String(data.semanaActual ?? "")
+    if (porCoach.length === 0) return <p className="text-xs text-gray-500 py-2">Sin coaches en tu equipo.</p>
+
+    return (
+      <div className="space-y-4">
+        {data.semanas?.length > 0 && (
+          <select
+            className="w-full bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+            value={semanaActiva}
+            onChange={e => setSemanaSeleccionada(e.target.value)}
+          >
+            {data.semanas.map(s => <option key={s} value={s}>Semana {s}</option>)}
+          </select>
+        )}
+
+        {/* KPI global */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gray-800 rounded-lg p-3">
+            <p className="text-xs text-gray-400">Diálogo equipo</p>
+            <p className={`text-2xl font-bold ${colorPct(data.kpi?.pct ?? 0)}`}>{data.kpi?.pct ?? 0}%</p>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-3">
+            <p className="text-xs text-gray-400">CDR promedio</p>
+            <p className={`text-2xl font-bold ${data.kpi?.cdr !== null && data.kpi?.cdr !== undefined ? colorPct(data.kpi.cdr) : "text-gray-500"}`}>
+              {data.kpi?.cdr !== null && data.kpi?.cdr !== undefined ? `${data.kpi.cdr}%` : "—"}
+            </p>
+          </div>
+        </div>
+
+        {/* Por coach */}
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">Por coach — sem. {semanaActiva}</p>
+          {porCoach.map((c, i) => (
+            <div key={i} className="bg-gray-800 rounded-lg p-3">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-gray-300 truncate max-w-[160px]">
+                  {c.coach.split(" ").slice(0, 3).join(" ")}
+                </span>
+                <div className="flex gap-2 items-center">
+                  {c.cdr !== null && (
+                    <span className={`text-xs ${colorPct(c.cdr)}`}>CDR {c.cdr}%</span>
+                  )}
+                  <span className={`text-xs font-bold ${colorPct(c.pct)}`}>{c.pct}%</span>
+                </div>
+              </div>
+              <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+                <div className={`h-1.5 rounded-full ${c.pct >= 80 ? "bg-green-500" : c.pct >= 60 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${c.pct}%` }} />
+              </div>
+              <p className="text-xs text-gray-600 mt-1">{c.cumplidos} de {c.totalDias} días</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (!data?.resumen || data.resumen.totalDias === 0) return <p className="text-xs text-gray-500 py-2">Sin registros.</p>
 
   const semanaActiva = semanaSeleccionada || String(data.semanas?.at(-1) ?? "")
 
-  const registrosFiltrados = data.registros.filter(r => {
+  const registrosFiltrados = (data.registros ?? []).filter(r => {
     if (esFinDeSemana(r.fecha)) return false
     return String(r.semana) === semanaActiva
   })
