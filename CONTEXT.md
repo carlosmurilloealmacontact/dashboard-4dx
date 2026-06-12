@@ -295,6 +295,19 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
   que quede inmediatamente debajo de los módulos (ej. Confirmaciones de Rol)
   en vez de con un salto grande. Afecta a todos los usos de `CoachTeamView`
   (coach normal y coordinador-coach), no solo a Katheryne.
+- (2026-06-12, cuarto ajuste) Se agregó el módulo "Circuito de Resolutividad"
+  (`resolutividad`) a la vista del rol híbrido "Coordinador Coach", ubicado
+  inmediatamente después de "Confirmaciones de Rol". El endpoint
+  `/api/modulos/resolutividad` ya soportaba `perfil.rol === "coordinador"`
+  (filtra la hoja `Datos` por columna `coordinador` = nombre de la persona),
+  por lo que no requirió cambios de backend. Como el orden por defecto de
+  `TODOS_MODULOS` colocaría "Circuito de Resolutividad" antes de
+  "Confirmaciones de Rol", se introdujo la constante ordenada
+  `MODULOS_COORDINADOR_COACH = ["practicas_coach", "adherencia_pca",
+  "confirmaciones_rol", "resolutividad"]` en `app/page.tsx` y
+  `app/preview/page.tsx`. Cuando `esCoordinadorCoach` es true, `modulosVisibles`
+  se construye mapeando esos ids sobre `TODOS_MODULOS` (en vez de filtrar
+  `TODOS_MODULOS` en su orden original), garantizando el orden deseado.
 - `app/api/modulos/seguimiento-coach/route.ts`: nuevo `modo: "coordinador"`
   cuando `perfil.rol === "coordinador"`. Toma `perfil.equipo` filtrado por
   `normalizarCargo(cargo) === "coach"` (sus coaches directos), busca cada uno

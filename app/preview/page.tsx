@@ -24,6 +24,9 @@ const TODOS_MODULOS = [
   { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
 ]
 
+// Orden de módulos para el rol híbrido "Coordinador Coach" (ej. Katheryne Quiñones)
+const MODULOS_COORDINADOR_COACH = ["practicas_coach", "adherencia_pca", "confirmaciones_rol", "resolutividad"]
+
 export default function PreviewPage() {
   const [email, setEmail] = useState("angelasilva.almacontact@outsourcing-account.com")
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null)
@@ -49,11 +52,13 @@ export default function PreviewPage() {
     && (perfil.persona.cargo ?? "").toLowerCase().includes("coach")
 
   const idsVisibles = perfil
-    ? new Set(esCoordinadorCoach ? MODULOS_POR_ROL["coach"] : (MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL] ?? []))
+    ? new Set(MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL] ?? [])
     : new Set<string>()
 
   const modulosVisibles = perfil
-    ? TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
+    ? esCoordinadorCoach
+      ? MODULOS_COORDINADOR_COACH.map(id => TODOS_MODULOS.find(m => m.id === id)!).filter(Boolean)
+      : TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
     : []
 
   return (

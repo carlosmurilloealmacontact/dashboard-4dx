@@ -42,6 +42,9 @@ const TODOS_MODULOS = [
   { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
 ]
 
+// Orden de módulos para el rol híbrido "Coordinador Coach" (ej. Katheryne Quiñones)
+const MODULOS_COORDINADOR_COACH = ["practicas_coach", "adherencia_pca", "confirmaciones_rol", "resolutividad"]
+
 const ETIQUETAS_ROL: Record<string, string> = {
   gerente: "Gerente",
   jefatura: "Jefatura",
@@ -77,11 +80,13 @@ export default function DashboardPage() {
 
   // Módulos visibles según el rol
   const idsVisibles = perfil
-    ? new Set(esCoordinadorCoach ? MODULOS_POR_ROL["coach"] : (MODULOS_POR_ROL[perfil.rol] ?? []))
+    ? new Set(MODULOS_POR_ROL[perfil.rol] ?? [])
     : new Set(TODOS_MODULOS.map(m => m.id))
 
   const modulosVisibles = perfil
-    ? TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
+    ? esCoordinadorCoach
+      ? MODULOS_COORDINADOR_COACH.map(id => TODOS_MODULOS.find(m => m.id === id)!).filter(Boolean)
+      : TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
     : TODOS_MODULOS
 
   const nombreCorto = perfil?.persona.nombre.split(" ")[0] ?? session.user?.name?.split(" ")[0] ?? "Usuario"
