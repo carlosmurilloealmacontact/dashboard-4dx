@@ -742,3 +742,56 @@ la vista admin (los demás roles no la necesitan).
    enviar un correo sin haber hecho esto, la API responderá 403 con un
    mensaje indicando que debe re-loguearse).
 2. No se requiere ninguna variable de entorno nueva ni dominio propio.
+
+## Enriquecer el Informe IA con detalle accionable por práctica (2026-06-12)
+
+El usuario pidió que el informe narrativo (no necesariamente las gráficas)
+profundice en datos puntuales por práctica para que el coordinador pueda
+accionar directamente. Cambios solo en la capa de datos (`lib/informes.ts`)
+y el prompt (`lib/informes-prompt.ts`); sin cambios en gráficas/dashboard.
+
+- **Prácticas Líderes 4DX** (`PracticasLiderSemana`): nuevo campo
+  `diasSinIngreso: string[]` — nombres (en español) de los días hábiles
+  (lunes a viernes) sin ningún registro de práctica esa semana, calculado en
+  `aggPracticasLideres` a partir de la columna "fecha" (`dd/mm/yyyy`,
+  parseada con `parseFechaDDMMYYYY`, nueva función auxiliar) de
+  "Resumen_Lideres_Diario_Historico_8Sem".
+- **Monitoreos de Calidad** (`PcaPtaSemana`): nuevos campos
+  `monitoreosPorDia: { dia, total }[]` (cantidad de monitoreos por día
+  hábil) y `diasSinIngreso: string[]` (días hábiles sin ningún monitoreo),
+  calculados en `aggPcaPta` a partir de "dia semana"/"total gestion dia" de
+  "Detalle Eventos".
+- **Circuito de Resolutividad** (`ResolutividadResumen`, antes era solo
+  `{ total, pctImpl, pctBacklog }`): ahora incluye `metaImpl` (meta de
+  implementación ponderada por jefatura de las ideas del líder, igual
+  cálculo que `/api/modulos/resolutividad`, con fallback 23%),
+  `idsAplicados: string[]` (ids "Id do Projeto" de ideas en etapa
+  "Aplicados") e `idsGuardian: string[]` (ids en etapa "Lider Guardião").
+  Se extendió `normalizarEtapaResolutividad` para reconocer variantes de
+  "lider_guardiao"/"lider guardião" → "Lider Guardião" (antes quedaban sin
+  categorizar).
+- **Feedback Interfábricas** (`FeedbackResumen`, antes
+  `{ total, nuevos, gestionados, rechazados }`): nuevo campo
+  `idsNuevos: string[]` con los ids "Id do Projeto" de los feedbacks en
+  estado "nuevo" (sin gestionar).
+- **Compromisos** (`CompromisosSemana`): nuevo campo
+  `nombresSinIngreso: string[]` con los nombres de los asesores que no
+  registraron compromiso esa semana.
+- **Pausas 4DX** (`CopilotSemana`): nuevo campo
+  `participacionPorDia: { dia, pctDialogo, pctCDR }[]` — % de participación
+  en pausas de Diálogo y CDR por día hábil de la semana, calculado en
+  `aggCompromisosCopilot` a partir de la fecha (`yyyy-mm-dd`) de
+  "Pausas 4DX Raw".
+- **`lib/informes-prompt.ts`**: se documentaron todos los campos nuevos en
+  la descripción de datos por práctica, y se ajustaron las instrucciones de
+  "Focos" de cada sección para que la IA los use: Prácticas Líderes 4DX y
+  Monitoreos de Calidad mencionan los días concretos sin ingreso (y
+  Monitoreos también la cantidad por día); Resolutividad pone el foco en
+  "pctImpl" vs. "metaImpl" y detalla los ids de "idsAplicados"/"idsGuardian"
+  a gestionar; Feedback pone el foco en "nuevos" con los ids de
+  "idsNuevos"; Compromisos pone el foco en la cantidad/nombres de
+  "nombresSinIngreso"; Pausas 4DX usa "participacionPorDia" para señalar
+  días de baja participación.
+- Nueva constante auxiliar `NOMBRES_DIA_SEMANA` (domingo..sábado) en
+  `lib/informes.ts`, usada por las prácticas anteriores para traducir
+  `Date.getDay()` a nombres de día en español.
