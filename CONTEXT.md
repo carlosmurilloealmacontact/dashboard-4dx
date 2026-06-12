@@ -283,6 +283,10 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
   "coordinador"` (selector de semana, KPI global Diálogo equipo/CDR promedio,
   lista "Por coach" con barra de progreso) — la vista individual existente
   ahora es `modo: "individual"`.
+- `app/preview/page.tsx` ("Ver como este usuario", modo desarrollo): se
+  replicó la misma lógica `esCoordinadorCoach` para que un admin pueda
+  previsualizar la vista híbrida de Katheryne sin necesidad de loguearse con
+  su cuenta.
 
 ---
 
