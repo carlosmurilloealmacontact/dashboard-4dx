@@ -621,3 +621,13 @@ solo el % general. Aplicado a los 4 módulos con métricas diarias:
   día según el conteo de monitoreos vs. `META` (5/día): verde ≥5, amarillo
   ≥3, rojo <3, gris = sin monitoreos — mismo criterio que la barra "Monitoreos
   diarios" de la vista supervisor individual.
+
+## ID por idea en Circuito de Resolutividad (2026-06-12)
+
+A petición del usuario, cada idea/ingreso del módulo "Circuito de Resolutividad"
+(`Resolutividad.tsx`) ahora muestra un identificador `#N` junto a la etiqueta de
+etapa, tanto en "Últimas ideas" como en las ideas expandidas de "Por
+supervisor". En `app/api/modulos/resolutividad/route.ts`, `id` = número de fila
+real en la hoja "Datos" (índice del registro + 2, contando el header), calculado
+antes de filtrar para que cada idea conserve su fila original. Así el ID permite
+ubicar el registro exacto en la hoja de Sheets.

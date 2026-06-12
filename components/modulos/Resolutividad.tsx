@@ -23,6 +23,7 @@ interface JefaturaRow {
 }
 
 interface Idea {
+  id: number
   etapa: string
   asesor: string
   problema: string
@@ -228,9 +229,12 @@ export default function Resolutividad() {
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-300 break-words">{idea.asesor}</p>
-                              <span className={`text-xs px-1.5 py-0.5 rounded mt-0.5 inline-block text-white ${colorEtapa(idea.etapa)}`}>
-                                {idea.etapa}
-                              </span>
+                              <div className="flex gap-1 mt-0.5 flex-wrap items-center">
+                                <span className={`text-xs px-1.5 py-0.5 rounded inline-block text-white ${colorEtapa(idea.etapa)}`}>
+                                  {idea.etapa}
+                                </span>
+                                <span className="text-xs text-gray-500">#{idea.id}</span>
+                              </div>
                             </div>
                             <span className="text-gray-600 text-xs mt-1">{expandidaIdea ? "▲" : "▼"}</span>
                           </button>
@@ -276,9 +280,12 @@ export default function Resolutividad() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-300 break-words">{idea.asesor}</p>
-                  <span className={`text-xs px-1.5 py-0.5 rounded mt-0.5 inline-block text-white ${colorEtapa(idea.etapa)}`}>
-                    {idea.etapa}
-                  </span>
+                  <div className="flex gap-1 mt-0.5 flex-wrap items-center">
+                    <span className={`text-xs px-1.5 py-0.5 rounded inline-block text-white ${colorEtapa(idea.etapa)}`}>
+                      {idea.etapa}
+                    </span>
+                    <span className="text-xs text-gray-500">#{idea.id}</span>
+                  </div>
                 </div>
                 <span className="text-gray-600 text-xs mt-1">{expandida === i ? "▲" : "▼"}</span>
               </button>

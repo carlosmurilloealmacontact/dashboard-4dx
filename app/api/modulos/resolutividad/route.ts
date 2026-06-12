@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         .map(s => (s.nombre ?? "").toLowerCase().trim()))
     : null
 
-  const ideas = rows.slice(1).filter(r => {
+  const ideas = rows.slice(1).map((r, i) => ({ r, fila: i + 2 })).filter(({ r }) => {
     const lider = (r[iLider] ?? "").toLowerCase().trim()
     const coord = (r[iCoord] ?? "").toLowerCase().trim()
     if (esCoord) {
@@ -91,7 +91,8 @@ export async function GET(req: NextRequest) {
       return true
     }
     return lider === nombrePersona
-  }).map(r => ({
+  }).map(({ r, fila }) => ({
+    id:        fila,
     etapa:     normalizarEtapa(r[iEtapa] ?? ""),
     etapaRaw:  r[iEtapa] ?? "",
     asesor:    r[iNombreA]  ?? "",
@@ -157,7 +158,7 @@ export async function GET(req: NextRequest) {
     total: number
     pctImpl: number
     pctBacklog: number
-    ideas: { etapa: string; asesor: string; problema: string; propuesta: string }[]
+    ideas: { id: number; etapa: string; asesor: string; problema: string; propuesta: string }[]
   }[] | undefined
   if (esCoord) {
     const supervisores = [...new Set(ideas.map(i => {
@@ -167,10 +168,11 @@ export async function GET(req: NextRequest) {
 
     // Re-filtrar por supervisor
     porSupervisor = supervisores.map(sup => {
-      const ideasSup = rows.slice(1)
-        .filter(r => (r[iLider] ?? "").toLowerCase().trim() === sup.toLowerCase().trim() &&
+      const ideasSup = rows.slice(1).map((r, i) => ({ r, fila: i + 2 }))
+        .filter(({ r }) => (r[iLider] ?? "").toLowerCase().trim() === sup.toLowerCase().trim() &&
                      (r[iCoord] ?? "").toLowerCase().trim() === nombrePersona)
-        .map(r => ({
+        .map(({ r, fila }) => ({
+          id:        fila,
           etapa:     normalizarEtapa(r[iEtapa] ?? ""),
           asesor:    r[iNombreA]  ?? "",
           problema:  iProblema >= 0 ? r[iProblema] : "",
