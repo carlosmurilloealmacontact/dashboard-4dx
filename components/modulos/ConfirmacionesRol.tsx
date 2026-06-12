@@ -146,8 +146,8 @@ export default function ConfirmacionesRol() {
             return (
               <div key={i} className="bg-white border border-gray-200 rounded-lg p-3">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-gray-700 truncate max-w-[160px]">
-                    {c.coach.split(" ").slice(0, 3).join(" ")}
+                  <span className="text-xs text-gray-700 break-words mr-2">
+                    {c.coach}
                   </span>
                   <span className={`text-xs font-bold ${confsSemana.length > 0 ? "text-green-600" : "text-red-600"}`}>
                     {confsSemana.length} esta semana
@@ -157,7 +157,7 @@ export default function ConfirmacionesRol() {
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {confsSemana.map((conf, j) => (
                       <div key={j} className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded px-2 py-1">
-                        <span className="text-xs text-gray-600 truncate max-w-[140px]">{conf.liderAcomp.split(" ").slice(0, 3).join(" ")}</span>
+                        <span className="text-xs text-gray-600 break-words mr-2">{conf.liderAcomp}</span>
                         {conf.ritual && <span className="text-xs text-gray-400 truncate max-w-[80px]">{conf.ritual}</span>}
                       </div>
                     ))}
@@ -293,7 +293,7 @@ export default function ConfirmacionesRol() {
           <div className="space-y-1 max-h-48 overflow-y-auto">
             {confirmacionesSemana.map((c, i) => (
               <div key={i} className="flex items-center justify-between bg-white border border-gray-200 rounded px-3 py-2">
-                <span className="text-xs text-gray-700 truncate max-w-[160px]">{c.liderAcomp.split(" ").slice(0, 3).join(" ")}</span>
+                <span className="text-xs text-gray-700 break-words mr-2">{c.liderAcomp}</span>
                 {c.ritual && <span className="text-xs text-gray-500 truncate max-w-[80px]">{c.ritual}</span>}
               </div>
             ))}

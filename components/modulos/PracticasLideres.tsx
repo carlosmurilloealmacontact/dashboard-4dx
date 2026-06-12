@@ -109,8 +109,8 @@ export default function PracticasLideres() {
           {supervisores.map((sv, i) => (
             <div key={i} className="bg-gray-800 rounded-lg p-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[160px]">
-                  {sv.supervisor.split(" ").slice(0, 3).join(" ")}
+                <span className="text-xs text-gray-300 break-words mr-2">
+                  {sv.supervisor}
                 </span>
                 <div className="flex gap-2 items-center">
                   {sv.cdr !== null && (

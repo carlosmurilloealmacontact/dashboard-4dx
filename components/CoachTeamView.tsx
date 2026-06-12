@@ -129,7 +129,7 @@ export default function CoachTeamView({ perfilCoach }: Props) {
           <option value="">— Selecciona un coordinador —</option>
           {coordnadoresPorServicio.map(c => (
             <option key={c.email} value={c.email}>
-              {c.nombre.split(" ").slice(0, 3).join(" ")}
+              {c.nombre}
             </option>
           ))}
         </select>
@@ -154,7 +154,7 @@ export default function CoachTeamView({ perfilCoach }: Props) {
             <div>
               {coordSeleccionado && (
                 <p className="text-xs text-gray-500 mb-4">
-                  Mostrando equipo de <span className="text-white">{coordSeleccionado.nombre.split(" ").slice(0, 3).join(" ")}</span>
+                  Mostrando equipo de <span className="text-white">{coordSeleccionado.nombre}</span>
                   {coordSeleccionado.servicio && <span className="text-gray-600"> · {coordSeleccionado.servicio}</span>}
                 </p>
               )}

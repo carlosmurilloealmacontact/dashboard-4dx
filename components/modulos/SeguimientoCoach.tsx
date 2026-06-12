@@ -138,8 +138,8 @@ export default function SeguimientoCoach() {
           {porCoach.map((c, i) => (
             <div key={i} className="bg-gray-800 rounded-lg p-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[160px]">
-                  {c.coach.split(" ").slice(0, 3).join(" ")}
+                <span className="text-xs text-gray-300 break-words mr-2">
+                  {c.coach}
                 </span>
                 <div className="flex gap-2 items-center">
                   {c.cdr !== null && (

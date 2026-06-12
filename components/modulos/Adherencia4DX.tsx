@@ -108,7 +108,7 @@ export default function Adherencia4DX() {
           <button className="text-xs text-gray-500 hover:text-white" onClick={() => setSupervisorDetalle(null)}>
             ← Volver
           </button>
-          <p className="text-xs text-white font-medium truncate">{supervisorDetalle.split(" ").slice(0, 3).join(" ")}</p>
+          <p className="text-xs text-white font-medium break-words">{supervisorDetalle}</p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -123,9 +123,9 @@ export default function Adherencia4DX() {
                   const tieneAlerta = (svData?.bpsAlerta ?? data.kpi.bpsAlerta ?? []).includes(bp)
                   return (
                     <tr key={bp}>
-                      <td className={`py-1 pr-2 truncate max-w-[110px] ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                      <td className={`py-1 pr-2 break-words ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
                         {tieneAlerta && <span className="mr-1">⚠</span>}
-                        {nombre.split(" ").slice(0, 2).join(" ")}
+                        {nombre}
                       </td>
                       {DIAS.map(d => {
                         const r = getRegistro(bp, d.num)
@@ -158,7 +158,7 @@ export default function Adherencia4DX() {
             <button key={i} className="w-full bg-gray-800 rounded-lg p-3 text-left hover:border hover:border-gray-600"
               onClick={() => setSupervisorDetalle(sv.supervisor)}>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[160px]">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</span>
+                <span className="text-xs text-gray-300 break-words mr-2">{sv.supervisor}</span>
                 <span className={`text-xs font-bold ${sv.pct >= 80 ? "text-green-400" : sv.pct >= 60 ? "text-yellow-400" : "text-red-400"}`}>{sv.pct}%</span>
               </div>
               <div className="flex-1 bg-gray-700 rounded-full h-1.5 mb-1">
@@ -219,9 +219,9 @@ export default function Adherencia4DX() {
               const tieneAlerta = (data.kpi.bpsAlerta ?? []).includes(bp)
               return (
                 <tr key={bp}>
-                  <td className={`py-1 pr-2 truncate max-w-[120px] ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                  <td className={`py-1 pr-2 break-words ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
                     {tieneAlerta && <span className="mr-1">⚠</span>}
-                    {nombre.split(" ").slice(0, 2).join(" ")}
+                    {nombre}
                   </td>
                   {DIAS.map(d => {
                     const r = getRegistro(bp, d.num)

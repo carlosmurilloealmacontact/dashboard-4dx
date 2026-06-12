@@ -124,7 +124,7 @@ export default function Compromisos() {
                   onClick={() => setSupervisorExpandido(expandido ? null : sv.supervisor)}
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs text-gray-300 truncate">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+                    <p className="text-xs text-gray-300 break-words mr-2">{sv.supervisor}</p>
                     <span className="text-gray-600 text-xs">{expandido ? "▲" : "▼"}</span>
                   </div>
                   <div className="flex gap-3 text-xs">
@@ -142,8 +142,8 @@ export default function Compromisos() {
                         <div key={j} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-900">
                           <div className="flex items-center gap-2 min-w-0">
                             {esAlerta && <span className="text-red-400 text-xs flex-shrink-0">⚠</span>}
-                            <span className={`text-xs truncate ${esAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
-                              {a.asesor.split(" ").slice(0, 3).join(" ")}
+                            <span className={`text-xs break-words ${esAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                              {a.asesor}
                             </span>
                           </div>
                           <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ml-2 ${cfg.badge}`}>
@@ -180,8 +180,8 @@ export default function Compromisos() {
               <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-800">
                 <div className="flex items-center gap-2 min-w-0">
                   {esAlerta && <span className="text-red-400 text-xs flex-shrink-0">⚠</span>}
-                  <span className={`text-xs truncate ${esAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
-                    {a.asesor.split(" ").slice(0, 3).join(" ")}
+                  <span className={`text-xs break-words ${esAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                    {a.asesor}
                   </span>
                 </div>
                 <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ml-2 ${cfg.badge}`}>

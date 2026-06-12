@@ -133,7 +133,7 @@ export default function EstoyEnterado() {
               <p className="text-xs text-green-400 mb-1">✓ Claro ({temaActual.detalle.si.length})</p>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {temaActual.detalle.si.map((n, i) => (
-                  <p key={i} className="text-xs text-gray-300 truncate">{n.split(" ").slice(0, 3).join(" ")}</p>
+                  <p key={i} className="text-xs text-gray-300 break-words">{n}</p>
                 ))}
               </div>
             </div>
@@ -143,7 +143,7 @@ export default function EstoyEnterado() {
               <p className="text-xs text-red-400 mb-1">✗ No claro ({temaActual.detalle.no.length})</p>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {temaActual.detalle.no.map((n, i) => (
-                  <p key={i} className="text-xs text-gray-300 truncate">{n.split(" ").slice(0, 3).join(" ")}</p>
+                  <p key={i} className="text-xs text-gray-300 break-words">{n}</p>
                 ))}
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function EstoyEnterado() {
               <p className="text-xs text-gray-500 mb-1">— Sin respuesta ({temaActual.detalle.sinRespuesta.length})</p>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {temaActual.detalle.sinRespuesta.map((n, i) => (
-                  <p key={i} className="text-xs text-gray-400 truncate">{n.split(" ").slice(0, 3).join(" ")}</p>
+                  <p key={i} className="text-xs text-gray-400 break-words">{n}</p>
                 ))}
               </div>
             </div>

@@ -573,3 +573,20 @@ para `lib/vertex.ts` — ver ese archivo para el detalle exacto de variables.)
   endpoint nuevo da 404 tras el push, revisar la pestaña "Deployments" — puede
   necesitar un commit adicional (incluso vacío) para disparar el build si el primero
   no se detectó.
+
+## Nombres completos en todas las tarjetas (2026-06-12)
+
+Se eliminó el recorte de nombres de personas (supervisores, coaches, asesores,
+líderes acompañados, jefaturas, agentes) en todos los módulos y vistas (coach,
+coordinador, supervisor, admin). Antes muchos componentes hacían
+`nombre.split(" ").slice(0, 2 o 3).join(" ")` y/o aplicaban `truncate
+max-w-[Npx]` (que corta con "..."), lo que recortaba nombres largos. Ahora se
+muestra el nombre completo (`{nombre}` sin `.split`) con la clase `break-words`
+(en vez de `truncate`) para que el texto haga salto de línea si no entra, sin
+perder información. Archivos afectados: `ConfirmacionesRol.tsx`,
+`Adherencia4DX.tsx`, `AdherenciaPCA.tsx`, `Compromisos.tsx`,
+`EstoyEnterado.tsx`, `Feedback.tsx`, `PracticasLideres.tsx`, `Pausas4DX.tsx`,
+`QuizSemanal.tsx`, `SeguimientoCoach.tsx`, `Resolutividad.tsx`,
+`CoachTeamView.tsx` (incluye el dropdown de coordinadores) y `AdminView.tsx`
+(selector "Ver como"). No se tocaron `titulo`/`descripcion` de `ModuloCard.tsx`
+ni campos no-nombre (ej. `ritual`, `causa`, `etapa`, `label`).

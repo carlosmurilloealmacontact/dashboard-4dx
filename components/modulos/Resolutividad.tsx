@@ -165,7 +165,7 @@ export default function Resolutividad() {
           {porJefatura.map((jf, i) => (
             <div key={i} className="bg-gray-800 rounded-lg p-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[170px]">{jf.jefatura}</span>
+                <span className="text-xs text-gray-300 break-words mr-2">{jf.jefatura}</span>
                 <span className={`text-xs font-bold ${jf.cumple ? "text-green-400" : "text-yellow-400"}`}>
                   {jf.pctImpl}% / ≥{jf.meta}%
                 </span>
@@ -203,7 +203,7 @@ export default function Resolutividad() {
                   }}
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs text-gray-300 truncate">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+                    <p className="text-xs text-gray-300 break-words mr-2">{sv.supervisor}</p>
                     <span className="text-gray-600 text-xs">{expandidoSup ? "▲" : "▼"}</span>
                   </div>
                   <div className="flex gap-3 text-xs">
@@ -227,7 +227,7 @@ export default function Resolutividad() {
                             onClick={() => setIdeaExpandida(expandidaIdea ? null : j)}
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-300 truncate">{idea.asesor.split(" ").slice(0, 2).join(" ")}</p>
+                              <p className="text-xs text-gray-300 break-words">{idea.asesor}</p>
                               <span className={`text-xs px-1.5 py-0.5 rounded mt-0.5 inline-block text-white ${colorEtapa(idea.etapa)}`}>
                                 {idea.etapa}
                               </span>
@@ -275,7 +275,7 @@ export default function Resolutividad() {
                 onClick={() => setExpandida(expandida === i ? null : i)}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-300 truncate">{idea.asesor.split(" ").slice(0, 2).join(" ")}</p>
+                  <p className="text-xs text-gray-300 break-words">{idea.asesor}</p>
                   <span className={`text-xs px-1.5 py-0.5 rounded mt-0.5 inline-block text-white ${colorEtapa(idea.etapa)}`}>
                     {idea.etapa}
                   </span>

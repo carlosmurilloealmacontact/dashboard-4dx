@@ -128,8 +128,8 @@ export default function AdherenciaPCA() {
           {supervisores.map((sv, i) => (
             <div key={i} className="bg-gray-800 rounded-lg p-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[150px]">
-                  {sv.supervisor.split(" ").slice(0, 3).join(" ")}
+                <span className="text-xs text-gray-300 break-words mr-2">
+                  {sv.supervisor}
                 </span>
                 <span className={`text-xs font-bold ${colorPct(sv.promCumple)}`}>{sv.promCumple}%</span>
               </div>

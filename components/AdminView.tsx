@@ -293,7 +293,7 @@ export default function AdminView({ perfilAdmin }: Props) {
               const email = persona.emailCorporativo || persona.email
               return (
                 <option key={persona.cedula} value={email}>
-                  {persona.nombre.split(" ").slice(0, 3).join(" ")} · {persona.cargo} · {persona.servicio}
+                  {persona.nombre} · {persona.cargo} · {persona.servicio}
                 </option>
               )
             })}
@@ -307,7 +307,7 @@ export default function AdminView({ perfilAdmin }: Props) {
         <PerfilProvider perfil={perfilAdmin} teamEmail={teamEmail}>
           <div>
             <p className="text-xs text-gray-600 mb-4">
-              Viendo como <span className="text-gray-900 font-semibold">{personaSeleccionada.nombre.split(" ").slice(0, 3).join(" ")}</span>
+              Viendo como <span className="text-gray-900 font-semibold">{personaSeleccionada.nombre}</span>
               {personaSeleccionada.cargo && <span className="text-gray-600"> · {personaSeleccionada.cargo}</span>}
               {personaSeleccionada.servicio && <span className="text-gray-600"> · {personaSeleccionada.servicio}</span>}
             </p>

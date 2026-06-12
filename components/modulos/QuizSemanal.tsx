@@ -97,8 +97,8 @@ export default function QuizSemanal() {
                   onClick={() => setSupervisorExpandido(expandido ? null : sv.supervisor)}
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs text-gray-300 truncate max-w-[150px]">
-                      {sv.supervisor.split(" ").slice(0, 3).join(" ")}
+                    <span className="text-xs text-gray-300 break-words mr-2">
+                      {sv.supervisor}
                     </span>
                     <div className="flex items-center gap-2">
                       {sv.noPresento > 0 && (
@@ -122,8 +122,8 @@ export default function QuizSemanal() {
                         <div key={j} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-900">
                           <div className="flex items-center gap-2 min-w-0">
                             {noPresento && <span className="text-red-400 text-xs">⚠</span>}
-                            <span className={`text-xs truncate ${noPresento ? "text-red-400 font-medium" : reprueba ? "text-yellow-400" : "text-gray-300"}`}>
-                              {a.nombre.split(" ").slice(0, 3).join(" ")}
+                            <span className={`text-xs break-words ${noPresento ? "text-red-400 font-medium" : reprueba ? "text-yellow-400" : "text-gray-300"}`}>
+                              {a.nombre}
                             </span>
                           </div>
                           <div className="flex gap-1 flex-shrink-0 ml-2">
@@ -196,8 +196,8 @@ export default function QuizSemanal() {
               <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-800">
                 <div className="flex items-center gap-2 min-w-0">
                   {noPresento && <span className="text-red-400 text-xs">⚠</span>}
-                  <span className={`text-xs truncate ${noPresento ? "text-red-400 font-medium" : reprueba ? "text-yellow-400" : "text-gray-300"}`}>
-                    {a.nombre.split(" ").slice(0, 3).join(" ")}
+                  <span className={`text-xs break-words ${noPresento ? "text-red-400 font-medium" : reprueba ? "text-yellow-400" : "text-gray-300"}`}>
+                    {a.nombre}
                   </span>
                 </div>
                 <div className="flex gap-1 flex-shrink-0 ml-2">

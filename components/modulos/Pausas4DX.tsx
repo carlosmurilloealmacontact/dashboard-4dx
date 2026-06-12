@@ -106,8 +106,8 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
             <tbody className="divide-y divide-gray-800">
               {agentes.map(({ id, nombre }) => (
                 <tr key={id}>
-                  <td className="py-1 pr-2 truncate max-w-[120px] text-gray-900">
-                    {nombre.split(" ").slice(0, 3).join(" ")}
+                  <td className="py-1 pr-2 break-words text-gray-900">
+                    {nombre}
                   </td>
                   {DIAS.map(d => {
                     const r = getRegistro(id, d.num)
@@ -190,8 +190,8 @@ export default function Pausas4DX() {
           <button className="text-xs text-gray-500 hover:text-white" onClick={() => setSupervisorDetalle(null)}>
             ← Volver
           </button>
-          <p className="text-xs text-white font-medium truncate">
-            {supervisorDetalle.split(" ").slice(0, 3).join(" ")}
+          <p className="text-xs text-white font-medium break-words">
+            {supervisorDetalle}
           </p>
           <GridPausa titulo="Diálogo 4DX" registros={regSup} tipo="Diálogo" agentes={agentes} />
           <div className="border-t border-gray-800 pt-4">
@@ -225,8 +225,8 @@ export default function Pausas4DX() {
               onClick={() => setSupervisorDetalle(sv.supervisor)}
             >
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-300 truncate max-w-[160px]">
-                  {sv.supervisor.split(" ").slice(0, 3).join(" ")}
+                <span className="text-xs text-gray-300 break-words mr-2">
+                  {sv.supervisor}
                 </span>
                 <span className="text-xs text-gray-500">{sv.totalAgentes} ag.</span>
               </div>

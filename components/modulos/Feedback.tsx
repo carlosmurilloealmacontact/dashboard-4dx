@@ -126,7 +126,7 @@ export default function Feedback() {
                   }}
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs text-gray-300 truncate">{sv.supervisor.split(" ").slice(0, 3).join(" ")}</p>
+                    <p className="text-xs text-gray-300 break-words mr-2">{sv.supervisor}</p>
                     <span className="text-gray-600 text-xs">{expandidoSup ? "▲" : "▼"}</span>
                   </div>
                   <div className="flex gap-3 text-xs">
@@ -152,8 +152,8 @@ export default function Feedback() {
                             onClick={() => setItemExpandido(expandidoItem ? null : j)}
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-300 truncate">
-                                {f.asesor.split(" ").slice(0, 2).join(" ")}
+                              <p className="text-xs text-gray-300 break-words">
+                                {f.asesor}
                               </p>
                               <div className="flex gap-1 mt-0.5 flex-wrap">
                                 <span className={`text-xs px-1.5 py-0.5 rounded text-white ${cfg.color}`}>
@@ -168,7 +168,7 @@ export default function Feedback() {
                           </button>
                           {expandidoItem && (
                             <div className="px-3 pb-3 border-t border-gray-800">
-                              <p className="text-xs text-gray-500 mt-2 mb-1">Sem. {f.semana} · {f.quien.split(" ").slice(0, 2).join(" ")}</p>
+                              <p className="text-xs text-gray-500 mt-2 mb-1 break-words">Sem. {f.semana} · {f.quien}</p>
                               {f.feedback && <p className="text-xs text-gray-300">{f.feedback}</p>}
                             </div>
                           )}
@@ -206,8 +206,8 @@ export default function Feedback() {
                   onClick={() => setExpandido(expandido === i ? null : i)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-300 truncate">
-                      {f.asesor.split(" ").slice(0, 2).join(" ")}
+                    <p className="text-xs text-gray-300 break-words">
+                      {f.asesor}
                     </p>
                     <div className="flex gap-1 mt-0.5 flex-wrap">
                       <span className={`text-xs px-1.5 py-0.5 rounded text-white ${cfg.color}`}>
@@ -222,7 +222,7 @@ export default function Feedback() {
                 </button>
                 {expandido === i && (
                   <div className="px-3 pb-3 border-t border-gray-700">
-                    <p className="text-xs text-gray-500 mt-2 mb-1">Sem. {f.semana} · {f.quien.split(" ").slice(0, 2).join(" ")}</p>
+                    <p className="text-xs text-gray-500 mt-2 mb-1 break-words">Sem. {f.semana} · {f.quien}</p>
                     {f.feedback && <p className="text-xs text-gray-300">{f.feedback}</p>}
                   </div>
                 )}
