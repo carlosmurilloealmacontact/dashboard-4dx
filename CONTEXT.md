@@ -709,24 +709,36 @@ la vista admin (los demás roles no la necesitan).
 - **`app/api/informes/enviar/route.ts`** (nuevo): `POST`, valida sesión y
   que `perfil.rol === "admin"` (mismo patrón que `app/api/debug/*`), recibe
   `{ destino, resultado }`, valida el formato del correo destino y envía el
-  HTML vía **Resend** (`resend.emails.send`). Requiere las variables de
-  entorno `RESEND_API_KEY` y `RESEND_FROM_EMAIL` (sin configurar, responde
-  500 con un mensaje explicativo en vez de fallar silenciosamente).
+  HTML construyendo un mensaje MIME (`raw` en base64url) y llamando a
+  **Gmail API** (`gmail.users.messages.send`) con el `accessToken` de la
+  sesión de Google del admin — el correo sale desde la propia cuenta de
+  Google del admin que está logueado, sin necesidad de dominio propio ni
+  proveedor externo. Si el token no tiene el scope `gmail.send` (cuentas que
+  iniciaron sesión antes de este cambio), responde 403 pidiendo cerrar
+  sesión y volver a iniciarla para re-autorizar.
+- **`lib/authOptions.ts`**: se añadió el scope
+  `https://www.googleapis.com/auth/gmail.send` al `GoogleProvider`. Como
+  `prompt: "consent select_account"` ya fuerza consentimiento en cada login,
+  basta con que el admin cierre sesión y vuelva a iniciarla para obtener un
+  token con permiso de envío.
 - **`components/InformeIA.tsx`**: nuevo prop `permitirEnvioCorreo?: boolean`.
   Cuando es `true` y hay un informe generado, se muestra un campo de correo
   + botón "Enviar por correo" que llama a `/api/informes/enviar`.
 - **`components/AdminView.tsx`**: pasa `permitirEnvioCorreo` a `<InformeIA>`
   (es el único lugar donde se usa). El resto de vistas (dashboard normal,
   `app/page.tsx`) no lo pasan, por lo que no aparece esa opción.
-- Se instaló la dependencia `resend`.
+- Se evaluó usar Resend, pero el usuario no tiene dominio propio (Resend sin
+  dominio verificado solo permite enviar a la dirección del propio dueño de
+  la cuenta) y su cuenta de correo es Outlook/Microsoft 365 corporativa
+  (SMTP con auth básica deshabilitado por Microsoft en la mayoría de
+  tenants, y Graph API requeriría registrar una app en Azure AD con
+  consentimiento de administrador). Se optó por reusar el OAuth de Google ya
+  existente (Gmail API), que no requiere dominio ni infraestructura nueva.
+  Se quitó la dependencia `resend`.
 
 ### Pendiente de configuración (no hecho por el agente)
-Para que el envío funcione hace falta, en producción (Vercel) y en
-`.env.local` para desarrollo:
-1. Crear cuenta en resend.com y obtener una API key.
-2. Verificar un dominio propio en Resend (registros DNS) para poder enviar
-   desde una dirección propia (ej. `informes@tudominio.com`). Sin dominio
-   verificado, Resend solo permite enviar a la dirección de prueba del
-   propio dueño de la cuenta desde `onboarding@resend.dev`.
-3. Configurar `RESEND_API_KEY` y `RESEND_FROM_EMAIL` como variables de
-   entorno.
+1. El admin debe cerrar sesión y volver a iniciarla con Google para que el
+   token incluya el nuevo scope `gmail.send` (la primera vez que se intente
+   enviar un correo sin haber hecho esto, la API responderá 403 con un
+   mensaje indicando que debe re-loguearse).
+2. No se requiere ninguna variable de entorno nueva ni dominio propio.

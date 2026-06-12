@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
-import { Resend } from "resend"
+import { google } from "googleapis"
 import { authOptions } from "@/lib/authOptions"
 import { obtenerPerfil } from "@/lib/jerarquia"
 import { construirCorreoInforme } from "@/lib/informe-email"
@@ -10,6 +10,29 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function codificarAsunto(asunto: string): string {
+  return `=?UTF-8?B?${Buffer.from(asunto, "utf-8").toString("base64")}?=`
+}
+
+function construirMensajeMime(from: string, to: string, asunto: string, html: string): string {
+  const mensaje = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${codificarAsunto(asunto)}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    Buffer.from(html, "utf-8").toString("base64"),
+  ].join("\r\n")
+
+  return Buffer.from(mensaje, "utf-8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "")
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -38,27 +61,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Falta el informe a enviar" }, { status: 400 })
   }
 
-  const apiKey = process.env.RESEND_API_KEY
-  const from = process.env.RESEND_FROM_EMAIL
-  if (!apiKey || !from) {
-    return NextResponse.json({ error: "El envío de correos no está configurado (faltan RESEND_API_KEY / RESEND_FROM_EMAIL)" }, { status: 500 })
-  }
-
   const { asunto, html } = construirCorreoInforme(resultado)
+  const raw = construirMensajeMime(email, destino, asunto, html)
 
   try {
-    const resend = new Resend(apiKey)
-    const { error } = await resend.emails.send({
-      from,
-      to: destino,
-      subject: asunto,
-      html,
-    })
-    if (error) {
-      return NextResponse.json({ error: error.message ?? "Error enviando el correo" }, { status: 500 })
-    }
+    const oauth2Client = new google.auth.OAuth2()
+    oauth2Client.setCredentials({ access_token: session.accessToken })
+    const gmail = google.gmail({ version: "v1", auth: oauth2Client })
+    await gmail.users.messages.send({ userId: "me", requestBody: { raw } })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+    const err = e as { code?: number; message?: string }
+    if (err?.code === 403) {
+      return NextResponse.json({ error: "Falta permiso para enviar correos con tu cuenta de Google. Cierra sesión y vuelve a iniciar sesión para autorizarlo." }, { status: 403 })
+    }
+    return NextResponse.json({ error: err?.message ?? String(e) }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })
