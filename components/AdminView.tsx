@@ -42,7 +42,7 @@ const TODOS_MODULOS = [
   { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
 ]
 
-const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
+const ROLES_DISPONIBLES = ["supervisor", "coordinador", "jefatura", "coach"]
 
 const COORDINADORES_PERMITIDOS = [
   "ROJAS LEGUIZAMO ANDRES FELIPE",

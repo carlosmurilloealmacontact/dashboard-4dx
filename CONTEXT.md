@@ -398,6 +398,13 @@ independientes**:
    - Nota: estas listas de "coordinadores activos" son hardcodeadas y deben
      actualizarse manualmente cada vez que se activa/desactiva un coordinador o
      jefatura.
+   - **Causa real de que tampoco apareciera en la Vista de Admin (2026-06-11)**:
+     `cargo` "JEFE DE OPERACION" normaliza a `"jefatura"` (no `"coordinador"`),
+     y el selector de rol de `AdminView.tsx` (`ROLES_DISPONIBLES`) solo ofrecía
+     `["supervisor", "coordinador", "coach"]` — `"jefatura"` ni siquiera era una
+     opción seleccionable, aunque `lib/roles.ts` y la sección de Informe IA de la
+     propia vista ya tratan `"jefatura"` como rol válido. **✅ Fix**: se agregó
+     `"jefatura"` a `ROLES_DISPONIBLES` (`components/AdminView.tsx`).
 
 3. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
    — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
