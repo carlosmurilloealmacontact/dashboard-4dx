@@ -8,20 +8,7 @@ import type { PerfilUsuario, Persona, RolNormalizado } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
-
-const TODOS_MODULOS = [
-  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
-  { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
-  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
-  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
-  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
-  { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
-  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
-  { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
-  { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-]
+import { modulosPorIds } from "@/lib/modulos"
 
 const DEMOEQUIPOS: Record<RolNormalizado, Persona[]> = {
   supervisor: [
@@ -117,9 +104,7 @@ export default function DemoPage() {
     }
   }, [rolSeleccionado])
 
-  const modulosVisibles = TODOS_MODULOS.filter(
-    m => MODULOS_POR_ROL[rolSeleccionado]?.includes(m.id)
-  )
+  const modulosVisibles = modulosPorIds(MODULOS_POR_ROL[rolSeleccionado] ?? [])
 
   return (
     <div className="min-h-screen bg-white">

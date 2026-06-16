@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
-import { cargarPersonas } from "@/lib/jerarquia"
+import { cargarPersonas, type Persona } from "@/lib/jerarquia"
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -27,13 +27,13 @@ export async function GET() {
     )
 
     // Contar duplicados por nombre
-    const contarDuplicados = (arr: any[]) => {
-      const map = new Map()
+    const contarDuplicados = (arr: Persona[]) => {
+      const map = new Map<string, number>()
       arr.forEach(p => {
         const nombre = p.nombre ?? ""
         map.set(nombre, (map.get(nombre) || 0) + 1)
       })
-      return Array.from(map.entries()).filter(([_, count]) => count > 1)
+      return Array.from(map.entries()).filter(([, count]) => count > 1)
     }
 
     const duplicados = contarDuplicados(equipo)

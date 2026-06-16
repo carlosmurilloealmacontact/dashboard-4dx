@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
 // El logout simplemente devuelve OK
 // NextAuth se encargará de limpiar la sesión en el cliente
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -35,11 +35,6 @@ export async function GET(req: NextRequest) {
   const iCDR    = idx("cdr_sim")
   const iFoco   = idx("focos")
 
-  // Debug: si no encuentra columnas, loguear
-  if (iLider === -1) console.log("No encontró 'Lider Coach' en headers:", headers.slice(0, 10))
-  if (iFecha === -1) console.log("No encontró 'Fecha'")
-  if (iCumple === -1) console.log("No encontró 'Cumple'")
-
   const nombreLider = (perfil.persona.nombre ?? "").toLowerCase().trim()
 
   // Vista coordinador (ej. Katheryne Quiñones): agrupar por cada coach de su equipo

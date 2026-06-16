@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
   // Columna AT (índice 45) para nombre del coach
   // Buscar columna "nombre" que esté en posición >= 45 o es la segunda "Nombre"
   let iNombreCoach = -1
-  let nombrePositions: number[] = []
+  const nombrePositions: number[] = []
 
   for (let i = 0; i < headers.length; i++) {
     if ((headers[i] ?? "").toLowerCase().trim() === "nombre") {
@@ -95,8 +95,6 @@ export async function GET(req: NextRequest) {
       Math.abs(current - 45) < Math.abs(closest - 45) ? current : closest
     )
   }
-
-  console.log("DEBUG confirmaciones-rol: iNombreCoach=", iNombreCoach, "posiciones encontradas=", nombrePositions)
 
   const iLiderAcomp  = idx("lider acompanado")
   const iRitual      = headers.findIndex(h => (h ?? "").toLowerCase().includes("ritual") && (h ?? "").toLowerCase().includes("acompan"))
@@ -166,12 +164,6 @@ export async function GET(req: NextRequest) {
     response.headers.set('Cache-Control', 'no-store')
     return response
   }
-
-  console.log("DEBUG confirmaciones-rol:")
-  console.log("  nombrePersona:", nombrePersona)
-  console.log("  esSupervisor:", esSupervisor)
-  console.log("  iNombreCoach index:", iNombreCoach)
-  console.log("  primeros 5 nombres:", rows.slice(1, 6).map(r => (r[iNombreCoach] ?? "").toLowerCase().trim()))
 
   const confirmaciones = rows.slice(1).filter(r => {
     if (esSupervisor) return (r[iLiderAcomp] ?? "").toLowerCase().trim() === nombrePersona

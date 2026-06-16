@@ -1,6 +1,6 @@
 # CONTEXT.md — Dashboard 4DX
 
-Última actualización: 2026-06-11
+Última actualización: 2026-06-16
 
 ---
 
@@ -109,6 +109,7 @@ lib/
   drive.ts                   ← obtenerAgendaLider(): estado del archivo de agenda en Drive
   sheets.ts                  ← getSheetData(): lectura de Sheets + caché en memoria + retries
   db.ts                      ← SQLite para tokens
+  modulos.ts                 ← Catálogo único de cards/módulos y órdenes especiales
 ```
 
 ---
@@ -144,11 +145,14 @@ lib/
 | `lib/semana.ts` | ✅ Completo |
 | Módulos del dashboard (Adherencia 4DX, PCA, Confirmaciones, Prácticas Líderes, Quiz, etc.) | ✅ usan useSemanaGlobal, reportWeeks, ?semana= |
 | `app/page.tsx` / `components/AdminView.tsx` / `app/demo/real/page.tsx` | ✅ SemanaGlobalProvider |
-| **`app/demo/page.tsx`** | ⚠️ imports OK pero grid NO está envuelto en SemanaGlobalProvider |
-| **`app/preview/page.tsx`** | ❌ sin imports ni Provider |
-| **`components/CoachTeamView.tsx`** | ❌ sin SemanaGlobalProvider en el grid de cards |
+| `app/demo/page.tsx` | ✅ SemanaGlobalProvider |
+| `app/preview/page.tsx` | ✅ SemanaGlobalProvider |
+| `components/CoachTeamView.tsx` | ✅ SemanaGlobalProvider propio para el grid de equipo |
 
-(Estos 3 pendientes son de una sesión anterior y no se han retomado — ver "Próximos pasos".)
+Actualización 2026-06-16: se corrigieron los pendientes antiguos del selector
+global de semana en demo, preview y vista de equipo coach. También se ajustó
+`SemanaGlobalContext.tsx` para cumplir las reglas de React/Next 16 sin cambiar
+la API pública del contexto.
 
 ---
 
@@ -489,11 +493,7 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
    todo (2026-06-12). **Pendiente**: definir el enfoque correcto para que
    Daniel Alzate (jefatura) sea gestionable desde la Vista de Admin.
 
-3. **`app/demo/page.tsx`, `app/preview/page.tsx`, `components/CoachTeamView.tsx`**
-   — pendientes de envolver con `SemanaGlobalProvider` (ver tabla de la sección de
-   filtro de semana). No bloqueante, pendiente desde sesión anterior.
-
-4. **Endpoints de debug acumulados** (`app/api/debug/*`): son admin-only y de
+3. **Endpoints de debug acumulados** (`app/api/debug/*`): son admin-only y de
    solo lectura, pero conviene revisar periódicamente si siguen siendo necesarios o
    se pueden retirar una vez resueltas las investigaciones que los originaron.
 
@@ -666,15 +666,18 @@ A pedido del usuario:
   "Prácticas Líderes 4DX" en la lista de módulos del dashboard (antes estaba
   más abajo, junto a "Estoy Enterado"/"Agenda del líder").
 
-Estos 3 cambios se aplicaron a los arrays `MODULOS`/`TODOS_MODULOS`/
-`MODULOS_EQUIPO` en los 6 archivos que definen el catálogo de módulos:
+Originalmente estos cambios estaban duplicados en arrays locales de
 `app/page.tsx`, `app/preview/page.tsx`, `app/demo/page.tsx`,
 `app/demo/real/page.tsx`, `components/AdminView.tsx` y
-`components/CoachTeamView.tsx`. No se tocaron `components/InformeIA.tsx` ni
-`lib/informes-prompt.ts`, que tienen su propio sistema de títulos de sección
-para el informe IA (`case "Adherencia 4DX":`, `case "Prácticas Líderes":`,
-`case "Pausas 4DX":`) — son listas separadas, distintas de las tarjetas del
-dashboard, y el usuario no pidió cambiarlas.
+`components/CoachTeamView.tsx`.
+
+Actualización 2026-06-16: el catálogo visual de módulos se centralizó en
+`lib/modulos.ts`. Es la fuente de verdad para títulos, descripciones, iconos,
+orden del rol híbrido "Coordinador Coach" y orden de la vista de equipo coach.
+No se tocaron `components/InformeIA.tsx` ni `lib/informes-prompt.ts`, que tienen
+su propio sistema de títulos de sección para el informe IA (`case "Adherencia
+4DX":`, `case "Prácticas Líderes":`, `case "Pausas 4DX":`) — son listas
+separadas, distintas de las tarjetas del dashboard.
 
 - **Etiquetas de datos en gráficas del Informe IA**: se agregó
   `<LabelList>` (de `recharts`) a cada `<Bar>` en `GraficaBarras` (con

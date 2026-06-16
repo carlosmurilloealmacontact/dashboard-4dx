@@ -11,39 +11,7 @@ import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import { usePerfil } from "@/hooks/usePerfil"
 import { MODULOS_POR_ROL } from "@/lib/roles"
-
-const MODULOS = [
-  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
-  { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
-  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
-  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
-  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
-  { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
-  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
-  { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
-  { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-  { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
-]
-
-const TODOS_MODULOS = [
-  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
-  { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
-  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
-  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
-  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
-  { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
-  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
-  { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
-  { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-  { id: "agenda_lider", titulo: "Agenda del líder", icono: "🗓️", descripcion: "Última actualización de la agenda" },
-]
-
-// Orden de módulos para el rol híbrido "Coordinador Coach" (ej. Katheryne Quiñones)
-const MODULOS_COORDINADOR_COACH = ["practicas_coach", "adherencia_pca", "confirmaciones_rol", "resolutividad"]
+import { MODULOS_COORDINADOR_COACH, TODOS_MODULOS, modulosEnOrden, modulosPorIds } from "@/lib/modulos"
 
 const ETIQUETAS_ROL: Record<string, string> = {
   gerente: "Gerente",
@@ -85,8 +53,8 @@ export default function DashboardPage() {
 
   const modulosVisibles = perfil
     ? esCoordinadorCoach
-      ? MODULOS_COORDINADOR_COACH.map(id => TODOS_MODULOS.find(m => m.id === id)!).filter(Boolean)
-      : TODOS_MODULOS.filter(m => idsVisibles.has(m.id))
+      ? modulosEnOrden(MODULOS_COORDINADOR_COACH)
+      : modulosPorIds(idsVisibles)
     : TODOS_MODULOS
 
   const nombreCorto = perfil?.persona.nombre.split(" ")[0] ?? session.user?.name?.split(" ")[0] ?? "Usuario"

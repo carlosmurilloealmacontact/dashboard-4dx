@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
 import { useSemanaGlobal, normalizarSemana } from "@/context/SemanaGlobalContext"
@@ -48,16 +47,6 @@ const DIMS_LABELS: Record<string, string> = {
   herramientas: "Herramientas", alineacion: "Alineación",
   reconocimiento: "Reconocimiento", retroalimentacion: "Retroalimentación",
   seguimiento: "Seguimiento", tips: "Tips", resumen: "Resumen",
-}
-
-function textoANumero(v: string): number | null {
-  if (!v) return null
-  const lower = v.toLowerCase()
-  if (lower === "1" || lower.includes("completa")) return 100
-  if (lower.includes("parcial")) return 50
-  if (lower.includes("observado") || lower === "0") return 0
-  const n = parseFloat(v)
-  return isNaN(n) ? null : n <= 1 ? Math.round(n * 100) : Math.round(n)
 }
 
 function colorPct(n: number | null) {

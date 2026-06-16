@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react"
+import { createContext, useContext, useState, useCallback, useMemo } from "react"
 
 /**
  * Filtro de semana GLOBAL para todas las tarjetas de módulos.
@@ -45,23 +45,21 @@ const SemanaGlobalContext = createContext<SemanaGlobalValue>({
 
 export function SemanaGlobalProvider({ children }: { children: React.ReactNode }) {
   const [semanaGlobal, setSemanaGlobalState] = useState<string | null>(null)
-  // Semanas reportadas por cada módulo (no provoca render por sí solo)
-  const porModulo = useRef<Record<string, string[]>>({})
-  const [version, setVersion] = useState(0)  // bump cuando cambia la unión
+  const [porModulo, setPorModulo] = useState<Record<string, string[]>>({})
 
   const reportWeeks = useCallback((moduleId: string, semanas: (string | number)[]) => {
     const norm = [...new Set(semanas.map(normalizarSemana).filter(Boolean))].sort()
-    const prev = porModulo.current[moduleId] ?? []
-    // Solo re-render si realmente cambió el set de este módulo
-    if (prev.length === norm.length && prev.every((v, i) => v === norm[i])) return
-    porModulo.current[moduleId] = norm
-    setVersion(v => v + 1)
+    setPorModulo(prev => {
+      const prevModulo = prev[moduleId] ?? []
+      // Solo re-render si realmente cambió el set de este módulo
+      if (prevModulo.length === norm.length && prevModulo.every((v, i) => v === norm[i])) return prev
+      return { ...prev, [moduleId]: norm }
+    })
   }, [])
 
   const semanasDisponibles = useMemo(() => {
-    void version // recalcula cuando cambia la unión
     const todas = new Set<string>()
-    Object.values(porModulo.current).forEach(arr => arr.forEach(s => todas.add(s)))
+    Object.values(porModulo).forEach(arr => arr.forEach(s => todas.add(s)))
 
     // Las semanas ISO no llevan año: una semana 44-52 reportada cuando vamos
     // por la semana ~2-24 del año actual es del ciclo anterior (año pasado),
@@ -75,19 +73,15 @@ export function SemanaGlobalProvider({ children }: { children: React.ReactNode }
     }
 
     return [...todas].sort((a, b) => orden(a) - orden(b))
-  }, [version])
+  }, [porModulo])
 
-  // Default: la semana más reciente, una vez que haya semanas disponibles
-  useEffect(() => {
-    if (semanaGlobal === null && semanasDisponibles.length > 0) {
-      setSemanaGlobalState(semanasDisponibles[semanasDisponibles.length - 1])
-    }
-  }, [semanasDisponibles, semanaGlobal])
+  // Default derivado: la semana más reciente, una vez que haya semanas disponibles
+  const semanaSeleccionada = semanaGlobal ?? semanasDisponibles[semanasDisponibles.length - 1] ?? null
 
   const setSemanaGlobal = useCallback((s: string) => setSemanaGlobalState(normalizarSemana(s)), [])
 
   return (
-    <SemanaGlobalContext.Provider value={{ semanaGlobal, setSemanaGlobal, semanasDisponibles, reportWeeks }}>
+    <SemanaGlobalContext.Provider value={{ semanaGlobal: semanaSeleccionada, setSemanaGlobal, semanasDisponibles, reportWeeks }}>
       {children}
     </SemanaGlobalContext.Provider>
   )

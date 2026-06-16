@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { usePerfilContext } from "@/context/PerfilContext"
 import { useModuloUrl } from "@/hooks/useModuloUrl"
 import { useModuloMetric } from "@/context/ModuloMetricContext"
 
@@ -72,26 +71,34 @@ export default function Resolutividad() {
 
   useEffect(() => {
     let activo = true
-    setCargando(true)
-    fetch(url).then(r => r.json()).then(d => {
-      if (!activo) return
-      // Respuesta inválida/transitoria (error de Sheets, quota): NO pisar datos buenos
-      if (d?.error || typeof d?.total !== "number" || !d?.metas) {
-        setError(d?.error || "No se pudieron cargar los datos")
-        return
+    async function cargar() {
+      setCargando(true)
+      try {
+        const r = await fetch(url)
+        const d = await r.json()
+        if (!activo) return
+        // Respuesta inválida/transitoria (error de Sheets, quota): NO pisar datos buenos
+        if (d?.error || typeof d?.total !== "number" || !d?.metas) {
+          setError(d?.error || "No se pudieron cargar los datos")
+          return
+        }
+        setError("")
+        setData(d)
+        const cumpleImpl = d.metas.implementacion?.cumple
+        const cumpleBack = d.metas.backlog?.cumple
+        const ok = cumpleImpl && cumpleBack
+        setMetric({
+          valor: `${d.metas.implementacion?.valor ?? 0}%`,
+          alerta: ok ? 0 : 1,
+          color: ok ? "green" : "yellow",
+        })
+      } catch {
+        if (activo) setError("Error de red")
+      } finally {
+        if (activo) setCargando(false)
       }
-      setError("")
-      setData(d)
-      const cumpleImpl = d.metas.implementacion?.cumple
-      const cumpleBack = d.metas.backlog?.cumple
-      const ok = cumpleImpl && cumpleBack
-      setMetric({
-        valor: `${d.metas.implementacion?.valor ?? 0}%`,
-        alerta: ok ? 0 : 1,
-        color: ok ? "green" : "yellow",
-      })
-    }).catch(() => { if (activo) setError("Error de red") })
-      .finally(() => { if (activo) setCargando(false) })
+    }
+    cargar()
     return () => { activo = false }
   }, [url, setMetric])
 

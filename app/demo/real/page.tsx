@@ -8,6 +8,7 @@ import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
+import { modulosPorIds } from "@/lib/modulos"
 
 const USUARIOS_DEMO = [
   { nombre: "MYRYAM LUCERO CASTRO LINARES", email: "lucero.castro@latam.com", rol: "coach" },
@@ -15,52 +16,39 @@ const USUARIOS_DEMO = [
   { nombre: "CARDONA BARRAGAN CATALINA", email: "catalinacarona.almacontact@outsourcing-account.com", rol: "supervisor" },
 ]
 
-const TODOS_MODULOS = [
-  { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
-  { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
-  { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
-  { id: "practicas_coach", titulo: "Prácticas Coach", icono: "🏋️", descripcion: "Cumplimiento de prácticas del coach" },
-  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
-  { id: "resolutividad", titulo: "Circuito de Resolutividad", icono: "💡", descripcion: "Ideas y mejoras del equipo" },
-  { id: "feedback", titulo: "Feedback Interfábricas", icono: "💬", descripcion: "Feedback entre compañeros" },
-  { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
-  { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del coach" },
-  { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },
-  { id: "estoy_enterado", titulo: "Estoy Enterado", icono: "📢", descripcion: "Seguimiento de briefings" },
-]
-
 export default function RealDemoPage() {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(USUARIOS_DEMO[0].email)
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null)
-  const [cargando, setCargando] = useState(false)
+  const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    cargarPerfil(usuarioSeleccionado)
+    let activo = true
+    fetch(`/api/jerarquia/test?email=${encodeURIComponent(usuarioSeleccionado)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!activo) return
+        setError("")
+        if (data.error) {
+          setError(data.error)
+          setPerfil(null)
+        } else {
+          setPerfil(data)
+        }
+      })
+      .catch(err => {
+        if (!activo) return
+        setError(String(err))
+        setPerfil(null)
+      })
+      .finally(() => {
+        if (activo) setCargando(false)
+      })
+    return () => { activo = false }
   }, [usuarioSeleccionado])
 
-  async function cargarPerfil(email: string) {
-    setCargando(true)
-    setError("")
-    try {
-      const res = await fetch(`/api/jerarquia/test?email=${encodeURIComponent(email)}`)
-      const data = await res.json()
-      if (data.error) {
-        setError(data.error)
-        setPerfil(null)
-      } else {
-        setPerfil(data)
-      }
-    } catch (err) {
-      setError(String(err))
-      setPerfil(null)
-    } finally {
-      setCargando(false)
-    }
-  }
-
   const modulosVisibles = perfil
-    ? TODOS_MODULOS.filter(m => MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL]?.includes(m.id))
+    ? modulosPorIds(MODULOS_POR_ROL[perfil.rol as keyof typeof MODULOS_POR_ROL] ?? [])
     : []
 
   return (
@@ -72,7 +60,11 @@ export default function RealDemoPage() {
         </div>
         <select
           value={usuarioSeleccionado}
-          onChange={e => setUsuarioSeleccionado(e.target.value)}
+          onChange={e => {
+            setCargando(true)
+            setError("")
+            setUsuarioSeleccionado(e.target.value)
+          }}
           className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
         >
           {USUARIOS_DEMO.map(u => (

@@ -37,7 +37,7 @@ interface ModuloCardProps {
   servicio?: string
 }
 
-function CardInner({ id, titulo, icono, descripcion, equipo, servicio }: ModuloCardProps) {
+function CardInner({ id, titulo, icono, descripcion, equipo }: ModuloCardProps) {
   const [expandido, setExpandido] = useState(false)
   const Componente = COMPONENTES[id]
   const { metric } = useModuloMetric()
