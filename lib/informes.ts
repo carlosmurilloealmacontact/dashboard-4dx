@@ -927,8 +927,8 @@ function fechaAIsoSemanaPausas(fechaStr: string): string {
 
 /**
  * Trae el histórico de "Compromisos Copilot" (hoja "Pausas 4DX Raw": pausas de
- * Diálogo y CDR) y agrupa por (jefe_inmediato, semana): % de participación en
- * cada tipo de pausa y cantidad de agentes con al menos una falta.
+ * Diálogo y CDR) y agrupa por (jefe_inmediato, semana): Diálogo se mide por
+ * participación diaria; CDR se mide una vez por agente en la semana.
  */
 export async function aggCompromisosCopilot(
   accessToken: string,
@@ -958,9 +958,10 @@ export async function aggCompromisosCopilot(
 
   type Grupo = { total: number; participo: number; faltantes: Set<string> }
   const buckets = new Map<string, {
+    agentes: Set<string>
     dialogo: Grupo
-    cdr: Grupo
-    porDia: Map<number, { dialogo: Grupo; cdr: Grupo }>
+    cdrParticiparon: Set<string>
+    porDia: Map<number, { dialogo: Grupo }>
   }>()
   rows.slice(1).forEach(r => {
     if (normNombre(r[iCoord]) !== coordNorm) return
@@ -977,24 +978,29 @@ export async function aggCompromisosCopilot(
       : !estado.includes("sin diálogo") && !estado.includes("sin dialogo")
     const key = `${jefe}|||${sem}`
     if (!buckets.has(key)) buckets.set(key, {
+      agentes: new Set(),
       dialogo: { total: 0, participo: 0, faltantes: new Set() },
-      cdr: { total: 0, participo: 0, faltantes: new Set() },
+      cdrParticiparon: new Set(),
       porDia: new Map(),
     })
     const b = buckets.get(key)!
-    const grupo = tipo === "CDR" ? b.cdr : b.dialogo
-    grupo.total++
-    if (participo) grupo.participo++
-    else grupo.faltantes.add(r[iAgenteId] ?? "")
+    const agenteId = r[iAgenteId] ?? ""
+    if (agenteId) b.agentes.add(agenteId)
+    if (tipo === "CDR") {
+      if (participo && agenteId) b.cdrParticiparon.add(agenteId)
+    } else {
+      b.dialogo.total++
+      if (participo) b.dialogo.participo++
+      else b.dialogo.faltantes.add(agenteId)
+    }
 
     const [y, m, d] = fechaStr.split("-").map(Number)
-    if (y && m && d) {
+    if (tipo === "Diálogo" && y && m && d) {
       const dia = new Date(y, m - 1, d).getDay()
       if (!b.porDia.has(dia)) b.porDia.set(dia, {
         dialogo: { total: 0, participo: 0, faltantes: new Set() },
-        cdr: { total: 0, participo: 0, faltantes: new Set() },
       })
-      const diaGrupo = tipo === "CDR" ? b.porDia.get(dia)!.cdr : b.porDia.get(dia)!.dialogo
+      const diaGrupo = b.porDia.get(dia)!.dialogo
       diaGrupo.total++
       if (participo) diaGrupo.participo++
     }
@@ -1002,6 +1008,11 @@ export async function aggCompromisosCopilot(
 
   buckets.forEach((b, key) => {
     const [jefe, sem] = key.split("|||")
+    const agentes = [...b.agentes]
+    const pctCDR = agentes.length > 0
+      ? Math.round((agentes.filter(id => b.cdrParticiparon.has(id)).length / agentes.length) * 100)
+      : 0
+    const agentesConFaltaCDR = agentes.filter(id => !b.cdrParticiparon.has(id)).length
     const participacionPorDia = [1, 2, 3, 4, 5]
       .filter(dia => b.porDia.has(dia))
       .map(dia => {
@@ -1009,15 +1020,15 @@ export async function aggCompromisosCopilot(
         return {
           dia: NOMBRES_DIA_SEMANA[dia],
           pctDialogo: g.dialogo.total > 0 ? Math.round((g.dialogo.participo / g.dialogo.total) * 100) : 0,
-          pctCDR: g.cdr.total > 0 ? Math.round((g.cdr.participo / g.cdr.total) * 100) : 0,
+          pctCDR,
         }
       })
     const fila: CopilotSemana = {
       semana: sem,
       pctDialogo: b.dialogo.total > 0 ? Math.round((b.dialogo.participo / b.dialogo.total) * 100) : 0,
-      pctCDR: b.cdr.total > 0 ? Math.round((b.cdr.participo / b.cdr.total) * 100) : 0,
+      pctCDR,
       agentesConFaltaDialogo: b.dialogo.faltantes.size,
-      agentesConFaltaCDR: b.cdr.faltantes.size,
+      agentesConFaltaCDR,
       participacionPorDia,
     }
     if (!resultado.has(jefe)) resultado.set(jefe, [])

@@ -156,6 +156,24 @@ la API pública del contexto.
 
 ---
 
+## Pausas 4DX — regla de medición
+
+Actualización 2026-06-16:
+
+- **Diálogo 4DX** se mide como práctica diaria de lunes a viernes. El porcentaje
+  se calcula sobre las filas diarias de Diálogo de la semana.
+- **Pausa CDR** se mide **una vez por persona a la semana**. Un asesor cumple si
+  tiene al menos un registro CDR con participación durante la semana; no debe
+  penalizarse como si fuera una práctica diaria L-V.
+- `app/api/modulos/pausas-4dx/route.ts` calcula `kpi.cdr` y `pctCDR` por
+  agente-semana, mientras `kpi.dialogo` y `pctDialogo` siguen siendo diarios.
+- `components/modulos/Pausas4DX.tsx` muestra Diálogo como grilla L-V y CDR como
+  cumplimiento semanal por persona.
+- `lib/informes.ts` y `lib/informes-prompt.ts` usan la misma regla para el
+  Informe IA: los días específicos solo se interpretan para Diálogo, no para CDR.
+
+---
+
 ## Informe de cumplimiento (IA) — `InformeIA.tsx` / `lib/informes.ts` / `lib/informes-prompt.ts`
 
 - **Flujo**: `components/InformeIA.tsx` (form: alcance, semana(s), tipo parcial/cierre)

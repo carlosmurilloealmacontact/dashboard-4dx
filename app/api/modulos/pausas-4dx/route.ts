@@ -106,8 +106,7 @@ export async function GET(req: NextRequest) {
 
   const deEstaSemana = todos.filter(r => fechaAIsoSemana(r.fecha) === semanaActual)
 
-  function kpiTipo(tipo: string) {
-    const filas = deEstaSemana.filter(r => r.tipo === tipo)
+  function kpiDialogo(filas: typeof deEstaSemana) {
     if (!filas.length) return { pct: 0, alertas: 0 }
     const participo = filas.filter(r => r.participo).length
     const pct = Math.round((participo / filas.length) * 100)
@@ -116,9 +115,18 @@ export async function GET(req: NextRequest) {
     return { pct, alertas: agentesConFalta }
   }
 
+  function kpiCdrSemanal(filas: typeof deEstaSemana, agentesBase?: string[]) {
+    const agentes = agentesBase ?? [...new Set(filas.map(r => r.agenteId).filter(Boolean))]
+    if (!agentes.length) return { pct: 0, alertas: 0 }
+    const filasCdr = filas.filter(r => r.tipo === "CDR")
+    const agentesConCdr = new Set(filasCdr.filter(r => r.participo).map(r => r.agenteId))
+    const pct = Math.round((agentes.filter(id => agentesConCdr.has(id)).length / agentes.length) * 100)
+    return { pct, alertas: agentes.filter(id => !agentesConCdr.has(id)).length }
+  }
+
   const kpi = {
-    dialogo: kpiTipo("Diálogo"),
-    cdr:     kpiTipo("CDR"),
+    dialogo: kpiDialogo(deEstaSemana.filter(r => r.tipo === "Diálogo")),
+    cdr:     kpiCdrSemanal(deEstaSemana),
   }
 
   if (esCoord) {
@@ -126,8 +134,9 @@ export async function GET(req: NextRequest) {
     const supervisoresResumen = supervisores.map(jefe => {
       const filas = deEstaSemana.filter(r => r.jefe === jefe)
       const agentesUnicos = new Set(filas.map(r => r.agenteId)).size
-      const kpD = kpiFilas(filas.filter(r => r.tipo === "Diálogo"))
-      const kpC = kpiFilas(filas.filter(r => r.tipo === "CDR"))
+      const agentesIds = [...new Set(filas.map(r => r.agenteId).filter(Boolean))]
+      const kpD = kpiDialogo(filas.filter(r => r.tipo === "Diálogo")).pct
+      const kpC = kpiCdrSemanal(filas, agentesIds).pct
       return { supervisor: jefe, totalAgentes: agentesUnicos, pctDialogo: kpD, pctCDR: kpC }
     }).sort((a, b) => a.pctDialogo - b.pctDialogo)
 
@@ -148,9 +157,4 @@ export async function GET(req: NextRequest) {
     kpi,
     registros: deEstaSemana,
   })
-}
-
-function kpiFilas(filas: { participo: boolean }[]): number {
-  if (!filas.length) return 0
-  return Math.round((filas.filter(r => r.participo).length / filas.length) * 100)
 }

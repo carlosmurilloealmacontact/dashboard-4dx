@@ -55,9 +55,9 @@ function diaSemana(fechaStr: string): number {
   return new Date(y, m - 1, d).getDay()
 }
 
-// Grilla compacta Lun-Vie con el % de participación diaria de un equipo, para un tipo (Diálogo/CDR)
-function GridDiasEquipo({ registros, tipo }: { registros: Registro[]; tipo: string }) {
-  const filas = registros.filter(r => r.tipo === tipo)
+// Grilla compacta Lun-Vie con el % de participación diaria de Diálogo.
+function GridDiasEquipo({ registros }: { registros: Registro[] }) {
+  const filas = registros.filter(r => r.tipo === "Diálogo")
   return (
     <div className="flex gap-1">
       {DIAS.map(d => {
@@ -97,12 +97,18 @@ interface GridPausaProps {
 
 function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
   const filas = registros.filter(r => r.tipo === tipo)
-  const total = filas.length
-  const participaron = filas.filter(r => r.participo).length
+  const cdrSemanal = tipo === "CDR"
+  const agentesConCdr = new Set(filas.filter(r => r.participo).map(r => r.agenteId))
+  const total = cdrSemanal ? agentes.length : filas.length
+  const participaron = cdrSemanal ? agentes.filter(a => agentesConCdr.has(a.id)).length : filas.filter(r => r.participo).length
   const pct = total > 0 ? Math.round((participaron / total) * 100) : 0
 
   function getRegistro(agenteId: string, dia: number): Registro | undefined {
     return filas.find(r => r.agenteId === agenteId && diaSemana(r.fecha) === dia)
+  }
+
+  function getRegistroSemanal(agenteId: string): Registro | undefined {
+    return filas.find(r => r.agenteId === agenteId && r.participo) ?? filas.find(r => r.agenteId === agenteId)
   }
 
   return (
@@ -119,9 +125,13 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
             <thead>
               <tr>
                 <th className="text-left text-gray-500 font-normal pb-1 pr-2">Agente</th>
-                {DIAS.map(d => (
-                  <th key={d.num} className="text-center text-gray-500 font-normal pb-1 px-1 w-8">{d.label}</th>
-                ))}
+                {cdrSemanal ? (
+                  <th className="text-center text-gray-500 font-normal pb-1 px-1 w-12">Sem.</th>
+                ) : (
+                  DIAS.map(d => (
+                    <th key={d.num} className="text-center text-gray-500 font-normal pb-1 px-1 w-8">{d.label}</th>
+                  ))
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
@@ -130,32 +140,49 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
                   <td className="py-1 pr-2 break-words text-gray-900">
                     {nombre}
                   </td>
-                  {DIAS.map(d => {
-                    const r = getRegistro(id, d.num)
+                  {cdrSemanal ? (() => {
+                    const r = getRegistroSemanal(id)
                     const color = !r ? "bg-gray-700" : r.participo ? "bg-green-500" : "bg-red-500"
                     return (
-                      <td key={d.num} className="text-center py-1 px-1">
+                      <td className="text-center py-1 px-1">
                         <div
                           className={`w-5 h-5 rounded mx-auto ${color}`}
                           title={r ? formatoDuracion(r.duracionMin) : "Sin registro"}
                         />
                       </td>
                     )
-                  })}
+                  })() : (
+                    DIAS.map(d => {
+                      const r = getRegistro(id, d.num)
+                      const color = !r ? "bg-gray-700" : r.participo ? "bg-green-500" : "bg-red-500"
+                      return (
+                        <td key={d.num} className="text-center py-1 px-1">
+                          <div
+                            className={`w-5 h-5 rounded mx-auto ${color}`}
+                            title={r ? formatoDuracion(r.duracionMin) : "Sin registro"}
+                          />
+                        </td>
+                      )
+                    })
+                  )}
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-800">
                 <td className="py-1 pr-2 text-gray-500">Participaron</td>
-                {DIAS.map(d => {
-                  const conDialogo = agentes.filter(({ id }) => getRegistro(id, d.num)?.participo).length
-                  return (
-                    <td key={d.num} className="text-center py-1 px-1 text-gray-300 font-medium">
-                      {conDialogo}
-                    </td>
-                  )
-                })}
+                {cdrSemanal ? (
+                  <td className="text-center py-1 px-1 text-gray-300 font-medium">{participaron}</td>
+                ) : (
+                  DIAS.map(d => {
+                    const conDialogo = agentes.filter(({ id }) => getRegistro(id, d.num)?.participo).length
+                    return (
+                      <td key={d.num} className="text-center py-1 px-1 text-gray-300 font-medium">
+                        {conDialogo}
+                      </td>
+                    )
+                  })
+                )}
               </tr>
             </tfoot>
           </table>
@@ -275,11 +302,13 @@ export default function Pausas4DX() {
                   <div className="mt-2 space-y-1.5">
                     <div>
                       <p className="text-xs text-gray-500 mb-0.5">Diálogo — Lun/Vie</p>
-                      <GridDiasEquipo registros={regSup} tipo="Diálogo" />
+                      <GridDiasEquipo registros={regSup} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-0.5">CDR — Lun/Vie</p>
-                      <GridDiasEquipo registros={regSup} tipo="CDR" />
+                      <p className="text-xs text-gray-500 mb-0.5">CDR — semanal por persona</p>
+                      <div className="bg-gray-700 rounded-full h-1.5">
+                        <div className={`h-1.5 rounded-full ${barColor(sv.pctCDR)}`} style={{ width: `${sv.pctCDR}%` }} />
+                      </div>
                     </div>
                   </div>
                 )
@@ -321,7 +350,7 @@ export default function Pausas4DX() {
 
       {/* Grid CDR */}
       <div className="border-t border-gray-800 pt-4">
-        <GridPausa titulo="Pausa CDR — Lun/Vie" registros={registros} tipo="CDR" agentes={agentes} />
+        <GridPausa titulo="Pausa CDR — semanal por persona" registros={registros} tipo="CDR" agentes={agentes} />
       </div>
 
       <Leyenda />
