@@ -21,6 +21,15 @@ export function construirPromptInforme(
   const avanceEsperadoPct = Math.round((diasHabilesTranscurridos / 5) * 100)
   const nombreDiaHoy = hoy.toLocaleDateString("es-CO", { weekday: "long" })
 
+  const NOMBRES_HABILES = ["lunes", "martes", "miércoles", "jueves", "viernes"]
+  // Días hábiles que ya cerraron completamente (ayer hacia atrás)
+  const diasYaCerrados = NOMBRES_HABILES.slice(0, Math.max(0, diasHabilesTranscurridos - 1))
+  // El día de hoy (en curso, aún no cerró) y los que vienen
+  const diaEnCurso = diasHabilesTranscurridos >= 1 && diasHabilesTranscurridos <= 5
+    ? NOMBRES_HABILES[diasHabilesTranscurridos - 1]
+    : null
+  const diasPendientes = NOMBRES_HABILES.slice(diasHabilesTranscurridos)
+
   const contextoTipo = tipoInforme === "parcial"
     ? `Este es un informe PARCIAL de la semana ${ultimaSemana} (semana en curso, aún no ha cerrado). Hoy es ${nombreDiaHoy}, ` +
       `día ${diasHabilesTranscurridos} de 5 hábiles de la semana. ` +
@@ -28,6 +37,13 @@ export function construirPromptInforme(
       `como una caída si la tendencia muestra menos cerrados con mejora que la semana pasada, ya que esa semana ya había cerrado. ` +
       `En cambio, sí son señales relevantes: % sin ingreso alto o creciente, baja presentación/aprobación del quiz, ` +
       `y pendientes acumulados — esto el coordinador SÍ puede accionar antes de que cierre la semana.\n\n` +
+      `**Días hábiles de esta semana**:\n` +
+      (diasYaCerrados.length > 0 ? `- Ya cerrados (pueden evaluarse): ${diasYaCerrados.join(", ")}.\n` : "") +
+      (diaEnCurso ? `- Hoy en curso (aún puede registrarse): ${diaEnCurso}.\n` : "") +
+      (diasPendientes.length > 0 ? `- Aún no han ocurrido (NO alertes sobre ausencia de datos en estos días): ${diasPendientes.join(", ")}.\n` : "") +
+      `Cuando menciones días sin monitoreo, sin ingreso o sin práctica, limítate a los días ya cerrados. ` +
+      `No señales como ausencia o problema la falta de datos en ${diaEnCurso ? `${diaEnCurso} (día en curso)` : ""}` +
+      `${diasPendientes.length > 0 ? (diaEnCurso ? ` ni en ${diasPendientes.join(", ")}` : diasPendientes.join(", ")) : ""}.\n\n` +
       `**Importante sobre comparaciones**: para las prácticas de cumplimiento diario acumulado (Medidas de Dirección, ` +
       `Prácticas Líderes 4DX, Monitoreos de Calidad/Panel Lea, Pausas 4DX), NO compares "pct" contra la semana anterior ` +
       `(ignora el campo "tendencia" de estas prácticas en este informe parcial). En su lugar, compara contra el ` +
