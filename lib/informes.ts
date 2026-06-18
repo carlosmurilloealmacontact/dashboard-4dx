@@ -88,6 +88,8 @@ const NOMBRES_DIA_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves"
 export interface Adherencia4dxSemana {
   semana: string
   pct: number
+  pctResol: number
+  pctProd: number
   totalAgentes: number
   totalRegistros: number
 }
@@ -396,11 +398,13 @@ export async function aggAdherencia4dx(
   const iJefe   = idx("jefe_inmediato")
   const iCoord  = idx("coordinador")
   const iCumple = idx("cumple_dia")
+  const iResol  = idx("resolutividade")
+  const iProd   = idx("produtividade")
 
   const coordNorm = normNombre(nombreCoord)
   const semSet = new Set(semanas)
 
-  const buckets = new Map<string, { total: number; cumplieron: number; bps: Set<string> }>()
+  const buckets = new Map<string, { total: number; cumplieron: number; conResol: number; conProd: number; bps: Set<string> }>()
   rows.slice(1).forEach(r => {
     if (normNombre(r[iCoord]) !== coordNorm) return
     const sup = matchSupervisor(r[iJefe], supervisoresEquipo)
@@ -408,18 +412,22 @@ export async function aggAdherencia4dx(
     const sem = normSemana(r[iSemana])
     if (!semSet.has(sem)) return
     const key = `${sup}|||${sem}`
-    if (!buckets.has(key)) buckets.set(key, { total: 0, cumplieron: 0, bps: new Set() })
+    if (!buckets.has(key)) buckets.set(key, { total: 0, cumplieron: 0, conResol: 0, conProd: 0, bps: new Set() })
     const b = buckets.get(key)!
     b.total++
     b.bps.add(r[iBP] ?? "")
     if ((parseFloat((r[iCumple] ?? "").replace(",", ".")) || 0) >= 1) b.cumplieron++
+    if (iResol >= 0 && (parseFloat((r[iResol] ?? "").replace(",", ".")) || 0) > 0) b.conResol++
+    if (iProd  >= 0 && (parseFloat((r[iProd]  ?? "").replace(",", ".")) || 0) > 0) b.conProd++
   })
 
   buckets.forEach((b, key) => {
     const [sup, sem] = key.split("|||")
     const fila: Adherencia4dxSemana = {
       semana: sem,
-      pct: b.total > 0 ? Math.round((b.cumplieron / b.total) * 100) : 0,
+      pct:      b.total > 0 ? Math.round((b.cumplieron / b.total) * 100) : 0,
+      pctResol: b.total > 0 ? Math.round((b.conResol   / b.total) * 100) : 0,
+      pctProd:  b.total > 0 ? Math.round((b.conProd    / b.total) * 100) : 0,
       totalAgentes: b.bps.size,
       totalRegistros: b.total,
     }

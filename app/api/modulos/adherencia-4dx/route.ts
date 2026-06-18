@@ -89,6 +89,8 @@ export async function GET(req: NextRequest) {
   const iJefe   = idx("jefe_inmediato")
   const iCoordinador = idx("coordinador")
   const iCumple = idx("cumple_dia")
+  const iResol  = idx("resolutividade")
+  const iProd   = idx("produtividade")
 
   const esCoord = ["coordinador", "jefatura", "gerente"].includes(perfil.rol?.toLowerCase())
   const nombrePersonaCoord = (perfil.persona.nombre ?? "").toLowerCase().trim()
@@ -112,6 +114,8 @@ export async function GET(req: NextRequest) {
         nombre: r[iNombre] ?? "",
         jefe:   r[iJefe]   ?? "",
         cumple: r[iCumple] ?? "",
+        resol:  iResol >= 0 ? (r[iResol] ?? "") : "",
+        prod:   iProd  >= 0 ? (r[iProd]  ?? "") : "",
       }))
 
     const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
@@ -132,8 +136,12 @@ export async function GET(req: NextRequest) {
       const totalDias = sv.agentes.length
       const cumplieron = sv.agentes.filter(a => parseCumple(a.cumple) >= 1).length
       const pct = totalDias > 0 ? Math.round((cumplieron / totalDias) * 100) : 0
+      const conResol = sv.agentes.filter(a => parseCumple(a.resol) > 0).length
+      const conProd  = sv.agentes.filter(a => parseCumple(a.prod)  > 0).length
+      const pctResol = totalDias > 0 ? Math.round((conResol / totalDias) * 100) : 0
+      const pctProd  = totalDias > 0 ? Math.round((conProd  / totalDias) * 100) : 0
       const alertasSv = calcularAlertas(sv.agentes)
-      return { supervisor: sv.nombre, totalAgentes: agentesUnicos.length, pct, conAlerta: alertasSv.count, bpsAlerta: alertasSv.bps }
+      return { supervisor: sv.nombre, totalAgentes: agentesUnicos.length, pct, pctResol, pctProd, conAlerta: alertasSv.count, bpsAlerta: alertasSv.bps }
     }).sort((a, b) => a.pct - b.pct)
 
     // KPI global
@@ -162,6 +170,8 @@ export async function GET(req: NextRequest) {
       bp:     r[iBP]     ?? "",
       nombre: r[iNombre] ?? "",
       cumple: r[iCumple] ?? "",
+      resol:  iResol >= 0 ? (r[iResol] ?? "") : "",
+      prod:   iProd  >= 0 ? (r[iProd]  ?? "") : "",
     }))
 
   const semanas = [...new Set(registros.map(r => r.semana).filter(Boolean))].sort((a, b) => Number(a) - Number(b))

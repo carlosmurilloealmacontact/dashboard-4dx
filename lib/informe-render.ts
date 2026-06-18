@@ -73,13 +73,29 @@ export function dataPracticasLideres(datos: DatosInforme): FilaGrafica[] {
     .filter((d): d is { supervisor: string; pct: number; cdr: number } => d !== null)
 }
 
+const DIAS_SEMANA = [
+  { key: "lun", nombre: "lunes",      label: "Lun" },
+  { key: "mar", nombre: "martes",     label: "Mar" },
+  { key: "mie", nombre: "miércoles",  label: "Mié" },
+  { key: "jue", nombre: "jueves",     label: "Jue" },
+  { key: "vie", nombre: "viernes",    label: "Vie" },
+]
+
+export { DIAS_SEMANA }
+
 export function dataMonitoreosCalidad(datos: DatosInforme): FilaGrafica[] {
   return datos.porSupervisor
     .map(s => {
       const f = ultimaSemana(s.porSemana, datos.semanas, p => (p as typeof s.porSemana[number]).pcaPta)?.valor
-      return f ? { supervisor: nombreCorto(s.supervisor), pct: f.pct, dias: f.diasConDatos } : null
+      if (!f) return null
+      const fila: FilaGrafica = { supervisor: nombreCorto(s.supervisor) }
+      DIAS_SEMANA.forEach(({ key, nombre }) => {
+        const entrada = (f.monitoreosPorDia ?? []).find(d => d.dia === nombre)
+        fila[key] = entrada ? entrada.total : 0
+      })
+      return fila
     })
-    .filter((d): d is { supervisor: string; pct: number; dias: number } => d !== null)
+    .filter((d): d is FilaGrafica => d !== null)
 }
 
 export function dataResolutividad(datos: DatosInforme): FilaGrafica[] {
@@ -167,7 +183,7 @@ export const SECCIONES_GRAFICA: Record<string, SeccionGrafica> = {
   },
   "Monitoreos de Calidad": {
     dataFn: dataMonitoreosCalidad,
-    series: [{ key: "pct", name: "% cumplimiento", color: COLORES.azul }, { key: "dias", name: "Días con datos (de 5)", color: COLORES.ambar }],
+    series: DIAS_SEMANA.map(({ key, label }) => ({ key, name: label, color: COLORES.azul })),
   },
   "Circuito de Resolutividad": {
     dataFn: dataResolutividad,

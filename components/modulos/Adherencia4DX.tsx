@@ -11,6 +11,8 @@ interface Registro {
   bp: string
   nombre: string
   cumple: string
+  resol?: string
+  prod?: string
   jefe?: string
 }
 
@@ -18,6 +20,8 @@ interface SupervisorResumen {
   supervisor: string
   totalAgentes: number
   pct: number
+  pctResol: number
+  pctProd: number
   conAlerta: number
   bpsAlerta: string[]
 }
@@ -196,6 +200,10 @@ export default function Adherencia4DX() {
               <div className="flex gap-3 text-xs text-gray-600 mt-1">
                 <span>{sv.totalAgentes} agentes</span>
                 {sv.conAlerta > 0 && <span className="text-red-400">⚠ {sv.conAlerta} alertas</span>}
+              </div>
+              <div className="flex gap-4 text-xs mt-1">
+                <span className="text-gray-500">Resol: <span className={`font-medium ${sv.pctResol >= 80 ? "text-green-400" : sv.pctResol >= 50 ? "text-yellow-400" : "text-red-400"}`}>{sv.pctResol}%</span></span>
+                <span className="text-gray-500">Prod: <span className={`font-medium ${sv.pctProd >= 80 ? "text-green-400" : sv.pctProd >= 50 ? "text-yellow-400" : "text-red-400"}`}>{sv.pctProd}%</span></span>
               </div>
             </button>
           ))}
