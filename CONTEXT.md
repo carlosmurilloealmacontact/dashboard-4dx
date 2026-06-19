@@ -1,6 +1,6 @@
 # CONTEXT.md — Dashboard 4DX
 
-Última actualización: 2026-06-16
+Última actualización: 2026-06-19
 
 ---
 
@@ -438,43 +438,27 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
    CRISTIAN ENRIQUE, MARTINEZ PEREZ JHON ALEXANDER, MONSALVE HERRERA JOHN JAMES —
    semana 24, parcial), confirmado vía `/api/debug/informe-supervisores` +
    `/api/debug/persona-cargo`.
-   - **Causa raíz (misma para los 3)**: en ambas bases de jerarquía
-     (`1veAlRJlVrJ2MRtoYNi3aJ_NX97sBFTgcww0V0jv6_Q0` y
-     `1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM!Socio`), los supervisores
-     reales de estos 3 coordinadores tienen el campo `coordinador` apuntando a
-     **"URREGO CASTAÑO ANDRES FELIPE"** (la jefatura) en vez de al coordinador
-     correcto, mientras que `jefeInmediato` sí está bien. `obtenerPerfil()`
-     calcula `supervisores = activos.filter(p => p.coordinador === nombreCoord
-     && cargo === supervisor)`, así que nunca matchea → `perfil.supervisores`
-     vacío → Adherencia 4DX, Prácticas Líderes, Monitoreos de Calidad (PCA/PTA) y
-     Pausas 4DX salen "Sin datos" en el Informe IA (las agregaciones de estas 4
-     prácticas exigen `matchSupervisor` contra `supervisoresEquipo`).
+   - **Causa raíz (misma para los 3)**: la columna `coordinador` en la hoja
+     NO representa al coordinador directo del supervisor — representa el nivel
+     gerencial (un nivel arriba). Por diseño, `coordinador` apunta a la
+     jefatura (ej. URREGO CASTAÑO ANDRES FELIPE) y `jefeInmediato` apunta al
+     coordinador directo. El dato en la hoja es correcto y no debe cambiarse.
+     El bug era que `obtenerPerfil()` buscaba supervisores filtrando solo por
+     `p.coordinador === nombreCoord`, que nunca matchea porque esa columna
+     tiene la gerencia → `perfil.supervisores` vacío → Adherencia 4DX,
+     Prácticas Líderes, Monitoreos de Calidad (PCA/PTA) y Pausas 4DX salen
+     "Sin datos" en el Informe IA.
    - **Compromisos, Quiz y Resolutividad sí muestran datos** porque esas
      agregaciones NO cruzan contra `perfil.supervisores`, agrupan directo por el
      nombre que viene en su propia hoja.
    - ~~Hipótesis descartada~~: LOMBARDO LIÑAN, CORREA VARGAS, URIBE BUILES,
-     VIRGUEZ SANCHEZ (con `coordinador=HERNANDEZ URREGO` correcto) NO son la
-     causa — tienen `estado: "Retiro"`, ya excluidas de `activos`.
-   - **Filas a corregir** (cambiar columna `coordinador`, en AMX y Socio):
-     - **→ HERNANDEZ URREGO CRISTIAN ENRIQUE**: CARDONA BARRAGAN CATALINA (AMX
-       14038 / Socio 1907), LOPEZ SISO KEILLURY MAHOLI (AMX 14177 / Socio 2029),
-       CASTRO RODRIGUEZ LUZ KARIME (AMX 14192 / Socio 2043).
-     - **→ MARTINEZ PEREZ JHON ALEXANDER**: ORIXAS CASTRO JHEISSON (AMX 14139 /
-       Socio 1998), RODRIGUEZ RESTREPO KAREN DAYANNE (AMX 14176 / Socio 2028),
-       RAMIREZ RIOS LIZETH MELISSA (AMX 14201 / Socio 2052), SALAZAR SANMARTIN
-       WENDY JOSEFINA (AMX 14303 / Socio 2146).
-     - **→ MONSALVE HERRERA JOHN JAMES**: VELASQUEZ CARTAGENA ALEJANDRO (AMX
-       14007 / Socio 1878), MENA CUESTA LAURA DANIELA (AMX 14184 / Socio 2036),
-       GRAJALES MENA JESUS ENRIQUE (AMX 14190 / Socio 2042), BARRERA VALENCIA
-       MARIA ALEJANDRA (AMX 14212 / Socio 2063), OVALLES ORTEGANA YENNIFEER
-       ANDREINA (AMX 14316 / Socio 2158).
-   - **✅ Corregido en código** (2026-06-11): como corregir la hoja de origen no
-     es viable a corto plazo, `obtenerPerfil()` en `lib/jerarquia.ts` ahora
-     calcula `supervisores` aceptando coincidencia por `coordinador` **o** por
-     `jefeInmediato` (este último siempre estaba correcto). Esto resuelve los 3
-     casos sin tocar la hoja. La corrección manual de la columna `coordinador`
-     (filas listadas arriba) sigue siendo recomendable a futuro para limpiar el
-     dato de origen, pero ya no bloquea el Informe IA.
+     VIRGUEZ SANCHEZ tienen `estado: "Retiro"`, ya excluidas de `activos`.
+   - **✅ Corregido en código** (2026-06-11): `obtenerPerfil()` en
+     `lib/jerarquia.ts` calcula `supervisores` aceptando coincidencia por
+     `coordinador` **o** por `jefeInmediato`. Como `coordinador` en la hoja
+     representa la gerencia (no el coordinador directo), el match siempre
+     viene por `jefeInmediato`. Esta es la solución definitiva — la hoja
+     está correcta y no requiere ningún cambio.
    - Pendiente: regenerar el Informe IA de los 3 coordinadores semana 24 y
      confirmar que las 4 secciones muestran datos.
    - Endpoints de debug creados para esta investigación:
@@ -526,30 +510,26 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
    equipo real.
    - ✅ Creado `app/api/debug/persona-cargo` (admin-only): devuelve `cargo`,
      `coordinador`, `servicio`, `jefeInmediato`, `estado` y la fila exacta de esas
-     4 personas en ambas bases (AMX y LATAM-Socio). Por defecto usa esos 4
-     nombres; acepta `?nombres=a,b,c` para otros casos.
-   - **Pendiente**: llamar a este endpoint logueado como admin
-     (`/api/debug/persona-cargo`), confirmar en qué fila/base está el dato
-     incorrecto, y corregir manualmente la hoja de Sheets.
+     4 personas en ambas bases (AMX y LATAM-Socio).
+   - **Pendiente**: llamar a `/api/debug/persona-cargo` logueado como admin,
+     confirmar en qué fila/base está el dato incorrecto, y corregir en Sheets.
 
 2. Tras corregir la jerarquía, regenerar el Informe IA para HERNANDEZ URREGO
-   CRISTIAN ENRIQUE / semana 24 y confirmar que Adherencia 4DX, Prácticas Líderes,
+   CRISTIAN ENRIQUE y confirmar que Adherencia 4DX, Prácticas Líderes,
    Monitoreos de Calidad y Pausas 4DX ya muestran datos.
 
-3. **`app/demo/page.tsx`** — envolver el grid de `ModuloCard` con
-   `<SemanaGlobalProvider>` y añadir `<SemanaGlobalSelector light />` encima.
+3. **ALZATE ARROYAVE DANIEL FELIPE** (cargo "JEFE DE OPERACION", normaliza a
+   `"jefatura"`) no aparece en el listado de coordinadores de la Vista Admin.
+   Definir enfoque: ¿agregar "jefatura" como rol seleccionable en la Vista Admin,
+   o mapear ese cargo a "coordinador" en `normalizarCargo`?
 
-4. **`app/preview/page.tsx`** — importar `SemanaGlobalProvider` + `SemanaGlobalSelector`,
-   envolver grid + selector (igual que `demo/real/page.tsx`).
+4. **Endpoints de debug acumulados** (`app/api/debug/*`): revisar periódicamente
+   cuáles siguen siendo necesarios y retirar los que ya no apliquen.
 
-5. **`components/CoachTeamView.tsx`** — importar `SemanaGlobalProvider` +
-   `SemanaGlobalSelector`, envolver el grid de MODULOS_EQUIPO con el Provider y
-   añadir `<SemanaGlobalSelector />` (dark style) en la fila de filtros.
-
-6. **`npx tsc --noEmit`** — verificar que no quedan errores de TypeScript antes de
+5. **`npx tsc --noEmit`** — verificar que no quedan errores de TypeScript antes de
    cada push (convención del proyecto).
 
-7. **Commit + push** a master (siempre requiere confirmación explícita del usuario).
+6. **Commit + push** a master (siempre requiere confirmación explícita del usuario).
 
 ---
 
@@ -816,3 +796,68 @@ y el prompt (`lib/informes-prompt.ts`); sin cambios en gráficas/dashboard.
 - Nueva constante auxiliar `NOMBRES_DIA_SEMANA` (domingo..sábado) en
   `lib/informes.ts`, usada por las prácticas anteriores para traducir
   `Date.getDay()` a nombres de día en español.
+
+## % Resolutividad y % Productividad por supervisor en Adherencia 4DX (2026-06-19)
+
+La hoja `Cumplimiento_Diario_MCI` tiene tres columnas de cumplimiento separadas:
+`Cumple_Día`, `Resolutividade` y `Produtividade`. El dashboard solo usaba
+`Cumple_Día` (métrica combinada, más estricta), ignorando las otras dos, mientras
+que paneles anteriores del usuario calculaban cada una por separado.
+
+Cambios aplicados:
+
+- **`app/api/modulos/adherencia-4dx/route.ts`**: lee las columnas `Resolutividade`
+  y `Produtividade`. En el resumen por supervisor (vista coordinador) calcula
+  `pctResol` y `pctProd` con la misma lógica del panel anterior:
+  `AVG(CASE WHEN campo > 0 THEN 1 ELSE 0 END)` sobre los registros de la semana.
+- **`components/modulos/Adherencia4DX.tsx`**: muestra `Resol: X%` y `Prod: X%`
+  debajo de cada tarjeta de supervisor en vista coordinador/admin, con el mismo
+  código de colores (verde ≥80%, amarillo ≥50%, rojo <50%).
+- **`lib/informes.ts`**: extiende `Adherencia4dxSemana` con `pctResol` y `pctProd`;
+  los calcula en `aggAdherencia4dx` para incluirlos en el JSON del informe IA.
+- **`lib/informes-prompt.ts`**: describe al LLM el significado de `pctResol` y
+  `pctProd`, e instruye señalar brechas cuando alguno sea notablemente inferior a
+  `pct` (Cumple_Día).
+
+Nota: `pct` (Cumple_Día) se mantiene como métrica principal. `pctResol` y
+`pctProd` son complementarias — un supervisor puede tener 40% en `pct` (ambos
+campos deben valer >0) pero 55% en cada dimensión por separado.
+
+## Gráfica de Monitoreos de Calidad — desglose diario (2026-06-19)
+
+En `lib/informe-render.ts`, la sección "Monitoreos de Calidad" del informe IA
+reemplazó las dos barras anteriores (% cumplimiento + días con datos) por
+**5 barras Lun/Mar/Mié/Jue/Vie** con el total de monitoreos de cada día por
+supervisor, usando el campo `monitoreosPorDia` ya disponible en `PcaPtaSemana`.
+
+La constante `DIAS_SEMANA` (exportada) mapea clave interna → nombre en la hoja
+(ej. `"mie"` → `"miércoles"`) para el match exacto con los registros. El cambio
+aplica automáticamente al correo (que usa el mismo `SECCIONES_GRAFICA`).
+
+## Informe parcial — no alertar sobre días futuros (2026-06-19)
+
+En `lib/informes-prompt.ts`, el contexto del informe parcial ahora incluye
+explícitamente tres listas:
+
+- **Días ya cerrados** (pueden evaluarse como ausencia/problema)
+- **Día en curso** (aún puede registrarse — no es ausencia)
+- **Días que aún no han ocurrido** (el LLM tiene instrucción explícita de NO
+  alertar sobre falta de datos en estos días)
+
+Antes el LLM alertaba sobre "jueves y viernes sin monitoreo" en un informe
+generado el jueves por la mañana, porque no distinguía entre días pasados y
+días futuros/en curso.
+
+## Nombre de pila en el header (2026-06-19)
+
+En `app/page.tsx`, el saludo "Hola, X" y el nombre en el header ahora muestran
+el **nombre de pila** del usuario en vez del primer apellido.
+
+- El campo `persona.nombre` viene como `"APELLIDO1 APELLIDO2 NOMBRE1 [NOMBRE2]"`
+  (convención LATAM: 2 apellidos + 1-2 nombres).
+- `extraerNombres(n)`: toma las palabras desde la posición 2 y las convierte a
+  título case → `"VELASQUEZ CARTAGENA ALEJANDRO"` → `"Alejandro"`,
+  `"MENA CUESTA LAURA DANIELA"` → `"Laura Daniela"`.
+- El nombre completo en el header también pasa a título case
+  (`"VELASQUEZ CARTAGENA ALEJANDRO"` → `"Velasquez Cartagena Alejandro"`).
+- Fallback: si no hay perfil, usa la primera palabra de `session.user?.name`.
