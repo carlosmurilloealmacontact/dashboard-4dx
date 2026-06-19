@@ -8,6 +8,7 @@ import type { PerfilUsuario, Persona, RolNormalizado } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
+import DataTimestamp from "@/components/DataTimestamp"
 import { modulosPorIds } from "@/lib/modulos"
 
 const DEMOEQUIPOS: Record<RolNormalizado, Persona[]> = {
@@ -113,7 +114,9 @@ export default function DemoPage() {
           <h1 className="text-lg font-semibold text-gray-900">Dashboard 4DX - Demo</h1>
           <p className="text-xs text-gray-600">Vista de demostración por rol</p>
         </div>
-        <select
+        <div className="flex items-center gap-3">
+          <DataTimestamp />
+          <select
           value={rolSeleccionado}
           onChange={e => setRolSeleccionado(e.target.value as RolNormalizado)}
           className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -122,6 +125,7 @@ export default function DemoPage() {
           <option value="coordinador">Coordinador</option>
           <option value="coach">Coach</option>
         </select>
+        </div>
       </header>
 
       <main className="px-6 py-8 max-w-7xl mx-auto">

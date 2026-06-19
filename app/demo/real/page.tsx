@@ -8,6 +8,7 @@ import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
+import DataTimestamp from "@/components/DataTimestamp"
 import { modulosPorIds } from "@/lib/modulos"
 
 const USUARIOS_DEMO = [
@@ -58,21 +59,24 @@ export default function RealDemoPage() {
           <h1 className="text-lg font-semibold text-gray-900">Dashboard 4DX - Vista Real</h1>
           <p className="text-xs text-gray-600">Datos cargados desde Google Sheets</p>
         </div>
-        <select
-          value={usuarioSeleccionado}
-          onChange={e => {
-            setCargando(true)
-            setError("")
-            setUsuarioSeleccionado(e.target.value)
-          }}
-          className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-        >
-          {USUARIOS_DEMO.map(u => (
-            <option key={u.email} value={u.email}>
-              {u.nombre.split(" ").slice(0, 3).join(" ")} ({u.rol})
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3">
+          <DataTimestamp />
+          <select
+            value={usuarioSeleccionado}
+            onChange={e => {
+              setCargando(true)
+              setError("")
+              setUsuarioSeleccionado(e.target.value)
+            }}
+            className="bg-white border border-gray-300 text-xs text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+          >
+            {USUARIOS_DEMO.map(u => (
+              <option key={u.email} value={u.email}>
+                {u.nombre.split(" ").slice(0, 3).join(" ")} ({u.rol})
+              </option>
+            ))}
+          </select>
+        </div>
       </header>
 
       <main className="px-6 py-8 max-w-7xl mx-auto">

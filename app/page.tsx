@@ -9,6 +9,7 @@ import AdminView from "@/components/AdminView"
 import InformeIA from "@/components/InformeIA"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
+import DataTimestamp from "@/components/DataTimestamp"
 import { usePerfil } from "@/hooks/usePerfil"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 import { MODULOS_COORDINADOR_COACH, TODOS_MODULOS, modulosEnOrden, modulosPorIds } from "@/lib/modulos"
@@ -78,6 +79,7 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-600">Almaexperience</p>
         </div>
         <div className="flex items-center gap-4">
+          <DataTimestamp />
           <div className="text-right">
             <p className="text-sm text-gray-900">
               {perfil

@@ -8,6 +8,7 @@ import AdminView from "@/components/AdminView"
 import { MODULOS_POR_ROL } from "@/lib/roles"
 import type { PerfilUsuario } from "@/lib/jerarquia"
 import { PerfilProvider } from "@/context/PerfilContext"
+import DataTimestamp from "@/components/DataTimestamp"
 import { SemanaGlobalProvider } from "@/context/SemanaGlobalContext"
 import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import { MODULOS_COORDINADOR_COACH, modulosEnOrden, modulosPorIds } from "@/lib/modulos"
@@ -49,8 +50,9 @@ export default function PreviewPage() {
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3 items-center">
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center justify-between gap-3">
           <span className="text-yellow-700 text-sm font-medium">⚠️ Modo Preview — solo desarrollo</span>
+          <DataTimestamp />
         </div>
 
         <div className="flex gap-3 mb-8">
