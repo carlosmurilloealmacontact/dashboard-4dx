@@ -57,7 +57,16 @@ export default function DashboardPage() {
       : modulosPorIds(idsVisibles)
     : TODOS_MODULOS
 
-  const nombreCorto = perfil?.persona.nombre.split(" ")[0] ?? session.user?.name?.split(" ")[0] ?? "Usuario"
+  // Formato en la hoja: "APELLIDO1 APELLIDO2 NOMBRE1 [NOMBRE2]"
+  // Tomamos las palabras desde la posición 2 (los nombres de pila).
+  const extraerNombres = (n: string) => {
+    const partes = n.trim().split(/\s+/)
+    const nombres = partes.length >= 3 ? partes.slice(2) : partes.slice(0, 1)
+    return nombres.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ")
+  }
+  const nombreCorto = perfil
+    ? extraerNombres(perfil.persona.nombre)
+    : (session.user?.name?.split(" ")[0] ?? "Usuario")
   const etiquetaRol = perfil ? ETIQUETAS_ROL[perfil.rol] : ""
   const totalEquipo = perfil?.equipo.length ?? 0
 
@@ -70,7 +79,11 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-sm text-gray-900">{perfil?.persona.nombre ?? session.user?.name}</p>
+            <p className="text-sm text-gray-900">
+              {perfil
+                ? perfil.persona.nombre.split(/\s+/).map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ")
+                : session.user?.name}
+            </p>
             <div className="flex items-center gap-2 justify-end">
               {etiquetaRol && (
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
