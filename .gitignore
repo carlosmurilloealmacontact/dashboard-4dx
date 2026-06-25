@@ -33,6 +33,14 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local sqlite token store + credenciales (NUNCA commitear)
+tokens.db
+*.db
+client_secret*.json
+credentials*.json
+*.pickle
+*.token
+
 # vercel
 .vercel
 
