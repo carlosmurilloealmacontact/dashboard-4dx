@@ -10,7 +10,8 @@ const BASES: { id: string; rango: string }[] = [
 const ADMIN_EMAILS = [
   "carlosmurilloe.almacontact@outsourcing-account.com",
   "mariarestrepoh.almacontact@outsourcing-account.com",
-  "fabian.galeano@latam.com"
+  "arodriguez.almacontact@outsourcing-account.com",
+  "andresfelipeurrego.almacontact@outsourcing-account.com",
 ]
 
 export interface Persona {
