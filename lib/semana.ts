@@ -11,3 +11,14 @@ export function resolverSemana(param: string | null | undefined, semanas: string
   }
   return semanas.at(-1) ?? ""
 }
+
+/**
+ * Semana ISO actual (mismo cálculo que `semanaISOActual()` en
+ * SemanaGlobalContext.tsx), para endpoints de servidor que necesitan una
+ * semana por defecto sin depender de que un módulo ya haya reportado semanas.
+ */
+export function semanaISOActual(): number {
+  const d = new Date()
+  const jan1 = new Date(d.getFullYear(), 0, 1)
+  return Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
+}
