@@ -55,6 +55,8 @@ export async function GET(req: NextRequest) {
       const iJefe = idx("jefe_inmediato")
       const iCoord = idx("coordinador")
       const iEstado = idx("estado")
+      const iEmail = idx("e_mail")
+      const iEmailCorp = idx("usuario_gestor_4")
 
       const coincidencias = rows.slice(1)
         .map((r, i) => ({ r, fila: i + 2 }))
@@ -68,6 +70,8 @@ export async function GET(req: NextRequest) {
           jefeInmediato: r[iJefe] ?? "",
           coordinador: r[iCoord] ?? "",
           estado: r[iEstado] ?? "",
+          email: iEmail >= 0 ? (r[iEmail] ?? "") : null,
+          usuarioGestor4: iEmailCorp >= 0 ? (r[iEmailCorp] ?? "") : null,
         }))
 
       return { base: base.nombre, totalFilas: rows.length - 1, coincidencias }

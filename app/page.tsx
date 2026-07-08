@@ -12,7 +12,7 @@ import SemanaGlobalSelector from "@/components/SemanaGlobalSelector"
 import DataTimestamp from "@/components/DataTimestamp"
 import { usePerfil } from "@/hooks/usePerfil"
 import { MODULOS_POR_ROL } from "@/lib/roles"
-import { MODULOS_COORDINADOR_COACH, TODOS_MODULOS, modulosEnOrden, modulosPorIds } from "@/lib/modulos"
+import { MODULOS_COORDINADOR_COACH, modulosEnOrden, modulosPorIds } from "@/lib/modulos"
 
 const ETIQUETAS_ROL: Record<string, string> = {
   gerente: "Gerente",
@@ -47,16 +47,18 @@ export default function DashboardPage() {
   const esCoordinadorCoach = perfil?.rol === "coordinador"
     && (perfil.persona.cargo ?? "").toLowerCase().includes("coach")
 
-  // Módulos visibles según el rol
-  const idsVisibles = perfil
-    ? new Set(MODULOS_POR_ROL[perfil.rol] ?? [])
-    : new Set(TODOS_MODULOS.map(m => m.id))
+  // Módulos visibles según el rol. Sin perfil (usuario no encontrado en la
+  // base de datos) no hay con qué filtrar los datos de ningún módulo, así que
+  // no se muestra ninguno — antes caía a TODOS_MODULOS (la unión de los
+  // módulos de todos los roles, ej. "Prácticas Coach" junto a módulos de
+  // supervisor) que no tenía sentido sin un perfil real detrás.
+  const idsVisibles = new Set(perfil ? MODULOS_POR_ROL[perfil.rol] ?? [] : [])
 
   const modulosVisibles = perfil
     ? esCoordinadorCoach
       ? modulosEnOrden(MODULOS_COORDINADOR_COACH)
       : modulosPorIds(idsVisibles)
-    : TODOS_MODULOS
+    : []
 
   // Formato en la hoja: "APELLIDO1 APELLIDO2 NOMBRE1 [NOMBRE2]"
   // Tomamos las palabras desde la posición 2 (los nombres de pila).
