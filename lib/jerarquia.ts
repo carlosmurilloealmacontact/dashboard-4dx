@@ -98,25 +98,29 @@ function normClave(s: string): string {
     .replace(/\s+/g, " ")
 }
 
-export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
+interface CargaPersonas {
+  personas: Persona[]
+  // true si AL MENOS UNA base falló al cargar (cuota, permisos, error
+  // transitorio) — no implica que TODAS fallaran; puede que la persona
+  // buscada viva perfectamente bien en la base que sí cargó.
+  huboFallas: boolean
+  detalleFallas: string
+}
+
+async function cargarPersonasDetallado(accessToken: string): Promise<CargaPersonas> {
   // Carga todas las bases en paralelo y las combina
   const resultados = await Promise.allSettled(
     BASES.map(b => getSheetData(accessToken, b.id, b.rango))
   )
 
-  // Si alguna hoja falla al cargar (cuota de Sheets, error transitorio de
-  // Google, etc.), NO seguir en silencio: antes esto descartaba esa base sin
-  // avisar, y cualquiera cuya fila viviera solo ahí terminaba viendo "no
-  // estás en la base de datos" — un falso negativo indistinguible de un
-  // problema real de registro. Se lanza un error explícito para que la ruta
-  // que llama a esto pueda devolver "no pudimos cargar tus datos, intenta de
-  // nuevo" en vez de la advertencia de "usuario no encontrado".
-  const fallidas = resultados.filter(r => r.status === "rejected")
-  if (fallidas.length > 0) {
-    const detalle = fallidas.map(r => (r as PromiseRejectedResult).reason instanceof Error
-      ? (r as PromiseRejectedResult).reason.message
-      : String((r as PromiseRejectedResult).reason)).join("; ")
-    throw new Error(`No se pudo cargar la base de personas (${detalle}). Intenta de nuevo en unos segundos.`)
+  const fallidas = resultados.filter((r): r is PromiseRejectedResult => r.status === "rejected")
+  const detalleFallas = fallidas.map(r => r.reason instanceof Error ? r.reason.message : String(r.reason)).join("; ")
+
+  // Si TODAS las bases fallan no hay nada utilizable — ahí sí hay que cortar
+  // con un error explícito (antes esto seguía en silencio con una lista
+  // vacía, indistinguible de "nadie está registrado").
+  if (fallidas.length === resultados.length) {
+    throw new Error(`No se pudo cargar la base de personas (${detalleFallas}). Intenta de nuevo en unos segundos.`)
   }
 
   const todasLasPersonas = resultados.flatMap(r => r.status === "fulfilled" ? parsearFilas(r.value) : [])
@@ -134,7 +138,12 @@ export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
       vistas.set(clave, p)
     }
   }
-  return [...vistas.values()]
+  return { personas: [...vistas.values()], huboFallas: fallidas.length > 0, detalleFallas }
+}
+
+export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
+  const { personas } = await cargarPersonasDetallado(accessToken)
+  return personas
 }
 
 export interface PerfilUsuario {
@@ -150,7 +159,7 @@ export async function obtenerPerfil(
   accessToken: string,
   emailLogueado: string
 ): Promise<PerfilUsuario | null> {
-  const todos = await cargarPersonas(accessToken)
+  const { personas: todos, huboFallas, detalleFallas } = await cargarPersonasDetallado(accessToken)
   const activos = todos.filter(p => (p.estado ?? "").toLowerCase() !== "retiro")
 
   // Buscar la persona por email corporativo (usuario_gestor_4) primero, luego email personal
@@ -187,7 +196,17 @@ export async function obtenerPerfil(
     }
   }
 
-  if (!persona) return null
+  if (!persona) {
+    // Si no se encontró Y alguna base falló al cargar, no podemos afirmar que
+    // de verdad no está registrado — puede que su fila viva justo en la base
+    // que falló. Es ambiguo, así que se avisa como "no se pudo verificar" en
+    // vez del más grave "no está en la base de datos" (que antes se mostraba
+    // por igual en ambos casos).
+    if (huboFallas) {
+      throw new Error(`No se pudo verificar tu perfil por completo (${detalleFallas}). Intenta de nuevo en unos segundos.`)
+    }
+    return null
+  }
 
   if (esAdmin) {
     // Los admins ven a todos como su "equipo"
