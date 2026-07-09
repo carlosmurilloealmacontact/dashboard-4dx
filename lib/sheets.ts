@@ -46,7 +46,17 @@ async function fetchSheetData(
 // misma hoja+rango reutilizan el mismo dato, sin importar qué usuario lo pida.
 // Esto reduce drásticamente el consumo de cuota de Sheets API en picos de tráfico
 // y permite mantener los datos frescos (TTL corto) sin golpear la API por usuario.
-const TTL_MS = 30_000
+//
+// Subido de 30s a 120s (2026-07-08) tras un pico de 429 (cuota excedida) que
+// bloqueó el login de varios usuarios: los datos de estas hojas se actualizan
+// a ritmo operativo (no segundo a segundo), así que 2 minutos de margen no
+// afecta la utilidad del dashboard y reduce bastante las lecturas repetidas
+// cuando varias personas entran o recargan el Panel de Control en una ventana
+// corta. Nota: esta caché vive en memoria por instancia de servidor — Vercel
+// puede levantar varias instancias en paralelo bajo carga, cada una con su
+// propia caché vacía, así que esto ayuda pero no elimina del todo el riesgo
+// de picos de cuota en concurrencia alta.
+const TTL_MS = 120_000
 
 interface CacheEntry { data: string[][]; timestamp: number }
 
