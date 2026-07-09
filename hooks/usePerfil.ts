@@ -11,6 +11,12 @@ export function usePerfil() {
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // true = el usuario genuinamente no está registrado (404). false = no se
+  // pudo cargar la base de personas por un problema transitorio (ej. cuota
+  // de Sheets) — se ve igual desde el resultado ("sin perfil") pero NO es lo
+  // mismo, y mostrar el mismo aviso confunde: la solución de un 404 es
+  // corregir la hoja; la de un fallo transitorio es simplemente recargar.
+  const [noEncontrado, setNoEncontrado] = useState(false)
 
   useEffect(() => {
     if (status === "loading") return
@@ -23,14 +29,18 @@ export function usePerfil() {
     if (status !== "authenticated") return
 
     fetch("/api/jerarquia")
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) setError(data.error)
-        else setPerfil(data)
+      .then(async res => {
+        const data = await res.json()
+        if (data.error) {
+          setError(data.error)
+          setNoEncontrado(res.status === 404)
+        } else {
+          setPerfil(data)
+        }
       })
-      .catch(() => setError("Error al cargar el perfil"))
+      .catch(() => { setError("Error al cargar el perfil"); setNoEncontrado(false) })
       .finally(() => setCargando(false))
   }, [status, router])
 
-  return { perfil, cargando, error, session }
+  return { perfil, cargando, error, noEncontrado, session }
 }

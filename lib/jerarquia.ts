@@ -103,6 +103,22 @@ export async function cargarPersonas(accessToken: string): Promise<Persona[]> {
   const resultados = await Promise.allSettled(
     BASES.map(b => getSheetData(accessToken, b.id, b.rango))
   )
+
+  // Si alguna hoja falla al cargar (cuota de Sheets, error transitorio de
+  // Google, etc.), NO seguir en silencio: antes esto descartaba esa base sin
+  // avisar, y cualquiera cuya fila viviera solo ahí terminaba viendo "no
+  // estás en la base de datos" — un falso negativo indistinguible de un
+  // problema real de registro. Se lanza un error explícito para que la ruta
+  // que llama a esto pueda devolver "no pudimos cargar tus datos, intenta de
+  // nuevo" en vez de la advertencia de "usuario no encontrado".
+  const fallidas = resultados.filter(r => r.status === "rejected")
+  if (fallidas.length > 0) {
+    const detalle = fallidas.map(r => (r as PromiseRejectedResult).reason instanceof Error
+      ? (r as PromiseRejectedResult).reason.message
+      : String((r as PromiseRejectedResult).reason)).join("; ")
+    throw new Error(`No se pudo cargar la base de personas (${detalle}). Intenta de nuevo en unos segundos.`)
+  }
+
   const todasLasPersonas = resultados.flatMap(r => r.status === "fulfilled" ? parsearFilas(r.value) : [])
 
   // Deduplicar por nombre+cargo+servicio (algunas personas tienen dos filas

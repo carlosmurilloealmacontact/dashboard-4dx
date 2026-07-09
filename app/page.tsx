@@ -25,7 +25,7 @@ const ETIQUETAS_ROL: Record<string, string> = {
 }
 
 export default function DashboardPage() {
-  const { perfil, cargando, error, session } = usePerfil()
+  const { perfil, cargando, error, noEncontrado, session } = usePerfil()
   const router = useRouter()
 
   useEffect(() => {
@@ -122,10 +122,17 @@ export default function DashboardPage() {
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Hola, {nombreCorto} 👋</h2>
               {error ? (
-                <p className="text-yellow-600 text-sm mt-1">
-                  ⚠️ Tu usuario no está en la base de datos — contacta a tu coordinador.
-                  <span className="block text-yellow-700 text-xs mt-0.5">{error}</span>
-                </p>
+                noEncontrado ? (
+                  <p className="text-yellow-600 text-sm mt-1">
+                    ⚠️ Tu usuario no está en la base de datos — contacta a tu coordinador.
+                    <span className="block text-yellow-700 text-xs mt-0.5">{error}</span>
+                  </p>
+                ) : (
+                  <p className="text-orange-600 text-sm mt-1">
+                    ⚠️ No pudimos cargar tus datos en este momento — recarga la página en unos segundos.
+                    <span className="block text-orange-700 text-xs mt-0.5">{error}</span>
+                  </p>
+                )
               ) : (
                 <p className="text-gray-600 text-sm mt-1">
                   {totalEquipo > 0
