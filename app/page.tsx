@@ -124,6 +124,7 @@ export default function DashboardPage() {
               {error ? (
                 <p className="text-yellow-600 text-sm mt-1">
                   ⚠️ Tu usuario no está en la base de datos — contacta a tu coordinador.
+                  <span className="block text-yellow-700 text-xs mt-0.5">{error}</span>
                 </p>
               ) : (
                 <p className="text-gray-600 text-sm mt-1">
