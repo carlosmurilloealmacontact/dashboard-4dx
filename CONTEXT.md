@@ -1,6 +1,6 @@
 # CONTEXT.md — Dashboard 4DX
 
-Última actualización: 2026-06-19
+Última actualización: 2026-07-09
 
 ---
 
@@ -72,11 +72,14 @@ app/
       pauta-eventos/         ← inspecciona "Alertas" (Pauta) por líder resuelto/semana
       informe-coord/         ← cruza nombre de coordinador entre las hojas del informe IA
       informe-supervisores/  ← cruza supervisores/semanas reales vs. jerarquía
-      persona-cargo/         ← muestra cargo/coordinador/servicio crudos de personas por nombre, en ambas bases
+      persona-cargo/         ← muestra cargo/coordinador/servicio/correo (e_mail, usuario_gestor_4) de personas por nombre, en ambas bases
+    admin/
+      panel-control/         ← KPI cards + heatmap por coordinador para la Vista Admin (ver sección abajo)
 
 components/
   ModuloCard.tsx            ← Wrapper que carga el componente del módulo
   AdminView.tsx             ← Vista admin con filtros rol/servicio/persona
+  PanelControlAdmin.tsx     ← Resumen ejecutivo (KPI cards + heatmap) montado arriba de los filtros de AdminView
   CoachTeamView.tsx         ← Vista coach: selección coordinador+servicio → cards
   SemanaGlobalSelector.tsx  ← Dropdown único de semana (prop light para bg blanco)
   InformeIA.tsx             ← UI del informe IA: form, gráficas por sección, copiar/PDF
@@ -100,8 +103,10 @@ context/
 lib/
   authOptions.ts             ← JWT callback con refresh de access token
   jerarquia.ts               ← Tipos PerfilUsuario, Persona, RolNormalizado; cargarPersonas, obtenerPerfil
+  equipoAdmin.ts             ← LIDERES/COACHES_PERMITIDOS/filtrarPorRol — fuente única para "quién es coordinador/supervisor/coach real" (AdminView y Panel de Control)
+  panelControl.ts            ← construirPanelControl(): agrega % + meta por práctica, por coordinador real y global (KPI cards + heatmap)
   roles.ts                   ← MODULOS_POR_ROL (qué módulos ve cada rol)
-  semana.ts                  ← resolverSemana(param, semanas[])
+  semana.ts                  ← resolverSemana(param, semanas[]), semanaISOActual()
   practicasLideres.ts        ← getPracticasLideres(token, perfil, semanaParam?)
   informes.ts                ← construirDatosInforme(): agrega TODAS las prácticas por supervisor/semana
   informes-prompt.ts         ← construirPromptInforme(): arma el prompt para Vertex AI
@@ -348,13 +353,17 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
 
 ---
 
-## `lib/sheets.ts` — caché y resiliencia (2026-06-11)
+## `lib/sheets.ts` — caché y resiliencia (2026-06-11, TTL actualizado 2026-07-09)
 
 - `getSheetData(accessToken, spreadsheetId, range)` mantiene una **caché compartida
-  en memoria** (`Map`, TTL 30s, clave `spreadsheetId::range`, ignora el token):
-  todas las peticiones concurrentes/recientes de **todos los usuarios** a la misma
-  hoja+rango reutilizan el mismo dato → reduce drásticamente el consumo de cuota de
-  Sheets API en picos de tráfico, sin sacrificar frescura (TTL corto).
+  en memoria** (`Map`, TTL **120s** — antes 30s, ver incidente de cuota abajo,
+  clave `spreadsheetId::range`, ignora el token): todas las peticiones
+  concurrentes/recientes de **todos los usuarios que caen en la misma instancia de
+  servidor** a la misma hoja+rango reutilizan el mismo dato → reduce el consumo de
+  cuota de Sheets API en picos de tráfico. Ojo: esta caché vive en memoria por
+  instancia — Vercel puede levantar varias instancias en paralelo bajo carga, cada
+  una con su propia caché vacía, así que el beneficio es real pero no elimina del
+  todo el riesgo de picos de cuota con concurrencia alta.
 - Las peticiones en curso se deduplican (`pendientes` Map) para evitar fan-out de
   llamadas idénticas simultáneas.
 - Reintenta automáticamente (backoff 1s/2s/4s) ante **429/403 (cuota) y
@@ -379,6 +388,8 @@ Coach") — sin lista de nombres hardcodeada, se detecta dinámicamente:
 | Producción sin cambios visibles | Vercel cacheaba respuestas de API routes | `Cache-Control: no-store` en todas las rutas de módulos |
 | Errores 500 intermitentes en módulos | `getSheetData` solo reintentaba 429/403, no 5xx transitorios | Ampliar reintentos a 5xx + caché compartida con fallback a dato vencido (ver sección `lib/sheets.ts`) |
 | Personas duplicadas en jerarquía | Filas repetidas (con/sin cédula) entre las dos bases de personas | Dedupe en `cargarPersonas` por `nombre+cargo+servicio`, prefiriendo la fila con `emailCorporativo` |
+| Vista sin perfil mostraba TODOS los módulos de TODOS los roles | `app/page.tsx` caía a `TODOS_MODULOS` cuando `perfil` era `null` | Cae a `[]` — sin perfil no hay con qué filtrar datos, no debe mostrar ningún módulo |
+| Falsos "usuario no encontrado" (2026-07-09) | `cargarPersonas` descartaba en silencio cualquier hoja que fallara al cargar (cuota de Sheets excedida por usuario, o permisos de Drive sin compartir a nivel de dominio en la hoja "Socio") — indistinguible de "no registrado" | Cuota subida (60→300/min por usuario), hoja "Socio" compartida por dominio, caché TTL 30s→120s, y mensajes de error distintos para "no encontrado" (404) vs. "no se pudo cargar" (falla parcial ambigua) — ver sección "Incidente" abajo |
 
 ---
 
@@ -861,3 +872,194 @@ el **nombre de pila** del usuario en vez del primer apellido.
 - El nombre completo en el header también pasa a título case
   (`"VELASQUEZ CARTAGENA ALEJANDRO"` → `"Velasquez Cartagena Alejandro"`).
 - Fallback: si no hay perfil, usa la primera palabra de `session.user?.name`.
+
+---
+
+## Panel de Control (Vista Admin) — 2026-07-08
+
+A petición del usuario, se agregó un resumen ejecutivo arriba de los filtros
+de "Seguimiento Administrativo" en `AdminView.tsx`, para que el admin tenga
+una foto de toda la operación antes de tener que elegir rol/servicio/persona.
+Dos piezas, montadas juntas en `PanelControlAdmin.tsx`:
+
+1. **KPI cards globales**: % ponderado de cada práctica (no promedio de
+   promedios) sumando los datos crudos de **todos los coordinadores reales**,
+   con tendencia vs. semana anterior.
+2. **Heatmap por coordinador**: una fila por coordinador real × una columna
+   por práctica, coloreada por qué tan cerca está de su meta.
+
+### Fuente de datos
+
+`lib/panelControl.ts` (`construirPanelControl`) reutiliza los mismos `agg*`
+de `lib/informes.ts` que ya usa el Informe IA (evita reimplementar la lógica
+de negocio), pero:
+
+- Solo recorre los **coordinadores reales** — jefes inmediatos de los 41
+  líderes de `lib/equipoAdmin.ts` (`filtrarPorRol`), NO los ~40 supervisores.
+  `lib/equipoAdmin.ts` es la extracción de esa lógica, que antes vivía
+  duplicada dentro de `AdminView.tsx` — ahora ambos la importan del mismo
+  lugar para no poder desincronizarse.
+- Pide `semanas: [semanaAnterior, semanaActual]` explícitamente y calcula el
+  rollup ponderado de cada semana por separado (en vez de usar el campo
+  `tendencia` que devuelve `construirDatosInforme`, que no aplica igual a
+  todas las prácticas) — así el cálculo del delta es uniforme entre módulos.
+- **`adherencia_pca` (Monitoreos de Calidad)**: NO usa el `pct` que devuelve
+  `aggPcaPta` de `lib/informes.ts` (esa es la nota de calidad antigua, ver
+  sección "% de cumplimiento = volumen vs. meta semanal" arriba) — se
+  recalcula aquí como `min(100, totalMonitoreos / 25 * 100)`, la misma
+  definición que ya usa `app/api/modulos/adherencia-pca/route.ts`. Es un bug
+  de fondo en `lib/informes.ts` (el Informe IA y el correo todavía muestran
+  la nota de calidad vieja para esta práctica) que quedó fuera de este
+  cambio — pendiente evaluar si vale la pena corregirlo ahí también.
+- Gracias a la caché compartida de `lib/sheets.ts`, recorrer varios
+  coordinadores no dispara una lectura de Sheets por cada uno — todos piden
+  la misma hoja+rango completa y se filtran en memoria, así que solo hay una
+  lectura real por hoja (ver el incidente de cuota más abajo, donde esto
+  terminó siendo relevante de todas formas por el volumen total).
+
+### Metas por práctica (`meta`, `metaInvertida`, `metaTexto`, `secundario`)
+
+Cada práctica del panel tiene una meta real distinta, no un umbral fijo
+80/50 genérico — el color del semáforo se calcula contra la meta de cada
+una (`tono()` en `lib/panelControl.ts` y su espejo en `PanelControlAdmin.tsx`):
+
+| Práctica | Meta | Notas |
+|---|---|---|
+| Adherencia (Medidas de Dirección) | 100% | cumplimiento diario acumulado |
+| Prácticas Líderes 4DX | 100% | ídem |
+| Monitoreos de Calidad | — (`metaTexto`: "25 monitoreos/semana") | ya normalizado 0-100 contra esa meta |
+| Compromisos | 100% | % con al menos un ingreso |
+| Quiz Semanal | 100% | % que presentó |
+| Circuito de Resolutividad | **% Implementación** (Seleccionados/total), meta **dinámica por jefatura** (`metaImpl`, fallback 23%, promedio ponderado en el rollup global) | secundario: **Backlog** (Aplicados/total), meta fija **≤10%**, `metaInvertida: true` (menor es mejor) |
+| Pausas 4DX | **Diálogo**, meta **80%** de participación | secundario: **CDR**, meta **80%** también (no confundir con el CDR de Prácticas Líderes 4DX, que no tiene meta fija porque varía por servicio) |
+| Feedback Interfábricas | % gestionado (sin meta fija) | secundario: conteo simple de "Pendientes" (nuevos sin gestionar) |
+
+El campo `secundario` (`{ label, texto, tono }`) se calcula 100% en el
+servidor (no en el componente) para que la UI solo tenga que pintar texto,
+sin reimplementar lógica de negocio.
+
+- Se agregaron dos etiquetas visuales (`SUBLABEL` en `PanelControlAdmin.tsx`)
+  para dejar explícito cuál de las dos métricas es el número principal de la
+  tarjeta cuando el título del módulo por sí solo es ambiguo: Resolutividad
+  muestra "% Implementación" arriba del número, Pausas 4DX muestra "Diálogo".
+  Antes de este ajuste el usuario reportó confusión porque el número grande
+  no decía a cuál de las dos métricas correspondía.
+
+### Selector de semana — clamp
+
+El botón "siguiente semana" del panel podía avanzar indefinidamente a
+semanas futuras sin datos. `construirPanelControl` calcula `semanaActualReal`
+(la semana ISO real de "hoy", `semanaISOActual()` en `lib/semana.ts`) y
+hace *clamp* si el parámetro pedido la supera; `PanelControlAdmin.tsx`
+además deshabilita el botón "›" al llegar a esa semana.
+
+---
+
+## Incidente: falsos "usuario no encontrado" (2026-07-09)
+
+Varios usuarios reales (líderes/coaches, todos con datos correctos en la
+hoja) reportaron el aviso "Tu usuario no está en la base de datos" al
+entrar al dashboard justo después de que se invitó a todo el equipo a
+usarlo con más frecuencia. Dos causas distintas, ambas relacionadas con que
+`cargarPersonas()` lee 2 hojas de personas (AMX y LATAM-Socio) con el
+**token de Google de quien esté logueado**, no con una cuenta de servicio:
+
+### Causa 1 — cuota de Sheets API excedida por usuario
+
+- `cargarPersonas()` (`lib/jerarquia.ts`) usaba `Promise.allSettled` y
+  **descartaba en silencio** cualquier hoja que fallara al cargar (cuota,
+  error transitorio). Si la hoja que fallaba era justo la que tenía la fila
+  de esa persona, el resultado era indistinguible de "no está registrado".
+- Confirmado en Google Cloud Console (Sheets API → Tráfico): pico de ~2
+  solicitudes/segundo (~120/min) en errores 429/403 durante varios minutos,
+  mientras se probaba repetidamente el nuevo Panel de Control (cada carga
+  dispara ~8 lecturas en paralelo). La cuota de proyecto (300/min) no se
+  superaba, pero la de **"Read requests per minute per user" (60, default de
+  Google)** sí — cada usuario individual (incluida la cuenta admin haciendo
+  las pruebas) tiene su propio balde de 60/min.
+- **Fix**: se solicitó y aprobó el aumento de esa cuota a 300 (igual al
+  límite de proyecto) desde Google Cloud Console. Además, el TTL de la caché
+  compartida de `lib/sheets.ts` subió de 30s a 120s como colchón adicional
+  (ver sección de esa librería arriba).
+
+### Causa 2 — hoja "Socio" (LATAM) sin acceso compartido a nivel de dominio
+
+- Un usuario (`ALISON MORENO MARIN`) reportó el mismo aviso; el mensaje de
+  error (ver "Fix de mensajes" abajo) mostró explícitamente
+  `"The caller does not have permission"` — un 403 de **permisos de Drive**,
+  no de cuota. Al revisar en Google Cloud Console / Drive, la hoja de
+  personas **LATAM-Socio ("Socio")** era la única de las ~10 hojas + 1
+  carpeta de Drive que usa la app que NO tenía activado el acceso por
+  dominio (`latam.com`) — se corrigió compartiéndola a nivel de dominio,
+  igual que las demás.
+- **Importante — punto ciego del diagnóstico**: para investigar los casos de
+  Mahide Santiago y Lucero Castro se usó `/api/jerarquia/test?email=X`, que
+  llama a `obtenerPerfil()` con **el token del admin que corre la prueba**,
+  no con el de la persona afectada — solo cambia qué correo busca dentro de
+  los datos que el admin sí puede leer. Como el admin tiene acceso directo
+  (no depende del compartido por dominio), esas pruebas "confirmaron" que
+  los datos estaban bien sin poder detectar un hueco de permisos específico
+  de la cuenta real de la persona. Es decir: este endpoint sirve para
+  verificar datos/matching, pero NO sirve para descartar un problema de
+  permisos de Drive/Sheets del usuario afectado — hay que revisar eso por
+  separado (Drive → Compartir → nivel de dominio) cuando el error explícito
+  diga "does not have permission".
+- **Lista completa de recursos de Google que la app lee**, para revisar
+  cuando se agregue una cuenta o dominio nuevo (todos deben tener acceso de
+  **Lector**, idealmente compartido a nivel de dominio en vez de cuenta por
+  cuenta):
+
+  | Recurso | ID | Usado por |
+  |---|---|---|
+  | Base AMX (personas) | `1veAlRJlVrJ2MRtoYNi3aJ_NX97sBFTgcww0V0jv6_Q0` | `cargarPersonas` |
+  | Base LATAM-Socio (personas) + Circuito de Resolutividad | `1tmFJQ4EJaUTCbogu11klf7GSzXpzevn7gw3U84Rw3zM` | `cargarPersonas`, `aggResolutividad` |
+  | Cumplimiento_Diario_MCI / Resumen_Líderes / Confirmaciones de Rol | `1UN-wQKOh1z9M4K4LUJiY1prj26Lo2taVR-szVhx-Gso` | Adherencia 4DX, Prácticas Líderes, Confirmaciones de Rol, Seguimiento Coach |
+  | Detalle Eventos (PCA/PTA) | `1MZiP7K4JbElp3lM2n0Tr554WNN1RTfGlsgCB9uJ8tSw` | Monitoreos de Calidad |
+  | Alertas (Pauta de Calidad) | `1MVyZW1N45iQgDiii6cnCFBCwFl4zk6B5s4ScqkwNF-U` | Monitoreos de Calidad |
+  | Compromisos histórico | `1eGoB7lIMvOfMB71g3S0IQZx5xtbNzwcOFSEqnXG4IuU` | Compromisos |
+  | Quiz Data2 | `1ElOVG-6SQZt_ZjnWKY7vUcWK78Zgm4dr4xZv3a5iA2k` | Quiz Semanal |
+  | Estoy Enterado | `1sxqnABVcemnPaWivLHmW1SDChBSBQyBYGTAN3sb9q44` | Estoy Enterado |
+  | Feedback Interfábricas | `1gd_ldwaaCCVVTV4iSh7oW9GHLyntWmmBQmfOo8Z1WtU` | Feedback |
+  | Pausas 4DX Raw | `17Jftow3b5V9AFhndlt1MNe6ZBKQD1xBCrQfNqM0vDl4` | Pausas 4DX |
+  | Carpeta "Agenda" (Drive, no Sheets) | `1LqXqtOOydr-qB4KTWWp0t8SCC_rivZjl` | Agenda del líder |
+
+### Fix de mensajes — distinguir "no encontrado" de "no se pudo cargar"
+
+Antes, cualquier error (404 real o 500 transitorio) mostraba el mismo texto
+genérico "Tu usuario no está en la base de datos — contacta a tu
+coordinador", lo cual mandaba a diagnosticar en la dirección equivocada.
+
+- `app/api/jerarquia/route.ts`: ya devolvía 404 solo para "no encontrado" y
+  500 para cualquier excepción — sin cambios aquí, el problema estaba en el
+  cliente.
+- `hooks/usePerfil.ts`: ahora expone `noEncontrado` (`true` solo si el
+  status fue 404).
+- `app/page.tsx`: si `noEncontrado` es `true`, muestra el aviso amarillo de
+  siempre ("contacta a tu coordinador") + el correo exacto que se buscó
+  (antes se descartaba el mensaje real del backend y siempre se mostraba un
+  texto fijo). Si es `false` (fallo transitorio/permisos), muestra un aviso
+  naranja distinto: "No pudimos cargar tus datos en este momento — recarga
+  la página en unos segundos", con el detalle técnico debajo.
+- `lib/jerarquia.ts`: `cargarPersonasDetallado()` (interna) solo lanza error
+  si **todas** las bases fallan (sin nada utilizable) — si al menos una
+  carga bien, sigue siendo tolerante como antes. `obtenerPerfil()` solo
+  escala a "no se pudo verificar" (mensaje naranja) cuando la persona **no
+  aparece Y hubo alguna falla parcial** (caso ambiguo); si la encuentra pese
+  a la falla parcial, no hay ningún aviso — mismo comportamiento de siempre.
+  (Un primer intento de este fix lanzaba error ante *cualquier* falla
+  parcial sin importar si afectaba a la persona buscada, lo cual bloqueaba
+  a todos los usuarios cuyo perfil vive en la base que sí cargaba bien —
+  corregido antes de que llegara a producción... salvo por el caso de
+  Alison, que sí lo alcanzó a ver desplegado y sirvió para detectar la
+  Causa 2 de este incidente.)
+- `app/api/debug/persona-cargo/route.ts`: se agregaron los campos `email` y
+  `usuarioGestor4` a la respuesta (antes solo mostraba cargo/servicio/
+  coordinador/estado, sin correo) — necesario para poder comparar el correo
+  cargado en la hoja contra el correo real con el que alguien inicia sesión.
+
+### Lista de administradores (2026-07-09)
+
+`ADMIN_EMAILS` en `lib/jerarquia.ts`: se agregaron
+`arodriguez.almacontact@outsourcing-account.com` y
+`andresfelipeurrego.almacontact@outsourcing-account.com`; se quitó
+`fabian.galeano@latam.com`.
