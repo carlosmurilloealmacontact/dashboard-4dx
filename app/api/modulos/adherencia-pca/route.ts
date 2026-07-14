@@ -267,9 +267,15 @@ export async function GET(req: NextRequest) {
         // El líder real que hizo el monitoreo es el jefe inmediato del asesor (BP).
         const lider = personasPorBP.get(bp)?.jefeInmediato || r[iSupervisor] || ""
         const fecha = parseSheetDate(r[iFecha] ?? "")
+        // getDay() da 0=Dom..6=Sáb; se convierte a 1=Lun..7=Dom para que
+        // coincida con la convención de "Dia Semana" de PCA/PTA (Detalle
+        // Eventos usa Utilities.formatDate(..., "u"), ISO 1=Lun..7=Dom) y
+        // así combinar bien ambas fuentes por día en combinarDias(). 0 queda
+        // libre para "fecha inválida" (ya no choca con domingo).
+        const diaISO = fecha ? (fecha.getDay() === 0 ? 7 : fecha.getDay()) : 0
         return {
           nombre:  lider,
-          dia:     fecha ? fecha.getDay() : 0, // 1=Lun .. 5=Vie
+          dia:     diaISO,
           semana:  normSemana(r[iSemana] ?? ""),
           nota:    parseCumplePct(r[iNota] ?? ""),
         }
@@ -283,7 +289,10 @@ export async function GET(req: NextRequest) {
         }
         return lider === nombrePersona
       })
-      .filter(r => r.dia >= 1 && r.dia <= 5)
+      // Incluye sábado y domingo (antes solo 1-5, Lun-Vie) — a petición del
+      // usuario, para contabilizar monitoreos de fin de semana en todas las
+      // vistas. La meta semanal (25) no cambia, solo se cuenta más días.
+      .filter(r => r.dia >= 1 && r.dia <= 7)
   }
 
   if (registrosPCA.length === 0 && registrosPauta.length === 0) {

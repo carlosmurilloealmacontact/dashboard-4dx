@@ -597,8 +597,12 @@ export async function aggPcaPta(
 
   porSemana.forEach((val, key) => {
     const [jefe, sem] = key.split("|||")
-    const monitoreosPorDia = [1, 2, 3, 4, 5].map(dia => ({ dia: NOMBRES_DIA_SEMANA[dia], total: val.porDia.get(dia) ?? 0 }))
-    const diasSinIngreso = [1, 2, 3, 4, 5].filter(dia => !val.porDia.has(dia)).map(dia => NOMBRES_DIA_SEMANA[dia])
+    // Incluye sábado(6) y domingo(7) — antes solo Lun-Vie. "dia" viene en
+    // convención ISO (1=Lun..7=Dom, igual que "Dia Semana" de Detalle
+    // Eventos), mientras que NOMBRES_DIA_SEMANA está indexado 0=domingo..
+    // 6=sábado — de ahí el "% 7" (7 % 7 = 0 = "domingo"; 1-6 quedan igual).
+    const monitoreosPorDia = [1, 2, 3, 4, 5, 6, 7].map(dia => ({ dia: NOMBRES_DIA_SEMANA[dia % 7], total: val.porDia.get(dia) ?? 0 }))
+    const diasSinIngreso = [1, 2, 3, 4, 5, 6, 7].filter(dia => !val.porDia.has(dia)).map(dia => NOMBRES_DIA_SEMANA[dia % 7])
     const fila: PcaPtaSemana = {
       semana: sem,
       pct: val.diasConDatos > 0 ? Math.round(val.sumaPct / val.diasConDatos) : 0,

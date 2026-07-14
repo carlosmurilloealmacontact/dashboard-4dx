@@ -24,6 +24,7 @@ export const MODULOS_EQUIPO: ModuloConfig[] = [
   { id: "adherencia", titulo: "Medidas de Dirección", icono: "📋", descripcion: "Ingresos diarios, resolutividad y productividad del equipo" },
   { id: "practicas_lideres", titulo: "Prácticas Líderes 4DX", icono: "🎯", descripcion: "CDR y cumplimiento de prácticas" },
   { id: "pausas_4dx", titulo: "Pausas 4DX", icono: "⏸️", descripcion: "Diálogo y CDR diario del equipo" },
+  { id: "adherencia_pca", titulo: "Monitoreos de Calidad", icono: "🔍", descripcion: "PCA, PTA y Pauta de calidad" },
   { id: "confirmaciones_rol", titulo: "Confirmaciones de Rol", icono: "✅", descripcion: "Acompañamientos del equipo" },
   { id: "compromisos", titulo: "Compromisos", icono: "🤝", descripcion: "Estado de compromisos por asesor" },
   { id: "quiz", titulo: "Quiz Semanal", icono: "📝", descripcion: "Presentación y aprobación" },

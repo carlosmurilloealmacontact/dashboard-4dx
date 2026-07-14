@@ -45,7 +45,7 @@ interface Data {
 }
 
 const META = 5
-const DIAS_LABEL = ["", "Lun", "Mar", "Mié", "Jue", "Vie"]
+const DIAS_LABEL = ["", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 
 function colorPct(n: number) {
   if (n >= 80) return "text-green-400"
@@ -63,7 +63,7 @@ function barColor(n: number) {
 function GridDiasEquipo({ diasSemana }: { diasSemana?: DiaSemana[] }) {
   return (
     <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map(numDia => {
+      {[1, 2, 3, 4, 5, 6, 7].map(numDia => {
         const dia = diasSemana?.find(d => d.dia === numDia)
         const count = dia?.total ?? null
         const color = count === null ? "bg-gray-700"
@@ -207,7 +207,7 @@ export default function AdherenciaPCA() {
       <div>
         <p className="text-xs text-gray-500 mb-2">Monitoreos diarios (meta: {META})</p>
         <div className="flex gap-1 items-end">
-          {[1, 2, 3, 4, 5].map((numDia) => {
+          {[1, 2, 3, 4, 5, 6, 7].map((numDia) => {
             const dia = diasSemana.find(d => d.dia === numDia)
             const count = dia?.total ?? null
             const pct = count !== null ? Math.min((count / META) * 100, 100) : 0
