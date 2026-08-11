@@ -47,14 +47,30 @@ export function ordenarSemanas(semanas: string[]): string[] {
 /**
  * Resuelve qué semana usar dado un parámetro (posiblemente "24", "W24", null)
  * contra la lista de semanas disponibles (en su formato original, ej. "W24" o "24").
- * Compara por número (ignora "W" y demás no-dígitos). Si no hay match, devuelve la
- * última cronológicamente (ver `ordenarSemanas`), no la última del array recibido.
+ * Compara por número (ignora "W" y demás no-dígitos).
+ *
+ * - Sin `param`: no hay semana pedida explícitamente → cae a la más reciente
+ *   cronológicamente (ver `ordenarSemanas`). Este es el único caso donde tiene
+ *   sentido "adivinar" una semana.
+ * - Con `param` que SÍ matchea alguna semana de `semanas`: se usa esa, tal cual
+ *   viene en el array (conserva formato original, ej. "W24").
+ * - Con `param` que NO matchea ninguna semana propia de esta persona/equipo: se
+ *   devuelve el número pedido normalizado, NO la última semana disponible. Antes
+ *   caía silenciosamente a la última semana con datos, lo que hacía que al pedir
+ *   explícitamente una semana sin registros (ej. semana actual todavía sin
+ *   monitoreos) la tarjeta mostrara "pegados" los números de la semana anterior
+ *   bajo la etiqueta de la semana pedida (bug confirmado 2026-08-11, caso Trejos
+ *   Hincapié Melissa semana 33: mostraba el total de la semana 32). Devolver el
+ *   número pedido dejar que el filtro `r.semana === semanaActual` aguas abajo
+ *   devuelva vacío, y la UI ya sabe mostrar "sin registros" en ese caso.
  */
 export function resolverSemana(param: string | null | undefined, semanas: string[]): string {
   if (param) {
     const objetivo = Number(String(param).replace(/\D/g, ""))
-    const match = semanas.find(s => Number(String(s).replace(/\D/g, "")) === objetivo)
-    if (match) return match
+    if (!isNaN(objetivo) && objetivo > 0) {
+      const match = semanas.find(s => Number(String(s).replace(/\D/g, "")) === objetivo)
+      return match ?? String(objetivo)
+    }
   }
   return ordenarSemanas(semanas).at(-1) ?? ""
 }
