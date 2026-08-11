@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { TODOS_MODULOS } from "@/lib/modulos"
 import type { ModuloPanel, Secundario } from "@/lib/panelControl"
+import { semanaAnterior, semanaSiguiente } from "@/lib/semana"
 
 interface PracticaRollup {
   pct: number | null
@@ -141,14 +142,14 @@ export default function PanelControlAdmin() {
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <button
               className="border border-gray-300 rounded-md px-2 py-1 hover:bg-gray-50"
-              onClick={() => setSemana(String(Number(data.semanaActual) - 1))}
+              onClick={() => setSemana(semanaAnterior(data.semanaActual))}
             >
               ‹
             </button>
             <span>Semana {data.semanaActual}</span>
             <button
               className="border border-gray-300 rounded-md px-2 py-1 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-              onClick={() => setSemana(String(Number(data.semanaActual) + 1))}
+              onClick={() => setSemana(semanaSiguiente(data.semanaActual))}
               disabled={enSemanaReal}
               title={enSemanaReal ? "Todavía no hay datos de semanas futuras" : undefined}
             >

@@ -1,6 +1,6 @@
 import type { Persona } from "@/lib/jerarquia"
 import { filtrarPorRol, supervisoresDeCoordinador } from "@/lib/equipoAdmin"
-import { semanaISOActual } from "@/lib/semana"
+import { semanaISOActual, semanaAnterior } from "@/lib/semana"
 import {
   normSemana,
   aggAdherencia4dx,
@@ -194,7 +194,7 @@ export async function construirPanelControl(
   // No dejar navegar a semanas futuras (todavía sin datos) — clamp defensivo,
   // además de que la UI deshabilita el botón "siguiente" en la semana real.
   const semanaActual = Number(semanaSolicitada) > Number(semanaActualReal) ? semanaActualReal : semanaSolicitada
-  const semanaAnterior = String(Number(semanaActual) - 1)
+  const semanaPrevia = semanaAnterior(semanaActual)
 
   const mapaVacio = (): Record<ModuloPanel, Item[]> => ({
     adherencia: [], practicas_lideres: [], adherencia_pca: [], compromisos: [], quiz: [], resolutividad: [], pausas_4dx: [], feedback: [],
@@ -207,7 +207,7 @@ export async function construirPanelControl(
 
   const porCoordinador = await Promise.all(coordinadoresReales.map(async (coord): Promise<CoordinadorRollup> => {
     const supervisores = supervisoresDeCoordinador(equipoCompleto, coord.nombre).map(s => s.nombre)
-    const semanas = [semanaAnterior, semanaActual]
+    const semanas = [semanaPrevia, semanaActual]
 
     const [adherencia4dx, practicasLideres, pcaPta, compromisos, quiz, resolutividad, pausas, feedback] = await Promise.all([
       aggAdherencia4dx(accessToken, coord.nombre, supervisores, semanas),
@@ -222,42 +222,42 @@ export async function construirPanelControl(
 
     const rAdherencia = {
       act: itemsDeMapaSemanal(adherencia4dx, supervisores, semanaActual, itemAdherencia),
-      ant: itemsDeMapaSemanal(adherencia4dx, supervisores, semanaAnterior, itemAdherencia),
+      ant: itemsDeMapaSemanal(adherencia4dx, supervisores, semanaPrevia, itemAdherencia),
     }
     globalActual.adherencia.push(...rAdherencia.act)
     globalAnterior.adherencia.push(...rAdherencia.ant)
 
     const rPracticasLideres = {
       act: itemsDeMapaSemanal(practicasLideres, supervisores, semanaActual, itemPracticasLideres),
-      ant: itemsDeMapaSemanal(practicasLideres, supervisores, semanaAnterior, itemPracticasLideres),
+      ant: itemsDeMapaSemanal(practicasLideres, supervisores, semanaPrevia, itemPracticasLideres),
     }
     globalActual.practicas_lideres.push(...rPracticasLideres.act)
     globalAnterior.practicas_lideres.push(...rPracticasLideres.ant)
 
     const rPcaPta = {
       act: itemsDeMapaSemanal(pcaPta, supervisores, semanaActual, itemPcaPta),
-      ant: itemsDeMapaSemanal(pcaPta, supervisores, semanaAnterior, itemPcaPta),
+      ant: itemsDeMapaSemanal(pcaPta, supervisores, semanaPrevia, itemPcaPta),
     }
     globalActual.adherencia_pca.push(...rPcaPta.act)
     globalAnterior.adherencia_pca.push(...rPcaPta.ant)
 
     const rCompromisos = {
       act: itemsDeMapaSemanal(compromisos, supervisores, semanaActual, itemCompromisos),
-      ant: itemsDeMapaSemanal(compromisos, supervisores, semanaAnterior, itemCompromisos),
+      ant: itemsDeMapaSemanal(compromisos, supervisores, semanaPrevia, itemCompromisos),
     }
     globalActual.compromisos.push(...rCompromisos.act)
     globalAnterior.compromisos.push(...rCompromisos.ant)
 
     const rQuiz = {
       act: itemsDeMapaSemanal(quiz, supervisores, semanaActual, itemQuiz),
-      ant: itemsDeMapaSemanal(quiz, supervisores, semanaAnterior, itemQuiz),
+      ant: itemsDeMapaSemanal(quiz, supervisores, semanaPrevia, itemQuiz),
     }
     globalActual.quiz.push(...rQuiz.act)
     globalAnterior.quiz.push(...rQuiz.ant)
 
     const rDialogo = {
       act: itemsDeMapaSemanal(pausas, supervisores, semanaActual, itemPausasDialogo),
-      ant: itemsDeMapaSemanal(pausas, supervisores, semanaAnterior, itemPausasDialogo),
+      ant: itemsDeMapaSemanal(pausas, supervisores, semanaPrevia, itemPausasDialogo),
     }
     globalActual.pausas_4dx.push(...rDialogo.act)
     globalAnterior.pausas_4dx.push(...rDialogo.ant)
@@ -380,7 +380,7 @@ export async function construirPanelControl(
 
   return {
     semanaActual,
-    semanaAnterior,
+    semanaAnterior: semanaPrevia,
     semanaActualReal,
     global,
     porCoordinador: porCoordinador.sort((a, b) => (a.practicas.adherencia.pct ?? -1) - (b.practicas.adherencia.pct ?? -1)),

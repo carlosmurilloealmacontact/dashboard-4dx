@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/authOptions"
 import { getSheetData } from "@/lib/sheets"
 import { obtenerPerfil } from "@/lib/jerarquia"
+import { resolverSemana } from "@/lib/semana"
 
 const SHEET_ID = "1eGoB7lIMvOfMB71g3S0IQZx5xtbNzwcOFSEqnXG4IuU"
 const HOJA = "historico"
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
   })
 
   const semanas = [...new Set(registros.map(r => r[iSemana]).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
-  const semanaActual = semanaParam && semanas.includes(semanaParam) ? semanaParam : (semanas.at(-1) ?? "")
+  const semanaActual = resolverSemana(semanaParam, semanas)
   const deEstaSemana = registros.filter(r => r[iSemana] === semanaActual)
 
   // Un registro por agente con su estado actual

@@ -1,5 +1,6 @@
 import { getSheetData } from "@/lib/sheets"
 import { obtenerAgendaLider, type AgendaLiderArchivo } from "@/lib/drive"
+import { semanaAnterior } from "@/lib/semana"
 
 /**
  * Normaliza un número de semana quitando ceros a la izquierda y cualquier
@@ -298,7 +299,7 @@ export async function construirDatosInforme(
   semanas: string[],
   soloSupervisor?: string,
 ): Promise<DatosInforme> {
-  const semanaPrevia = String(Number(semanas[0]) - 1)
+  const semanaPrevia = semanaAnterior(semanas[0])
   const semanasFetch = [...new Set([semanaPrevia, ...semanas])]
 
   const equipoParaSoporte = soloSupervisor ? [soloSupervisor] : supervisoresEquipo
@@ -343,7 +344,7 @@ export async function construirDatosInforme(
         estoyEnterado: buscar(estoyEnterado, sup, sem),
         compromisosCopilot: buscar(compromisosCopilot, sup, sem),
       }
-      const semAnterior = String(Number(sem) - 1)
+      const semAnterior = semanaAnterior(sem)
       const datosAnterior: DatosSemana = {
         adherencia4dx: buscar(adherencia4dx, sup, semAnterior),
         practicasLideres: buscar(practicasLideres, sup, semAnterior),
