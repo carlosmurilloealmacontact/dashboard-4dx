@@ -156,7 +156,14 @@ export async function GET(req: NextRequest) {
       semanaActual,
       kpi: { pct: pctGlobal, alertas: alertasGlobal.count, bpsAlerta: alertasGlobal.bps },
       supervisoresResumen,
-      registros: registros.slice(-1000),
+      // El cliente solo filtra `registros` por la semana activa (grilla diaria y
+      // detalle por agente) — nunca usa otras semanas del histórico. Un slice(-N)
+      // sobre TODO el histórico del coordinador podía cortar el registro de un
+      // supervisor específico para un día de la semana actual (bug confirmado
+      // 2026-08-11: agentes de un líder sin "ingresos" en el detalle pese a
+      // existir en la hoja), si el orden de filas de la hoja no es estrictamente
+      // cronológico. Enviar solo la semana activa es más chico Y correcto.
+      registros: deEstaSemana,
     })
   }
 
@@ -189,6 +196,9 @@ export async function GET(req: NextRequest) {
     semanas,
     semanaActual,
     kpi: { pct, alertas: alertas.count, bpsAlerta: alertas.bps },
-    registros: registros.slice(-500),
+    // Ver comentario equivalente en la rama coordinador: el cliente solo filtra
+    // por la semana activa, así que enviar solo `deEstaSemana` evita el mismo
+    // bug de truncado perdiendo días de la semana actual.
+    registros: deEstaSemana,
   })
 }
