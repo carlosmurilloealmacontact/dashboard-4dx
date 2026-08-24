@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   let rows: string[][]
   try {
-    rows = await getSheetData(session.accessToken, SHEET_ID, `'${HOJA}'!A:J`)
+    rows = await getSheetData(session.accessToken, SHEET_ID, `'${HOJA}'!A:K`)
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }
@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
   const iJefe      = idx("jefe_inmediato")
   const iCoord     = idx("coordinador")
   const iDuracion  = idx("duracion_min")
+  const iTramos    = idx("tramos")
 
   const rol = perfil.rol?.toLowerCase()
   const esAdmin = rol === "admin"
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest) {
         participo,
         jefe:     r[iJefe]     ?? "",
         duracionMin: parseFloat((r[iDuracion] ?? "").replace(",", ".")) || 0,
+        tramos:   iTramos >= 0 ? (r[iTramos] ?? "") : "",
       }
     })
 

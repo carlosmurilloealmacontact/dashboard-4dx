@@ -14,6 +14,7 @@ interface Registro {
   participo: boolean
   jefe: string
   duracionMin: number
+  tramos: string
 }
 
 function formatoDuracion(min: number): string {
@@ -21,6 +22,12 @@ function formatoDuracion(min: number): string {
   const horas = Math.floor(min / 60)
   const minutos = Math.round(min % 60)
   return horas > 0 ? `${horas}h ${minutos}min` : `${minutos} min`
+}
+
+function tituloRegistro(r: Registro | undefined): string {
+  if (!r) return "Sin registro"
+  const duracion = formatoDuracion(r.duracionMin)
+  return r.tramos ? `${duracion}\n${r.tramos}` : duracion
 }
 
 interface SupervisorResumen {
@@ -147,7 +154,7 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
                       <td className="text-center py-1 px-1">
                         <div
                           className={`w-5 h-5 rounded mx-auto ${color}`}
-                          title={r ? formatoDuracion(r.duracionMin) : "Sin registro"}
+                          title={tituloRegistro(r)}
                         />
                       </td>
                     )
@@ -159,7 +166,7 @@ function GridPausa({ titulo, registros, tipo, agentes }: GridPausaProps) {
                         <td key={d.num} className="text-center py-1 px-1">
                           <div
                             className={`w-5 h-5 rounded mx-auto ${color}`}
-                            title={r ? formatoDuracion(r.duracionMin) : "Sin registro"}
+                            title={tituloRegistro(r)}
                           />
                         </td>
                       )
