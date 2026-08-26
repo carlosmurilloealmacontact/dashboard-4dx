@@ -17,6 +17,13 @@ export function normalizarCargo(cargo: string): string {
 
 export const ROLES_DISPONIBLES = ["supervisor", "coordinador", "coach"]
 
+// Duplicado deliberado de ROL_FORZADO de lib/jerarquia.ts (mismo motivo que
+// normalizarCargo arriba). ALZATE ARROYAVE DANIEL FELIPE: cargo real "Jefe de
+// Operación", pero se trata como coordinador en el panel.
+const ROL_FORZADO: Record<string, string> = {
+  "ALZATE ARROYAVE DANIEL FELIPE": "coordinador",
+}
+
 export const LIDERES = [
   "CARVAJAL BARRERA LUCAS",
   "ARENAS MONCADA VALERIA",
@@ -88,7 +95,8 @@ export const COACHES_PERMITIDOS = [
 export function filtrarPorRol(equipo: Persona[], rol: string): Persona[] {
   if (!rol) return equipo
   return equipo.filter(p => {
-    if (normalizarCargo(p.cargo) !== rol) return false
+    const rolReal = ROL_FORZADO[p.nombre.toUpperCase().trim()] ?? normalizarCargo(p.cargo)
+    if (rolReal !== rol) return false
 
     // Filtro especial para supervisores: solo los 41 líderes de la lista
     if (rol === "supervisor") {

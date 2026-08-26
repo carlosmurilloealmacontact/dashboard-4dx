@@ -40,6 +40,15 @@ export type RolNormalizado =
   | "admin"
   | "desconocido"
 
+// Personas cuyo cargo real no debe determinar cómo se les trata en el panel.
+// ALZATE ARROYAVE DANIEL FELIPE: cargo real "Jefe de Operación" (normaliza a
+// "jefatura"), pero para efectos del dashboard debe verse y funcionar como
+// coordinador (mismos módulos, mismo filtrado de datos por columna
+// "Coordinador"/supervisores a cargo).
+const ROL_FORZADO: Record<string, RolNormalizado> = {
+  "ALZATE ARROYAVE DANIEL FELIPE": "coordinador",
+}
+
 export function normalizarCargo(cargo: string): RolNormalizado {
   const c = cargo.toLowerCase()
   if (c.includes("gerente") || c.includes("director")) return "gerente"
@@ -218,7 +227,7 @@ export async function obtenerPerfil(
     }
   }
 
-  const rol = normalizarCargo(persona.cargo)
+  const rol = ROL_FORZADO[(persona.nombre ?? "").toUpperCase().trim()] ?? normalizarCargo(persona.cargo)
   const nombrePersona = (persona.nombre ?? "").toLowerCase().trim()
 
   // Equipo directo: quienes tienen a esta persona como jefe_inmediato
