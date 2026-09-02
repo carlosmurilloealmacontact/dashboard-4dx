@@ -233,7 +233,7 @@ export async function obtenerPerfil(
   // Equipo directo: quienes tienen a esta persona como jefe_inmediato
   const equipo = activos.filter(
     p => (p.jefeInmediato ?? "").toLowerCase().trim() === nombrePersona
-  )
+  ).sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" }))
 
   // Supervisores: para coordinadores, quienes tienen a esta persona como coordinador.
   // En la hoja base, algunos supervisores tienen mal el campo "coordinador"
@@ -243,7 +243,7 @@ export async function obtenerPerfil(
     p => normalizarCargo(p.cargo) === "supervisor"
       && ((p.coordinador ?? "").toLowerCase().trim() === nombrePersona
         || (p.jefeInmediato ?? "").toLowerCase().trim() === nombrePersona)
-  )
+  ).sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" }))
 
   return { persona, rol, equipo, supervisores }
 }

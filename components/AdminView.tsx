@@ -43,6 +43,7 @@ export default function AdminView({ perfilAdmin }: Props) {
   // Equipo final: aplicar rol y servicio elegidos
   const equipoFiltrado = filtrarPorRol(equipoCompleto, filtroRol)
     .filter(p => !filtroServicio || p.servicio === filtroServicio)
+    .sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" }))
 
   // Persona seleccionada explícitamente por el admin
   const personaSeleccionada = equipoFiltrado.find(p => {
@@ -60,7 +61,7 @@ export default function AdminView({ perfilAdmin }: Props) {
     ? equipoCompleto.filter(p =>
         (p.coordinador ?? "").toLowerCase().trim() === personaSeleccionada.nombre.toLowerCase().trim()
         && normalizarCargo(p.cargo) === "supervisor"
-      )
+      ).sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" }))
     : []
 
   return (

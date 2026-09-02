@@ -1,66 +1,46 @@
-const TOKEN_URL = "https://oauth2.googleapis.com/token"
-const MODELO = "gemini-2.5-flash-lite"
+const MODELO = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"
 
-interface VertexCandidate {
+interface GeminiCandidate {
   content?: { parts?: { text?: string }[] }
 }
 
 /**
- * Llama a Vertex AI (Gemini) usando credenciales OAuth de usuario
- * (client_id/client_secret/refresh_token), sin necesidad de service account.
+ * Llama a la API publica de Gemini (Google AI Studio) usando una API key.
+ * Reemplaza a Vertex AI desde 2026-08-27 (credito Vertex vencido); mismo
+ * modelo gratuito, sin OAuth ni cuenta de servicio.
  */
 export async function generarTextoVertex(prompt: string): Promise<string> {
-  const clientId = process.env.VERTEX_OAUTH_CLIENT_ID
-  const clientSecret = process.env.VERTEX_OAUTH_CLIENT_SECRET
-  const refreshToken = process.env.VERTEX_OAUTH_REFRESH_TOKEN
-  const project = process.env.VERTEX_PROJECT
-  const location = process.env.VERTEX_LOCATION || "us-central1"
+  const apiKey = process.env.GEMINI_API_KEY
 
-  if (!clientId || !clientSecret || !refreshToken || !project) {
-    throw new Error("Faltan variables de entorno de Vertex AI (VERTEX_PROJECT / VERTEX_OAUTH_*)")
+  if (!apiKey) {
+    throw new Error("Falta la variable de entorno GEMINI_API_KEY")
   }
 
-  const tokenRes = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
-  })
-  const tokenJson = await tokenRes.json()
-  if (!tokenRes.ok) throw new Error(`Error obteniendo token de Google: ${JSON.stringify(tokenJson)}`)
-
-  const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models/${MODELO}:generateContent`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent?key=${apiKey}`
   const body = JSON.stringify({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
   })
 
-  const ESPERAS_MS = [2000, 5000, 10000] // reintentos ante 429 (límite por minuto del free tier)
+  const ESPERAS_MS = [2000, 5000, 10000] // reintentos ante 429 (limite por minuto del free tier)
   let genRes: Response
-  let genJson: { candidates?: VertexCandidate[]; error?: unknown }
+  let genJson: { candidates?: GeminiCandidate[]; error?: unknown }
   for (let intento = 0; ; intento++) {
     genRes = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${tokenJson.access_token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body,
     })
     genJson = await genRes.json()
     if (genRes.ok) break
     if (genRes.status !== 429 || intento >= ESPERAS_MS.length) {
-      throw new Error(`Error de Vertex AI: ${JSON.stringify(genJson)}`)
+      throw new Error(`Error de Gemini API: ${JSON.stringify(genJson)}`)
     }
     await new Promise(r => setTimeout(r, ESPERAS_MS[intento]))
   }
 
-  const candidatos: VertexCandidate[] = genJson.candidates ?? []
+  const candidatos: GeminiCandidate[] = genJson.candidates ?? []
   const texto = candidatos[0]?.content?.parts?.map(p => p.text ?? "").join("") ?? ""
-  if (!texto) throw new Error("Vertex AI no devolvió contenido")
+  if (!texto) throw new Error("Gemini API no devolvio contenido")
   return texto
 }

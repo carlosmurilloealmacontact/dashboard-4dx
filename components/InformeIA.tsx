@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, Cell, LabelList,
 } from "recharts"
@@ -160,6 +160,12 @@ export default function InformeIA({ supervisores, email, permitirEnvioCorreo }: 
   const [enviandoCorreo, setEnviandoCorreo] = useState(false)
   const [estadoEnvio, setEstadoEnvio] = useState("")
 
+  const supervisoresOrdenados = useMemo(() => {
+    return [...supervisores].sort((a, b) =>
+      (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" })
+    )
+  }, [supervisores])
+
   async function generar() {
     const semanasLimpias = semanas.trim()
     if (!semanasLimpias) {
@@ -239,7 +245,7 @@ export default function InformeIA({ supervisores, email, permitirEnvioCorreo }: 
             onChange={e => setSupervisor(e.target.value)}
           >
             <option value="">Todo mi equipo</option>
-            {supervisores.map(s => (
+            {supervisoresOrdenados.map(s => (
               <option key={s.nombre} value={s.nombre}>{s.nombre}</option>
             ))}
           </select>

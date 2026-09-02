@@ -56,9 +56,10 @@ export default function CoachTeamView({ perfilCoach }: Props) {
 
   // - Si hay un servicio elegido → los coordinadores disponibles son los que lo tienen.
   // - Si no → todos los coordinadores.
-  const coordnadoresPorServicio = filtroServicio
+  const coordnadoresPorServicio = (filtroServicio
     ? coordinadores.filter(c => (c.servicios ?? []).includes(filtroServicio))
     : coordinadores
+  ).slice().sort((a, b) => (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" }))
 
   // Email del coordinador seleccionado y servicio para pasar a los módulos
   const teamEmail = coordSeleccionado?.email ?? ""

@@ -50,3 +50,7 @@ next-env.d.ts
 
 # logs
 .next-dev.log
+
+# claude / antigravity
+.claude/
+
