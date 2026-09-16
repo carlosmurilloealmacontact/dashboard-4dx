@@ -105,9 +105,9 @@ function IngresoBadge({ fechaStr }: { fechaStr?: string }) {
     return (
       <span
         title={fechaStr ? `Último registro: ${fechaStr} (Atraso)` : "Sin registros encontrados"}
-        className="inline-flex items-center justify-center gap-1 text-[11px] font-medium text-red-400 bg-red-950/40 border border-red-800/40 px-2 py-0.5 rounded"
+        className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-red-800 bg-red-100 border border-red-300 px-2 py-0.5 rounded shadow-sm"
       >
-        <span className="text-[10px]">⚠</span>
+        <span className="text-red-700 font-bold">⚠</span>
         <span>{texto}</span>
       </span>
     )
@@ -117,7 +117,7 @@ function IngresoBadge({ fechaStr }: { fechaStr?: string }) {
     return (
       <span
         title={`Último registro: ${fechaStr}`}
-        className="inline-flex items-center justify-center text-[11px] font-medium text-yellow-400 bg-yellow-950/40 border border-yellow-800/40 px-2 py-0.5 rounded"
+        className="inline-flex items-center justify-center text-xs font-semibold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded shadow-sm"
       >
         <span>{texto}</span>
       </span>
@@ -127,7 +127,7 @@ function IngresoBadge({ fechaStr }: { fechaStr?: string }) {
   return (
     <span
       title={`Último registro: ${fechaStr}`}
-      className="inline-flex items-center justify-center text-[11px] text-gray-300 bg-gray-800/80 border border-gray-700/50 px-2 py-0.5 rounded"
+      className="inline-flex items-center justify-center text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded shadow-sm"
     >
       <span>{texto}</span>
     </span>
@@ -266,7 +266,7 @@ export default function Adherencia4DX() {
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"/>No cumplió</span>
             </div>
             <div className="text-[11px] text-gray-500 flex items-center gap-1">
-              <span className="text-red-400">⚠</span> Atraso en último ingreso (&gt;2 días hábiles)
+              <span className="text-red-600 font-bold">⚠</span> Atraso en último ingreso (&gt;2 días hábiles)
             </div>
           </div>
         </div>
@@ -385,7 +385,7 @@ export default function Adherencia4DX() {
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"/>No cumplió</span>
         </div>
         <div className="text-[11px] text-gray-500 flex items-center gap-1">
-          <span className="text-red-400">⚠</span> Atraso en último ingreso (&gt;2 días hábiles)
+          <span className="text-red-600 font-bold">⚠</span> Atraso en último ingreso (&gt;2 días hábiles)
         </div>
       </div>
     </div>
