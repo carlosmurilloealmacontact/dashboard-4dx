@@ -26,6 +26,11 @@ interface SupervisorResumen {
   bpsAlerta: string[]
 }
 
+interface UltimoIngreso {
+  ultimoResol: string
+  ultimoProd: string
+}
+
 interface Data {
   modo: "supervisor" | "coordinador"
   semanas: string[]
@@ -33,6 +38,7 @@ interface Data {
   kpi: { pct: number; alertas: number; bpsAlerta: string[] }
   registros: Registro[]
   supervisoresResumen?: SupervisorResumen[]
+  ultimosIngresos?: Record<string, UltimoIngreso>
 }
 
 function parseCumple(v: string): number {
@@ -53,6 +59,80 @@ function colorText(n: number): "green" | "yellow" | "red" {
 }
 
 const DIAS = [{ num: 1, label: "Lun" }, { num: 2, label: "Mar" }, { num: 3, label: "Mié" }, { num: 4, label: "Jue" }, { num: 5, label: "Vie" }]
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+function calcularEstadoIngreso(fechaStr?: string): { texto: string; alerta: boolean; warning: boolean } {
+  if (!fechaStr) {
+    return { texto: "Sin reg.", alerta: true, warning: false }
+  }
+  const [y, m, d] = fechaStr.split("-")
+  if (!y || !m || !d) return { texto: fechaStr, alerta: false, warning: false }
+
+  const fecha = new Date(Number(y), Number(m) - 1, Number(d))
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  fecha.setHours(0, 0, 0, 0)
+
+  const diffTime = hoy.getTime() - fecha.getTime()
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+  const mesIndex = Number(m) - 1
+  const texto = `${Number(d)} ${MESES[mesIndex] ?? m}`
+
+  // Días hábiles transcurridos estrictamente entre la fecha del registro y hoy
+  let diasHabiles = 0
+  const cur = new Date(fecha)
+  cur.setDate(cur.getDate() + 1)
+  while (cur < hoy) {
+    const dayOfWeek = cur.getDay()
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      diasHabiles++
+    }
+    cur.setDate(cur.getDate() + 1)
+  }
+
+  // Alerta si han pasado 2 o más días hábiles, o más de 5 días corridos
+  const alerta = diasHabiles >= 2 || diffDays > 5
+  const warning = !alerta && diasHabiles === 1
+
+  return { texto, alerta, warning }
+}
+
+function IngresoBadge({ fechaStr }: { fechaStr?: string }) {
+  const { texto, alerta, warning } = calcularEstadoIngreso(fechaStr)
+
+  if (alerta) {
+    return (
+      <span
+        title={fechaStr ? `Último registro: ${fechaStr} (Atraso)` : "Sin registros encontrados"}
+        className="inline-flex items-center justify-center gap-1 text-[11px] font-medium text-red-400 bg-red-950/40 border border-red-800/40 px-2 py-0.5 rounded"
+      >
+        <span className="text-[10px]">⚠</span>
+        <span>{texto}</span>
+      </span>
+    )
+  }
+
+  if (warning) {
+    return (
+      <span
+        title={`Último registro: ${fechaStr}`}
+        className="inline-flex items-center justify-center text-[11px] font-medium text-yellow-400 bg-yellow-950/40 border border-yellow-800/40 px-2 py-0.5 rounded"
+      >
+        <span>{texto}</span>
+      </span>
+    )
+  }
+
+  return (
+    <span
+      title={`Último registro: ${fechaStr}`}
+      className="inline-flex items-center justify-center text-[11px] text-gray-300 bg-gray-800/80 border border-gray-700/50 px-2 py-0.5 rounded"
+    >
+      <span>{texto}</span>
+    </span>
+  )
+}
 
 function fechaDiaSemana(fecha: string): number | null {
   const [y, m, d] = (fecha ?? "").split("-")
@@ -143,6 +223,8 @@ export default function Adherencia4DX() {
               <thead>
                 <tr>
                   <th className="text-left text-gray-500 font-normal pb-1 pr-2">Agente</th>
+                  <th className="text-center text-gray-500 font-normal pb-1 px-2 whitespace-nowrap" title="Último ingreso registrado de resolutividad">Últ. Resol.</th>
+                  <th className="text-center text-gray-500 font-normal pb-1 px-2 whitespace-nowrap" title="Último ingreso registrado de productividad">Últ. Prod.</th>
                   {DIAS.map(d => <th key={d.num} className="text-center text-gray-500 font-normal pb-1 px-1 w-8">{d.label}</th>)}
                 </tr>
               </thead>
@@ -150,16 +232,23 @@ export default function Adherencia4DX() {
                 {agentes.map(({ bp, nombre }) => {
                   const svData = data.supervisoresResumen?.find(s => s.supervisor.toLowerCase() === supervisorDetalle?.toLowerCase())
                   const tieneAlerta = (svData?.bpsAlerta ?? data.kpi.bpsAlerta ?? []).includes(bp)
+                  const ult = data.ultimosIngresos?.[bp]
                   return (
                     <tr key={bp}>
-                      <td className={`py-1 pr-2 break-words ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                      <td className={`py-1.5 pr-2 break-words ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
                         {tieneAlerta && <span className="mr-1">⚠</span>}
                         {nombre}
+                      </td>
+                      <td className="text-center py-1.5 px-2 whitespace-nowrap">
+                        <IngresoBadge fechaStr={ult?.ultimoResol} />
+                      </td>
+                      <td className="text-center py-1.5 px-2 whitespace-nowrap">
+                        <IngresoBadge fechaStr={ult?.ultimoProd} />
                       </td>
                       {DIAS.map(d => {
                         const r = getRegistro(bp, d.num)
                         return (
-                          <td key={d.num} className="text-center py-1 px-1">
+                          <td key={d.num} className="text-center py-1.5 px-1">
                             <div className={`w-5 h-5 rounded mx-auto ${r ? colorPct(parseCumple(r.cumple) * 100) : "bg-gray-700"}`} />
                           </td>
                         )
@@ -170,10 +259,15 @@ export default function Adherencia4DX() {
               </tbody>
             </table>
           </div>
-          <div className="flex gap-3 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block"/>Completo</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-500 inline-block"/>Parcial</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"/>No cumplió</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 pt-1">
+            <div className="flex gap-3">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block"/>Completo</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-500 inline-block"/>Parcial</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"/>No cumplió</span>
+            </div>
+            <div className="text-[11px] text-gray-500 flex items-center gap-1">
+              <span className="text-red-400">⚠</span> Atraso en último ingreso (&gt;2 días hábiles)
+            </div>
           </div>
         </div>
       )
@@ -248,22 +342,31 @@ export default function Adherencia4DX() {
           <thead>
             <tr>
               <th className="text-left text-gray-500 font-normal pb-1 pr-2">Agente</th>
+              <th className="text-center text-gray-500 font-normal pb-1 px-2 whitespace-nowrap" title="Último ingreso registrado de resolutividad">Últ. Resol.</th>
+              <th className="text-center text-gray-500 font-normal pb-1 px-2 whitespace-nowrap" title="Último ingreso registrado de productividad">Últ. Prod.</th>
               {DIAS.map(d => <th key={d.num} className="text-center text-gray-500 font-normal pb-1 px-1 w-8">{d.label}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {agentes.map(({ bp, nombre }) => {
               const tieneAlerta = (data.kpi.bpsAlerta ?? []).includes(bp)
+              const ult = data.ultimosIngresos?.[bp]
               return (
                 <tr key={bp}>
-                  <td className={`py-1 pr-2 break-words ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                  <td className={`py-1.5 pr-2 break-words ${tieneAlerta ? "text-red-400 font-medium" : "text-gray-300"}`}>
                     {tieneAlerta && <span className="mr-1">⚠</span>}
                     {nombre}
+                  </td>
+                  <td className="text-center py-1.5 px-2 whitespace-nowrap">
+                    <IngresoBadge fechaStr={ult?.ultimoResol} />
+                  </td>
+                  <td className="text-center py-1.5 px-2 whitespace-nowrap">
+                    <IngresoBadge fechaStr={ult?.ultimoProd} />
                   </td>
                   {DIAS.map(d => {
                     const r = getRegistro(bp, d.num)
                     return (
-                      <td key={d.num} className="text-center py-1 px-1">
+                      <td key={d.num} className="text-center py-1.5 px-1">
                         <div className={`w-5 h-5 rounded mx-auto ${r ? colorPct(parseCumple(r.cumple) * 100) : "bg-gray-700"}`} />
                       </td>
                     )
@@ -275,10 +378,15 @@ export default function Adherencia4DX() {
         </table>
       </div>
 
-      <div className="flex gap-3 text-xs text-gray-500">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block"/>Completo</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-500 inline-block"/>Parcial</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"/>No cumplió</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 pt-1">
+        <div className="flex gap-3">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block"/>Completo</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-500 inline-block"/>Parcial</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"/>No cumplió</span>
+        </div>
+        <div className="text-[11px] text-gray-500 flex items-center gap-1">
+          <span className="text-red-400">⚠</span> Atraso en último ingreso (&gt;2 días hábiles)
+        </div>
       </div>
     </div>
   )

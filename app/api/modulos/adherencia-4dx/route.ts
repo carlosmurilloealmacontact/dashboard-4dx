@@ -57,6 +57,29 @@ function calcularAlertas(registrosSemana: { bp: string; fecha: string; cumple: s
   return { count: bpsConAlerta.length, bps: bpsConAlerta }
 }
 
+function calcularUltimosIngresos(
+  registros: { bp: string; fecha: string; resol?: string; prod?: string }[]
+): Record<string, { ultimoResol: string; ultimoProd: string }> {
+  const map: Record<string, { ultimoResol: string; ultimoProd: string }> = {}
+  for (const r of registros) {
+    if (!r.bp) continue
+    if (!map[r.bp]) {
+      map[r.bp] = { ultimoResol: "", ultimoProd: "" }
+    }
+    if (parseCumple(r.resol ?? "") > 0) {
+      if (!map[r.bp].ultimoResol || r.fecha > map[r.bp].ultimoResol) {
+        map[r.bp].ultimoResol = r.fecha
+      }
+    }
+    if (parseCumple(r.prod ?? "") > 0) {
+      if (!map[r.bp].ultimoProd || r.fecha > map[r.bp].ultimoProd) {
+        map[r.bp].ultimoProd = r.fecha
+      }
+    }
+  }
+  return map
+}
+
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
@@ -77,7 +100,7 @@ export async function GET(req: NextRequest) {
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }
-  if (rows.length < 2) return NextResponse.json({ registros: [], semanas: [], modo: "supervisor" })
+  if (rows.length < 2) return NextResponse.json({ registros: [], semanas: [], modo: "supervisor", ultimosIngresos: {} })
 
   const headers = rows[0]
   const idx = (n: string) => headers.findIndex(h => (h ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") === n.toLowerCase())
@@ -149,6 +172,7 @@ export async function GET(req: NextRequest) {
     const totalCumplieron = deEstaSemana.filter(r => parseCumple(r.cumple) >= 1).length
     const pctGlobal = totalRegistros > 0 ? Math.round((totalCumplieron / totalRegistros) * 100) : 0
     const alertasGlobal = calcularAlertas(deEstaSemana)
+    const ultimosIngresos = calcularUltimosIngresos(registros)
 
     return NextResponse.json({
       modo: "coordinador",
@@ -156,6 +180,7 @@ export async function GET(req: NextRequest) {
       semanaActual,
       kpi: { pct: pctGlobal, alertas: alertasGlobal.count, bpsAlerta: alertasGlobal.bps },
       supervisoresResumen,
+      ultimosIngresos,
       // El cliente solo filtra `registros` por la semana activa (grilla diaria y
       // detalle por agente) — nunca usa otras semanas del histórico. Un slice(-N)
       // sobre TODO el histórico del coordinador podía cortar el registro de un
@@ -190,12 +215,14 @@ export async function GET(req: NextRequest) {
   const cumplieron = deEstaSemana.filter(r => parseCumple(r.cumple) >= 1).length
   const pct = totalDias > 0 ? Math.round((cumplieron / totalDias) * 100) : 0
   const alertas = calcularAlertas(deEstaSemana)
+  const ultimosIngresos = calcularUltimosIngresos(registros)
 
   return NextResponse.json({
     modo: "supervisor",
     semanas,
     semanaActual,
     kpi: { pct, alertas: alertas.count, bpsAlerta: alertas.bps },
+    ultimosIngresos,
     // Ver comentario equivalente en la rama coordinador: el cliente solo filtra
     // por la semana activa, así que enviar solo `deEstaSemana` evita el mismo
     // bug de truncado perdiendo días de la semana actual.
